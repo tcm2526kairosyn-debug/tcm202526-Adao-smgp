@@ -1,0 +1,49 @@
+services:
+  app:
+    build: .
+    dns:
+      - 8.8.8.8
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=app:create_app  # IMPORTANTE: Indica o caminho da factory
+      - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://user:secret@db:5432/postgres
+      - WKHTMLTOPDF_PATH=/usr/bin/wkhtmltopdf
+      # Flask-Mail — usar App Password do Gmail (não a password normal da conta)
+      - MAIL_SERVER=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=true
+      - MAIL_USERNAME=tcm2526kairosyn@gmail.com
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - FLASK_BASE_URL=http://127.0.0.1:5000
+    depends_on:
+      - db
+    command: flask run -h 0.0.0.0
+
+  db:
+    image: postgres:15-alpine # Uma versão específica é mais estável que "latest"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data # Caminho correto para persistência
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  db_data:

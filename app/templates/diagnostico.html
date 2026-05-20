@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-10 px-4">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 1 — Diagnóstico Contextual</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Framework KairoSyn · Escala 1 (baixo) → 4 (alto)</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+        <!-- ── Sidebar: State Machine (sticky) ─────────────────────────────── -->
+        <div class="lg:col-span-2 lg:sticky lg:top-20">
+            <div class="bg-white rounded-2xl shadow border border-slate-100 p-5 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px]">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-600"></span>
+                    </span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">KairoSyn — State Machine</span>
+                </div>
+                <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff','primaryTextColor': '#475569','primaryBorderColor': '#e2e8f0','lineColor': '#94a3b8','fontSize': '12px','fontFamily': 'Inter, sans-serif'}}}%%
+flowchart TD
+    s1(["Etapa 1<br/><b>Diagnóstico Contextual</b>"])
+    s2(["Etapa 2<br/><b>Resolução da Abordagem</b>"])
+    s3(["Etapa 3<br/><b>Fit_M — Metodologia</b>"])
+    s4(["Etapa 4<br/><b>Fit_T — Ferramentas</b>"])
+    sc(["✓<br/><b>Concluído</b>"])
+    s1 --> s2
+    s2 --> s3
+    s3 --> s4
+    s4 --> sc
+    s4 -.-> s2
+    s4 -.-> s3
+    s3 -.-> s2
+    s3 -.-> s1
+    s2 -.-> s1
+    style s1 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px
+                </div>
+                <p class="text-[10px] text-slate-400 text-center mt-3">
+                    Setas a tracejado = re-entry possível
+                </p>
+            </div>
+        </div>
+
+        <!-- ── Formulário ───────────────────────────────────────────────────── -->
+        <div class="lg:col-span-3">
+        <form action="{{ url_for('main.diagnostico') }}" method="POST" class="space-y-6">
+
+            <!-- Identificação do Projeto -->
+            {% if projeto_prefill %}
+            <input type="hidden" name="project_name" value="{{ projeto_prefill.nome }}">
+            <input type="hidden" name="projeto_id" value="{{ projeto_prefill.id }}">
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-slate-400">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Projeto</p>
+                        <p class="text-lg font-black text-slate-800">{{ projeto_prefill.nome }}</p>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Gestor: {{ projeto_prefill.gestor_projeto }} ·
+                            Fase: {{ projeto_prefill.fase_atual }} ·
+                            <span class="{% if projeto_prefill.status == 'Ativo' %}text-green-600{% else %}text-slate-400{% endif %} font-semibold">{{ projeto_prefill.status }}</span>
+                        </p>
+                    </div>
+                    <a href="{{ url_for('main.projeto_diagnosticos', projeto_uuid=projeto_prefill.projeto_uuid) }}"
+                       class="text-xs text-slate-400 hover:text-slate-700 transition font-semibold">
+                        Ver diagnósticos →
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-gray-400">
+                <h2 class="text-base font-semibold mb-3 text-gray-700 dark:text-gray-200">Identificação do Projeto</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Projeto</label>
+                        <input type="text" name="project_name" required placeholder="Ex: Sistema de Gestão de Inventário"
+                               class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Projeto Associado (opcional)</label>
+                        <select name="projeto_id" class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">— Sem associação —</option>
+                            {% for p in projetos %}
+                            <option value="{{ p.id }}">{{ p.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% set ctx   = (prev_decision.context_data   if prev_decision else {}) or {} %}
+            {% set notes = (prev_decision.evidence_notes if prev_decision else {}) or {} %}
+
+            {% if prev_decision %}
+            <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm text-slate-600">
+                <span class="text-lg leading-none mt-0.5">↺</span>
+                <span>A rever diagnóstico anterior <strong>(#{{ prev_decision.id }})</strong> — AgPI {{ "%.2f"|format(prev_decision.agpi_score) }} · AsPI {{ "%.2f"|format(prev_decision.aspi_score) }} · {{ prev_decision.suggested_approach }}. Ajuste os valores conforme necessário.</span>
+            </div>
+            {% endif %}
+
+            <!-- Dimensões AgPI -->
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Agilidade (AgPI)</h2>
+                <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de uma abordagem adaptativa/ágil.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Complexidade do Âmbito
+                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_complexity">{{ ctx.get('complexity', 2) }}</span>
+                        </label>
+                        <input type="range" name="complexity" id="complexity" min="1" max="4" step="1" value="{{ ctx.get('complexity', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                               oninput="document.getElementById('lbl_complexity').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Simples</span><span>4 — Muito Complexo</span></div>
+                        <details class="mt-2" {% if notes.get('complexity') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_complexity" rows="2" placeholder="Observações sobre a complexidade..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('complexity', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Incerteza / Novidade Tecnológica
+                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_novelty">{{ ctx.get('novelty', 2) }}</span>
+                        </label>
+                        <input type="range" name="novelty" id="novelty" min="1" max="4" step="1" value="{{ ctx.get('novelty', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                               oninput="document.getElementById('lbl_novelty').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Conhecido</span><span>4 — Inovação Total</span></div>
+                        <details class="mt-2" {% if notes.get('novelty') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_novelty" rows="2" placeholder="Observações sobre novidade..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('novelty', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Dinamismo dos Requisitos
+                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_dynamism">{{ ctx.get('dynamism', 2) }}</span>
+                        </label>
+                        <input type="range" name="dynamism" id="dynamism" min="1" max="4" step="1" value="{{ ctx.get('dynamism', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                               oninput="document.getElementById('lbl_dynamism').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Estáveis</span><span>4 — Altamente Voláteis</span></div>
+                        <details class="mt-2" {% if notes.get('dynamism') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_dynamism" rows="2" placeholder="Observações sobre dinamismo..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('dynamism', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Autonomia da Equipa
+                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_team_autonomy">{{ ctx.get('team_autonomy', 2) }}</span>
+                        </label>
+                        <input type="range" name="team_autonomy" id="team_autonomy" min="1" max="4" step="1" value="{{ ctx.get('team_autonomy', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                               oninput="document.getElementById('lbl_team_autonomy').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Hierárquica</span><span>4 — Auto-organizada</span></div>
+                        <details class="mt-2" {% if notes.get('team_autonomy') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_team_autonomy" rows="2" placeholder="Observações sobre autonomia..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('team_autonomy', '') }}</textarea>
+                        </details>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Dimensões AsPI -->
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-red-500">
+                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPI)</h2>
+                <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de controlo, conformidade e rastreabilidade.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Criticidade (Impacto de Falha)
+                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_criticality">{{ ctx.get('criticality', 2) }}</span>
+                        </label>
+                        <input type="range" name="criticality" id="criticality" min="1" max="4" step="1" value="{{ ctx.get('criticality', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
+                               oninput="document.getElementById('lbl_criticality').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Baixo Impacto</span><span>4 — Vital / Vida Humana</span></div>
+                        <details class="mt-2" {% if notes.get('criticality') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_criticality" rows="2" placeholder="Observações sobre criticidade..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('criticality', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Rigidez Regulatória / Compliance
+                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_compliance">{{ ctx.get('compliance', 2) }}</span>
+                        </label>
+                        <input type="range" name="compliance" id="compliance" min="1" max="4" step="1" value="{{ ctx.get('compliance', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
+                               oninput="document.getElementById('lbl_compliance').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Flexível</span><span>4 — Altamente Regulado</span></div>
+                        <details class="mt-2" {% if notes.get('compliance') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_compliance" rows="2" placeholder="Observações sobre compliance..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('compliance', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Necessidade de Rastreabilidade
+                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_traceability">{{ ctx.get('traceability', 2) }}</span>
+                        </label>
+                        <input type="range" name="traceability" id="traceability" min="1" max="4" step="1" value="{{ ctx.get('traceability', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
+                               oninput="document.getElementById('lbl_traceability').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Informal</span><span>4 — Auditoria Total</span></div>
+                        <details class="mt-2" {% if notes.get('traceability') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_traceability" rows="2" placeholder="Observações sobre rastreabilidade..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('traceability', '') }}</textarea>
+                        </details>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Formalidade dos Stakeholders
+                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_stakeholder_formality">{{ ctx.get('stakeholder_formality', 2) }}</span>
+                        </label>
+                        <input type="range" name="stakeholder_formality" id="stakeholder_formality" min="1" max="4" step="1" value="{{ ctx.get('stakeholder_formality', 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
+                               oninput="document.getElementById('lbl_stakeholder_formality').textContent=this.value">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 — Informal</span><span>4 — Exige Relatórios Formais</span></div>
+                        <details class="mt-2" {% if notes.get('stakeholder_formality') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
+                            <textarea name="note_stakeholder_formality" rows="2" placeholder="Observações sobre stakeholders..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('stakeholder_formality', '') }}</textarea>
+                        </details>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Motor MCDM -->
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-slate-400">
+                <h2 class="text-base font-semibold mb-1 text-gray-700 dark:text-gray-200">Motor MCDM</h2>
+                <p class="text-xs text-gray-400 mb-3">Algoritmo de ranking utilizado nas Etapas 3 e 4</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    {% set prev_engine = prev_decision.mcdm_engine if prev_decision else 'MAVT' %}
+                    <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if prev_engine == 'MAVT' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-mavt">
+                        <input type="radio" name="mcdm_engine" value="MAVT" {% if prev_engine == 'MAVT' %}checked{% endif %}
+                               class="mt-0.5 accent-slate-700" onchange="selectMethod('MAVT')">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-white">MAVT</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Multi-Attribute Value Theory — soma ponderada com normalização min-max</p>
+                        </div>
+                    </label>
+                    <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if prev_engine == 'AHP' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-ahp">
+                        <input type="radio" name="mcdm_engine" value="AHP" {% if prev_engine == 'AHP' %}checked{% endif %}
+                               class="mt-0.5 accent-slate-700" onchange="selectMethod('AHP')">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                                AHP
+                                <span class="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-1.5 py-0.5 rounded">stub</span>
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Analytic Hierarchy Process — recorre a MAVT enquanto a matriz par-a-par não estiver implementada</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end pb-6">
+                <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg">
+                    Calcular Perfil KairoSyn →
+                </button>
+            </div>
+        </form>
+        </div><!-- end form col -->
+
+    </div><!-- end grid -->
+</div>
+
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, flowchart: { curve: 'basis', nodeSpacing: 40, rankSpacing: 50, useMaxWidth: true, htmlLabels: true } });
+</script>
+<style>
+    .mermaid .edgePath path { stroke-width: 2px !important; }
+</style>
+<script>
+function selectMethod(val) {
+    const mavt = document.getElementById('label-mavt');
+    const ahp  = document.getElementById('label-ahp');
+    mavt.classList.toggle('border-slate-700', val === 'MAVT');
+    mavt.classList.toggle('bg-slate-100',     val === 'MAVT');
+    mavt.classList.toggle('border-gray-200',  val !== 'MAVT');
+    ahp.classList.toggle('border-slate-700',  val === 'AHP');
+    ahp.classList.toggle('bg-slate-100',      val === 'AHP');
+    ahp.classList.toggle('border-gray-200',   val !== 'AHP');
+}
+</script>
+{% endblock %}

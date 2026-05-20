@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 22mm 16mm;
+    @bottom-center {
+      content: "KairoSyn SAD · Decision Report #" string(decision-id) " · Página " counter(page) " de " counter(pages);
+      font-size: 9px;
+      color: #94a3b8;
+      font-family: Helvetica, sans-serif;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    color: #1e293b;
+    line-height: 1.5;
+  }
+
+  /* ── Utilidades ─────────────────────────── */
+  .page-break { page-break-before: always; }
+  .no-break   { page-break-inside: avoid; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-adaptativa { background: #dcfce7; color: #166534; }
+  .badge-preditiva  { background: #dbeafe; color: #1e40af; }
+  .badge-hibrida    { background: #f3e8ff; color: #6b21a8; }
+  .badge-gray       { background: #f1f5f9; color: #475569; }
+
+  .score-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .score-bar-bg   { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; }
+  .score-bar-fill { height: 6px; border-radius: 3px; background: #475569; }
+
+  /* ── Cabeçalho ──────────────────────────── */
+  .header {
+    border-bottom: 3px solid #334155;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header-logo {
+    font-size: 22px;
+    font-weight: 900;
+    color: #334155;
+    letter-spacing: -0.5px;
+  }
+  .header-logo span { color: #1e293b; }
+  .header-meta { text-align: right; font-size: 9px; color: #64748b; line-height: 1.8; }
+
+  /* ── Secção ─────────────────────────────── */
+  h2 {
+    font-size: 9px;
+    font-weight: 900;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-bottom: 12px;
+    margin-top: 22px;
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  /* ── Grid 2 colunas ─────────────────────── */
+  .grid-2 { display: flex; gap: 12px; }
+  .grid-2 > * { flex: 1; }
+
+  /* ── Cards de índice ────────────────────── */
+  .index-card {
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .index-card .label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .index-card .value { font-size: 32px; font-weight: 900; line-height: 1; }
+  .index-card .sub   { font-size: 9px; margin-top: 4px; }
+  .card-slate  { background: #f8fafc; color: #1e293b; }
+  .card-blue   { background: #eff6ff; color: #1d4ed8; }
+  .card-red    { background: #fef2f2; color: #b91c1c; }
+  .card-green  { background: #f0fdf4; color: #15803d; }
+  .card-purple { background: #faf5ff; color: #7e22ce; }
+
+  /* ── Tabela padrão ──────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px; }
+  th {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 7px 9px;
+    text-align: left;
+    font-size: 9px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  td { border: 1px solid #e2e8f0; padding: 7px 9px; vertical-align: top; color: #334155; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .selected-row td { background: #f1f5f9 !important; }
+
+  /* ── Dimensões 8D ───────────────────────── */
+  .dim-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .dim-card {
+    width: calc(25% - 6px);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .dim-card .dim-label { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
+  .dim-card .dim-dots  { display: flex; gap: 3px; margin-bottom: 3px; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; }
+  .dot-filled-slate { background: #64748b; }
+  .dot-empty-slate  { background: #e2e8f0; }
+  .dot-filled-red   { background: #ef4444; }
+  .dot-empty-red    { background: #fecaca; }
+  .dim-card .dim-val { font-size: 18px; font-weight: 900; }
+  .dim-card .dim-note { font-size: 8px; color: #64748b; font-style: italic; margin-top: 3px; line-height: 1.3; }
+  .dim-slate { background: #f8fafc; }
+  .dim-red   { background: #fff1f2; }
+
+  /* ── Governance ─────────────────────────── */
+  .gov-section { border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .gov-hard      { background: #fff1f2; border-left: 3px solid #ef4444; }
+  .gov-threshold { background: #fefce8; border-left: 3px solid #eab308; }
+  .gov-soft      { background: #f0fdf4; border-left: 3px solid #22c55e; }
+  .gov-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .gov-hard .gov-label      { color: #dc2626; }
+  .gov-threshold .gov-label { color: #ca8a04; }
+  .gov-soft .gov-label      { color: #16a34a; }
+  .gov-item { font-size: 10px; color: #334155; margin-bottom: 3px; }
+  .gov-reason { font-size: 9px; color: #64748b; font-style: italic; }
+
+  /* ── Timeline ───────────────────────────── */
+  .timeline { border-left: 2px solid #e2e8f0; padding-left: 14px; }
+  .tl-item  { margin-bottom: 10px; position: relative; }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -19px; top: 3px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #475569;
+    border: 2px solid white;
+  }
+  .tl-states { font-size: 10px; font-weight: 600; color: #334155; }
+  .tl-action { display: inline-block; background: #f1f5f9; color: #334155; font-size: 8px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; }
+  .tl-meta   { font-size: 9px; color: #94a3b8; margin-top: 1px; }
+
+  /* ── Critérios MCDM ────────────────────── */
+  .criteria-table th { font-size: 8px; padding: 5px 6px; }
+  .criteria-table td { font-size: 9px; padding: 5px 6px; text-align: center; }
+  .criteria-table td:first-child { text-align: left; font-weight: 600; }
+  .crit-bar-wrap { display: flex; align-items: center; gap: 4px; justify-content: center; }
+  .crit-bar-bg   { width: 36px; height: 5px; background: #e2e8f0; border-radius: 3px; display: inline-block; }
+  .crit-bar-fill { height: 5px; border-radius: 3px; background: #475569; display: block; }
+
+  /* ── Sensibilidade ──────────────────────── */
+  .sens-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .sens-robustness { text-align: right; }
+  .sens-robustness .pct { font-size: 28px; font-weight: 900; line-height: 1; }
+  .sens-robustness .lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-top: 2px; }
+  .sens-stable   { color: #16a34a; }
+  .sens-unstable { color: #d97706; }
+  .sens-callout  { border-radius: 8px; padding: 8px 10px; font-size: 9px; margin-bottom: 10px; }
+  .sens-callout-ok  { background: #f0fdf4; border-left: 3px solid #22c55e; color: #166534; }
+  .sens-callout-warn{ background: #fffbeb; border-left: 3px solid #f59e0b; color: #92400e; }
+  .sens-table th { font-size: 8px; padding: 5px 6px; }
+  .sens-table td { font-size: 9px; padding: 5px 6px; text-align: center; font-family: monospace; }
+  .sens-table td:first-child { text-align: left; font-family: Helvetica, sans-serif; }
+  .range-robust   { color: #16a34a; font-weight: 700; }
+  .range-moderate { color: #ca8a04; font-weight: 700; }
+  .range-sensitive{ color: #dc2626; font-weight: 700; }
+
+  /* ── Rodapé de assinatura ───────────────── */
+  .signature-box {
+    margin-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- CABEÇALHO -->
+<div class="header">
+  <div>
+    <div class="header-logo">KairoSyn <span>SAD</span></div>
+    <div style="font-size:10px; color:#64748b; margin-top:3px;">Sistema de Apoio à Decisão · Framework KairoSyn (Esteves, 2026)</div>
+  </div>
+  <div class="header-meta">
+    <strong style="font-size:12px; color:#1e293b;">{{ decision.project_name }}</strong><br>
+    Decision Report #{{ decision.id }}<br>
+    Gerado em {{ now.strftime('%d/%m/%Y %H:%M') }}<br>
+    Fase: <strong>{{ decision.current_stage | replace('stage_','') | replace('_',' ') | title }}</strong>
+    {% if decision.questionnaire_version == 'v2' %} · Questionário 8D{% endif %}
+  </div>
+</div>
+
+<!-- ÍNDICES E ABORDAGEM -->
+<h2>Etapa 2 — Índices e Abordagem de Gestão</h2>
+<div class="grid-2 no-break" style="margin-bottom:14px;">
+  <div class="index-card card-slate">
+    <div class="label">AgPI — Pressão de Agilidade</div>
+    <div class="value">{{ "%.2f"|format(decision.agpi_score or 0) }}</div>
+    <div class="sub">Escala 1–4</div>
+  </div>
+  <div class="index-card card-red">
+    <div class="label">AsPI — Pressão de Assurance</div>
+    <div class="value">{{ "%.2f"|format(decision.aspi_score or 0) }}</div>
+    <div class="sub">Escala 1–4</div>
+  </div>
+  <div class="index-card
+    {% if decision.suggested_approach == 'Adaptativa' %}card-green
+    {% elif decision.suggested_approach == 'Preditiva' %}card-blue
+    {% else %}card-purple{% endif %}" style="flex:2;">
+    <div class="label">Abordagem KairoSyn</div>
+    <div class="value" style="font-size:24px;">{{ decision.suggested_approach or '—' }}</div>
+    {% if decision.selected_methodology %}
+    <div class="sub">Metodologia selecionada: <strong>{{ decision.selected_methodology }}</strong> · Motor: {{ decision.mcdm_engine or 'MAVT' }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- PERFIL CONTEXTUAL 8D -->
+{% if decision.context_data %}
+<h2>Etapa 1 — Perfil Contextual (8 Dimensões)</h2>
+<div class="no-break" style="margin-bottom:6px;">
+  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Agilidade (AgPI)</div>
+  <div class="dim-grid">
+    {% for key, label in [('complexity','Complexidade do Âmbito'),('novelty','Incerteza / Novidade'),('dynamism','Dinamismo dos Requisitos'),('team_autonomy','Autonomia da Equipa')] %}
+    {% set val = decision.context_data.get(key, 0) %}
+    <div class="dim-card dim-slate">
+      <div class="dim-label">{{ label }}</div>
+      <div class="dim-dots">
+        {% for i in range(1,5) %}<div class="dot {% if i <= val %}dot-filled-slate{% else %}dot-empty-slate{% endif %}"></div>{% endfor %}
+      </div>
+      <div class="dim-val" style="color:#334155;">{{ val }}</div>
+      {% set note = (decision.evidence_notes or {}).get(key,'') %}
+      {% if note %}<div class="dim-note">{{ note }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div class="no-break" style="margin-top:8px;">
+  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Assurance (AsPI)</div>
+  <div class="dim-grid">
+    {% for key, label in [('criticality','Criticidade'),('compliance','Rigidez Regulatória'),('traceability','Rastreabilidade'),('stakeholder_formality','Formalidade Stakeholders')] %}
+    {% set val = decision.context_data.get(key, 0) %}
+    <div class="dim-card dim-red">
+      <div class="dim-label">{{ label }}</div>
+      <div class="dim-dots">
+        {% for i in range(1,5) %}<div class="dot {% if i <= val %}dot-filled-red{% else %}dot-empty-red{% endif %}"></div>{% endfor %}
+      </div>
+      <div class="dim-val" style="color:#b91c1c;">{{ val }}</div>
+      {% set note = (decision.evidence_notes or {}).get(key,'') %}
+      {% if note %}<div class="dim-note">{{ note }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- GOVERNANCE REGISTER -->
+{% if decision.governance_register %}
+{% set gov = decision.governance_register %}
+{% if gov.hard or gov.threshold or gov.soft %}
+<h2>Etapa 2 — Governance Register</h2>
+<div class="no-break">
+  {% if gov.hard %}
+  <div class="gov-section gov-hard">
+    <div class="gov-label">Hard Constraints</div>
+    {% for c in gov.hard %}
+    <div class="gov-item">{{ c.constraint }} = <strong>{{ c.value }}</strong> [scope: {{ c.scope }}]</div>
+    <div class="gov-reason">{{ c.reason }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if gov.threshold %}
+  <div class="gov-section gov-threshold">
+    <div class="gov-label">Threshold Constraints</div>
+    {% for c in gov.threshold %}
+    <div class="gov-item">{{ c.constraint }} = <strong>{{ c.value }}</strong> [scope: {{ c.scope }}]</div>
+    <div class="gov-reason">{{ c.reason }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if gov.soft %}
+  <div class="gov-section gov-soft">
+    <div class="gov-label">Soft Constraints</div>
+    {% for c in gov.soft %}
+    <div class="gov-item">{{ c.constraint }} [scope: {{ c.scope }}]</div>
+    <div class="gov-reason">{{ c.reason }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}
+
+<!-- RANKING DE METODOLOGIAS -->
+{% if decision.methodology_ranking %}
+<h2>Etapa 3 — Ranking MCDM de Metodologias ({{ decision.mcdm_engine or 'MAVT' }})</h2>
+<table class="no-break">
+  <thead>
+    <tr>
+      <th style="width:5%;">#</th>
+      <th>Metodologia</th>
+      <th style="width:14%;">Postura</th>
+      <th style="width:8%;">Tier</th>
+      <th style="width:26%;">Value Score</th>
+      <th style="width:10%;">Misfit Δk</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in decision.methodology_ranking %}
+    <tr {% if decision.selected_methodology == item.name %}class="selected-row"{% endif %}>
+      <td style="font-weight:700; color:#475569;">{{ loop.index }}</td>
+      <td>
+        <strong>{{ item.name }}</strong>
+        {% if decision.selected_methodology == item.name %}
+        <span class="badge" style="background:#334155;color:#fff;margin-left:4px;">✓ Selecionada</span>
+        {% endif %}
+      </td>
+      <td>
+        <span class="badge
+          {% if item.posture == 'Adaptativa' %}badge-adaptativa
+          {% elif item.posture == 'Preditiva' %}badge-preditiva
+          {% else %}badge-hibrida{% endif %}">
+          {{ item.posture }}
+        </span>
+      </td>
+      <td style="text-align:center;">T{{ item.tier }}</td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ (item.score * 100)|round }}%;"></div></div>
+          <span style="font-family:monospace; font-size:10px;">{{ "%.3f"|format(item.score) }}</span>
+        </div>
+      </td>
+      <td style="font-family:monospace; text-align:center;
+        {% if item.misfit < 0.5 %}color:#16a34a;
+        {% elif item.misfit < 1.5 %}color:#ca8a04;
+        {% else %}color:#dc2626;{% endif %}">
+        {{ "%.2f"|format(item.misfit) }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- CRITÉRIOS MCDM POR METODOLOGIA -->
+{% if decision.methodology_ranking and decision.methodology_ranking | selectattr('criteria') | list %}
+<h2>Etapa 3 — Perfil de Critérios MCDM por Metodologia</h2>
+<table class="criteria-table no-break">
+  <thead>
+    <tr>
+      <th>Metodologia</th>
+      <th>Assurance</th>
+      <th>Agility</th>
+      <th>Scalability</th>
+      <th>Hybridisation</th>
+      <th>Postura Alin.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in decision.methodology_ranking %}
+    {% if item.criteria %}
+    <tr {% if decision.selected_methodology == item.name %}class="selected-row"{% endif %}>
+      <td>
+        {{ item.name }}
+        {% if decision.selected_methodology == item.name %}
+        <span class="badge" style="background:#334155;color:#fff;margin-left:4px;">✓</span>
+        {% endif %}
+      </td>
+      {% for key in ['assurance','agility','scalability','hybridisation','posture_alignment'] %}
+      {% set v = item.criteria.get(key, 0) %}
+      <td>
+        <div class="crit-bar-wrap">
+          <span class="crit-bar-bg"><span class="crit-bar-fill" style="width:{{ (v * 100)|round }}%;"></span></span>
+          <span style="font-family:monospace; font-size:9px;">{{ "%.2f"|format(v) }}</span>
+        </div>
+      </td>
+      {% endfor %}
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- PORTFÓLIO DE FERRAMENTAS -->
+{% if decision.tool_portfolio %}
+<h2>Etapa 4 — Portfólio de Ferramentas (Fit_T)</h2>
+<table class="no-break">
+  <thead>
+    <tr>
+      <th>Ferramenta</th>
+      <th style="width:18%;">Categoria</th>
+      <th style="width:14%;">Custo</th>
+      <th style="width:26%;">Score MCDM</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tool in decision.tool_portfolio %}
+    <tr>
+      <td><strong>{{ tool.name }}</strong> <span style="color:#94a3b8; font-size:9px;">({{ tool.code }})</span></td>
+      <td>{{ tool.category }}</td>
+      <td>
+        {% if tool.cost_tier == 'free' %}
+        <span class="badge badge-adaptativa">Gratuito</span>
+        {% else %}
+        <span style="font-weight:600;">{{ tool.cost_monthly_eur }}€/mês</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ (tool.score * 100)|round }}%; background:#10b981;"></div></div>
+          <span style="font-family:monospace; font-size:10px;">{{ "%.3f"|format(tool.score) }}</span>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ANÁLISE DE SENSIBILIDADE MCDM -->
+{% if sensitivity %}
+<h2>Análise de Sensibilidade MCDM</h2>
+<div class="no-break">
+  <div class="sens-header">
+    <div>
+      <div style="font-size:9px; color:#64748b;">{{ sensitivity.n_simulations }} simulações Monte Carlo · pesos Dirichlet uniformes</div>
+      <div style="font-size:9px; color:#64748b; margin-top:2px;">Metodologia avaliada: <strong>{{ sensitivity.top_name }}</strong></div>
+    </div>
+    <div class="sens-robustness">
+      <div class="pct {% if sensitivity.stable %}sens-stable{% else %}sens-unstable{% endif %}">{{ sensitivity.robustness_pct }}%</div>
+      <div class="lbl">Robustez</div>
+    </div>
+  </div>
+
+  <div class="sens-callout {% if sensitivity.stable %}sens-callout-ok{% else %}sens-callout-warn{% endif %}">
+    {% if sensitivity.stable %}
+    ✓ <strong>{{ sensitivity.top_name }}</strong> mantém-se como recomendação principal em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações com pesos aleatórios — o ranking é robusto.
+    {% else %}
+    ⚠ <strong>{{ sensitivity.top_name }}</strong> mantém-se em apenas <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações — o ranking é sensível aos pesos.
+    {% endif %}
+    {% if sensitivity.runner_up %}
+    Alternativa mais competitiva: <strong>{{ sensitivity.runner_up }}</strong> ({{ sensitivity.runner_up_pct }}% das simulações).
+    {% endif %}
+  </div>
+
+  <table class="sens-table">
+    <thead>
+      <tr>
+        <th>Critério</th>
+        <th>Peso atual</th>
+        <th>Mín estável</th>
+        <th>Máx estável</th>
+        <th>Amplitude (Δ)</th>
+        <th>Estabilidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in sensitivity.per_criterion %}
+      <tr>
+        <td>{{ c.label }}</td>
+        <td>{{ "%.1f"|format(c.current * 100) }}%</td>
+        <td>{{ "%.1f"|format(c.min * 100) }}%</td>
+        <td>{{ "%.1f"|format(c.max * 100) }}%</td>
+        <td class="{% if c.range >= 0.3 %}range-robust{% elif c.range >= 0.1 %}range-moderate{% else %}range-sensitive{% endif %}">
+          {{ "%.1f"|format(c.range * 100) }}pp
+        </td>
+        <td class="{% if c.range >= 0.3 %}range-robust{% elif c.range >= 0.1 %}range-moderate{% else %}range-sensitive{% endif %}">
+          {% if c.range >= 0.3 %}Robusto{% elif c.range >= 0.1 %}Moderado{% else %}Sensível{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="font-size:8px; color:#94a3b8; margin-top:5px;">
+    Δ ≥ 30pp = robusto &nbsp;·&nbsp; 10pp ≤ Δ &lt; 30pp = moderado &nbsp;·&nbsp; Δ &lt; 10pp = sensível ao peso
+  </div>
+</div>
+{% endif %}
+
+<!-- HISTÓRICO DE TRANSIÇÕES -->
+{% if decision.transition_history %}
+<h2>Auditoria — Histórico de Transições de Estado</h2>
+<div class="timeline no-break">
+  {% for t in decision.transition_history %}
+  <div class="tl-item">
+    <div class="tl-states">
+      {{ t.from | replace('stage_','') | replace('_',' ') | title }}
+      → {{ t.to | replace('stage_','') | replace('_',' ') | title }}
+      <span class="tl-action">{{ t.action }}</span>
+    </div>
+    <div class="tl-meta">{{ t.timestamp }} · {{ t.user }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ASSINATURA -->
+<div class="signature-box">
+  <div>KairoSyn SAD · Framework desenvolvida por Esteves (2026) · UMinho MIEGSI</div>
+  <div>Decision #{{ decision.id }} · Gerado em {{ now.strftime('%d/%m/%Y às %H:%M') }}</div>
+</div>
+
+</body>
+</html>

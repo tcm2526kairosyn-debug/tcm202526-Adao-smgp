@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4 font-sans antialiased text-slate-900">
+
+    {% set last_decision = decisions[0] if decisions else none %}
+
+    <!-- Cabeçalho do projeto -->
+    <div class="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 mb-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Portefólio de Diagnósticos</p>
+                <h1 class="text-2xl font-black text-slate-800 leading-tight">{{ projeto.nome }}</h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    Gestor: <strong>{{ projeto.gestor_projeto }}</strong> ·
+                    Fase: <strong>{{ projeto.fase_atual }}</strong>
+                </p>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <span class="px-3 py-1.5 rounded-full text-xs font-bold
+                    {% if projeto.status == 'Ativo' %}bg-green-100 text-green-700
+                    {% elif projeto.status == 'Concluído' %}bg-slate-100 text-slate-600
+                    {% else %}bg-amber-100 text-amber-700{% endif %}">
+                    {% if projeto.status == 'Ativo' %}<span class="inline-block w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>{% endif %}
+                    {{ projeto.status }}
+                </span>
+                {% if projeto.status != 'Concluído' %}
+                    {% if last_decision %}
+                    <a href="{{ url_for('main.diagnostico') }}?projeto_id={{ projeto.id }}&from_decision_id={{ last_decision.id }}"
+                       class="px-5 py-2 bg-slate-700 text-white rounded-xl font-bold text-sm hover:bg-slate-600 transition shadow shadow-slate-300">
+                        ↺ Rever diagnóstico
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('main.diagnostico') }}?projeto_id={{ projeto.id }}"
+                       class="px-5 py-2 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-700 transition shadow shadow-slate-300">
+                        + Novo Diagnóstico
+                    </a>
+                    {% endif %}
+                {% else %}
+                <span class="px-4 py-2 bg-slate-100 text-slate-400 rounded-xl font-bold text-sm cursor-not-allowed border border-slate-200"
+                      title="Projeto concluído — não é possível iniciar novos diagnósticos">
+                    ↺ Rever diagnóstico
+                </span>
+                {% endif %}
+                <a href="{{ url_for('main.listaprojetos') }}"
+                   class="text-sm font-semibold text-slate-400 hover:text-slate-700 transition">
+                    ← Projetos
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 flex items-center gap-6 text-sm">
+            <div class="text-center">
+                <p class="text-2xl font-black text-slate-700">{{ decisions | length }}</p>
+                <p class="text-[10px] text-slate-400 uppercase font-semibold">Diagnósticos</p>
+            </div>
+            {% set completos = decisions | selectattr('current_stage', 'equalto', 'stage_complete') | list %}
+            <div class="text-center">
+                <p class="text-2xl font-black text-green-600">{{ completos | length }}</p>
+                <p class="text-[10px] text-slate-400 uppercase font-semibold">Completos</p>
+            </div>
+            {% set em_curso = decisions | rejectattr('current_stage', 'equalto', 'stage_complete') | list %}
+            <div class="text-center">
+                <p class="text-2xl font-black text-amber-600">{{ em_curso | length }}</p>
+                <p class="text-[10px] text-slate-400 uppercase font-semibold">Em Curso</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de diagnósticos -->
+    {% if decisions %}
+    <div class="space-y-4">
+        {% for d in decisions %}
+        {% set is_complete = d.current_stage == 'stage_complete' %}
+        <div class="bg-white rounded-[1.5rem] shadow border border-slate-100 p-6 hover:shadow-md transition">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+                <!-- Info principal -->
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm
+                                {% if is_complete %}bg-green-100 text-green-700{% else %}bg-slate-100 text-slate-700{% endif %}">
+                        #{{ loop.revindex }}
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="font-bold text-slate-800">{{ d.project_name }}</h2>
+                            <span class="px-2 py-0.5 text-[10px] font-black uppercase rounded-full
+                                {% if is_complete %}bg-green-100 text-green-700
+                                {% elif d.current_stage == 'stage_2_approach' %}bg-blue-100 text-blue-700
+                                {% elif d.current_stage == 'stage_3_fit_m' %}bg-purple-100 text-purple-700
+                                {% elif d.current_stage == 'stage_4_fit_t' %}bg-orange-100 text-orange-700
+                                {% else %}bg-slate-100 text-slate-500{% endif %}">
+                                {{ d.current_stage | replace('stage_','') | replace('_',' ') | title }}
+                            </span>
+                            {% if d.mcdm_engine %}
+                            <span class="px-2 py-0.5 text-[9px] font-semibold bg-slate-50 text-slate-400 border border-slate-200 rounded">{{ d.mcdm_engine }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Iniciado em {{ d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else '—' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Métricas -->
+                <div class="flex items-center gap-6 shrink-0">
+                    {% if d.agpi_score is not none %}
+                    <div class="text-center">
+                        <p class="text-lg font-black text-slate-800">{{ "%.2f"|format(d.agpi_score) }}</p>
+                        <p class="text-[9px] text-slate-400 uppercase font-bold">AgPI</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-lg font-black text-red-600">{{ "%.2f"|format(d.aspi_score) }}</p>
+                        <p class="text-[9px] text-red-400 uppercase font-bold">AsPI</p>
+                    </div>
+                    {% endif %}
+                    {% if d.suggested_approach %}
+                    <div class="text-center">
+                        <span class="px-2 py-1 text-xs font-bold rounded-lg
+                            {% if d.suggested_approach == 'Adaptativa' %}bg-green-100 text-green-700
+                            {% elif d.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-700
+                            {% else %}bg-purple-100 text-purple-700{% endif %}">
+                            {{ d.suggested_approach }}
+                        </span>
+                        {% if d.selected_methodology %}
+                        <p class="text-[9px] text-slate-400 mt-1 font-semibold">{{ d.selected_methodology }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Ação -->
+                <div class="flex gap-2 shrink-0">
+                    <a href="{{ url_for('main.workflow', id=d.id) }}"
+                       class="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold text-xs hover:bg-slate-200 transition">
+                        Ver estado
+                    </a>
+                    {% if not is_complete %}
+                    {% if d.current_stage == 'stage_2_approach' %}
+                    <a href="{{ url_for('main.etapa2', id=d.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 transition shadow shadow-slate-300">Continuar →</a>
+                    {% elif d.current_stage == 'stage_3_fit_m' %}
+                    <a href="{{ url_for('main.etapa3', id=d.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 transition shadow shadow-slate-300">Continuar →</a>
+                    {% elif d.current_stage == 'stage_4_fit_t' %}
+                    <a href="{{ url_for('main.etapa4', id=d.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 transition shadow shadow-slate-300">Continuar →</a>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Barra de progresso do ciclo -->
+            {% set all_stages = ['stage_1_diagnosis','stage_2_approach','stage_3_fit_m','stage_4_fit_t','stage_complete'] %}
+            {% set stage_labels = ['Diag.','Abord.','Fit_M','Fit_T','✓'] %}
+            {% set ns = namespace(ci=0) %}
+            {% for s in all_stages %}{% if s == d.current_stage %}{% set ns.ci = loop.index0 %}{% endif %}{% endfor %}
+            <div class="mt-4 flex items-center gap-1">
+                {% for i in range(all_stages|length) %}
+                {% set is_cur = (i == ns.ci) %}
+                {% set is_dn = (i < ns.ci) %}
+                <div class="flex items-center gap-1 {% if not loop.last %}flex-1{% endif %}">
+                    <div class="flex flex-col items-center shrink-0">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black
+                                    {% if is_cur %}bg-slate-800 text-white
+                                    {% elif is_dn %}bg-green-500 text-white
+                                    {% else %}bg-slate-100 text-slate-400{% endif %}">
+                            {% if is_dn %}✓{% else %}{{ i+1 }}{% endif %}
+                        </div>
+                        <span class="text-[8px] mt-0.5 {% if is_cur %}text-slate-800 font-bold{% elif is_dn %}text-green-600{% else %}text-slate-300{% endif %}">{{ stage_labels[i] }}</span>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="flex-1 h-px {% if i < ns.ci %}bg-green-400{% else %}bg-slate-200{% endif %} mb-3"></div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16 text-slate-400">
+        <p class="text-4xl mb-4">🔍</p>
+        <p class="font-semibold">Nenhum diagnóstico para este projeto.</p>
+        {% if projeto.status != 'Concluído' %}
+        <a href="{{ url_for('main.diagnostico') }}?projeto_id={{ projeto.id }}"
+           class="inline-block mt-4 px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-700 transition">
+            + Iniciar primeiro diagnóstico
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

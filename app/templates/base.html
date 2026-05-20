@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KairoSyn SAD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card':    '0 1px 3px rgba(9,30,66,0.12), 0 0 0 1px rgba(9,30,66,0.07)',
+                        'card-md': '0 4px 12px rgba(9,30,66,0.11), 0 0 0 1px rgba(9,30,66,0.07)',
+                        'card-lg': '0 8px 24px rgba(9,30,66,0.10), 0 0 0 1px rgba(9,30,66,0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        .mobile-menu { transition: max-height 0.3s ease-in-out; max-height: 0; overflow: hidden; }
+        .mobile-menu.open { max-height: 420px; }
+    </style>
+</head>
+
+<body class="bg-slate-100 text-slate-900 flex flex-col min-h-screen font-sans antialiased">
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="bg-white border-b border-slate-200/80 z-50 relative shadow-sm">
+    <div class="max-w-screen-xl mx-auto px-4">
+        <div class="flex items-center h-14 gap-4">
+
+            <!-- Logo -->
+            <a href="{{ url_for('main.index') }}" class="flex items-center gap-2.5 shrink-0 group mr-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-600 to-zinc-800 flex items-center justify-center text-white font-black text-sm shadow-md group-hover:shadow-slate-400 transition-all">K</div>
+                <span class="hidden sm:block font-bold text-slate-800 text-sm tracking-tight">KairoSyn <span class="text-slate-400 font-normal">SAD</span></span>
+            </a>
+
+            {% if current_user.is_authenticated %}
+            <!-- Desktop links -->
+            <div class="hidden lg:flex items-center gap-0.5 flex-1">
+                <a href="{{ url_for('main.index') }}"
+                   class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-medium">Início</a>
+                <a href="{{ url_for('main.listaprojetos') }}"
+                   class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-medium">Gerir Projetos</a>
+                <a href="{{ url_for('main.historico') }}"
+                   class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all font-medium">Decision Log</a>
+                {% if current_user.is_admin %}
+                <div class="w-px h-4 bg-slate-200 mx-2"></div>
+                <a href="{{ url_for('main.gerirusers') }}"
+                   class="px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all font-medium">Utilizadores</a>
+                <a href="{{ url_for('main.gerir_mcdm') }}"
+                   class="px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all font-medium">MCDM Engine</a>
+                {% endif %}
+            </div>
+
+            <!-- User chip -->
+            <div class="ml-auto hidden lg:flex items-center gap-2">
+                {% if decision is defined and decision.id %}
+                <a href="{{ url_for('main.workflow', id=decision.id) }}"
+                   class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                    Fluxo
+                </a>
+                {% endif %}
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-slate-500 to-zinc-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {{ current_user.username[0].upper() }}
+                    </div>
+                    <span class="text-slate-700 text-sm font-medium truncate max-w-[120px]">{{ current_user.username }}</span>
+                    {% if current_user.is_admin %}
+                    <span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-200 font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">Admin</span>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('main.logout') }}"
+                   class="px-3 py-1.5 text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all font-medium">Sair</a>
+            </div>
+
+            <!-- Mobile toggle -->
+            <button id="mobile-menu-btn" class="lg:hidden ml-auto text-slate-500 hover:text-slate-800 transition p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+
+            {% else %}
+            <div class="ml-auto flex items-center gap-3">
+                <a href="{{ url_for('main.login') }}" class="text-sm text-slate-600 hover:text-slate-900 transition font-medium">Entrar</a>
+                <a href="{{ url_for('main.register') }}" class="text-sm bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-1.5 rounded-lg transition shadow-sm">Criar Conta</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="mobile-menu lg:hidden bg-white border-t border-slate-100">
+        {% if current_user.is_authenticated %}
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-slate-500 to-zinc-700 flex items-center justify-center text-white text-xs font-bold shrink-0">{{ current_user.username[0].upper() }}</div>
+            <span class="text-slate-700 text-sm font-semibold">{{ current_user.username }}</span>
+        </div>
+        <a href="{{ url_for('main.index') }}" class="flex px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-100">Início</a>
+        <a href="{{ url_for('main.listaprojetos') }}" class="flex px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-100">Gerir Projetos</a>
+        <a href="{{ url_for('main.historico') }}" class="flex px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-100">Decision Log</a>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('main.gerirusers') }}" class="flex px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 border-b border-slate-100 font-semibold">Utilizadores</a>
+        <a href="{{ url_for('main.gerir_mcdm') }}" class="flex px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 border-b border-slate-100 font-semibold">MCDM Engine</a>
+        {% endif %}
+        <a href="{{ url_for('main.logout') }}" class="flex px-4 py-3 text-sm text-red-500 hover:bg-red-50 font-semibold">Sair</a>
+        {% else %}
+        <a href="{{ url_for('main.login') }}" class="flex px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-100">Entrar</a>
+        <a href="{{ url_for('main.register') }}" class="flex px-4 py-3 text-sm text-slate-800 font-bold hover:bg-slate-100">Criar Conta</a>
+        {% endif %}
+    </div>
+    <!-- gradient accent line -->
+    <div class="h-[2.5px] bg-gradient-to-r from-slate-400 via-slate-600 to-zinc-800"></div>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<main class="flex-grow w-full px-4 sm:px-6 lg:px-8 mt-6 mb-12">
+
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+        <div class="max-w-screen-xl mx-auto mb-6 space-y-2">
+            {% for category, message in messages %}
+            <div class="flex items-start gap-3 p-4 rounded-xl text-sm border
+                {% if category == 'success' %}bg-green-50 border-green-200 text-green-800
+                {% elif category in ['danger','error'] %}bg-red-50 border-red-200 text-red-800
+                {% elif category == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
+                {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}" role="alert">
+                <span class="shrink-0 mt-0.5">
+                    {% if category == 'success' %}
+                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    {% elif category in ['danger','error'] %}
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    {% elif category == 'warning' %}
+                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    {% else %}
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    {% endif %}
+                </span>
+                <p class="font-medium">{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+<footer class="bg-white border-t border-slate-200/80 py-5 mt-auto">
+    <div class="max-w-screen-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-gradient-to-br from-slate-600 to-zinc-800 flex items-center justify-center text-white font-black text-xs">K</div>
+            <span class="text-slate-500 text-xs font-semibold tracking-tight">KairoSyn SAD</span>
+        </div>
+        <p class="text-slate-400 text-xs text-center">
+            &copy; 2026 KairoSyn Framework · Tese Doutoramento UMinho · Marco Esteves · Desenvolvido por Adão Teixeira — MIEGSI
+        </p>
+    </div>
+</footer>
+
+<script>
+    const btn  = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    if (btn && menu) btn.addEventListener('click', () => menu.classList.toggle('open'));
+</script>
+</body>
+</html>

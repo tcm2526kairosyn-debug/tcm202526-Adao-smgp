@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-10 px-4">
+
+    <div class="mb-6 flex items-center gap-3">
+        <a href="{{ url_for('main.gerir_mcdm') }}"
+           class="text-gray-400 hover:text-gray-600 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">{{ titulo }}</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Tool Evidence Base</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="mb-4 bg-slate-50 border-l-4 border-slate-400 text-slate-600 p-3 rounded text-sm">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="space-y-6">
+
+        <!-- Identificação -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Identificação</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        Código <span class="text-red-500">*</span>
+                        {% if teb %}<span class="ml-1 text-gray-400 font-normal">(identificador estável — não editável)</span>{% endif %}
+                    </label>
+                    {% if teb %}
+                    <input type="hidden" name="code" value="{{ teb.code }}">
+                    <input type="text" value="{{ teb.code }}" readonly
+                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 font-mono cursor-not-allowed">
+                    {% else %}
+                    <input type="text" name="code" required value=""
+                           placeholder="ex: JIRA"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 font-mono uppercase">
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Nome <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required value="{{ teb.name if teb else '' }}"
+                           placeholder="ex: Jira"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Categoria</label>
+                    <select name="category"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        {% for cat in ['Planning', 'Tracking', 'Communication', 'Documentation', 'Collaboration'] %}
+                        <option value="{{ cat }}" {% if teb and teb.category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tier de Custo</label>
+                    <select name="cost_tier"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        {% for tier in ['free', 'low', 'medium', 'high'] %}
+                        <option value="{{ tier }}" {% if teb and teb.cost_tier == tier %}selected{% endif %}>{{ tier }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Custo mensal (€)</label>
+                    <input type="number" name="cost_monthly_eur" min="0" step="0.01"
+                           value="{{ teb.cost_monthly_eur if teb else 0 }}"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+                <div class="flex flex-col gap-3 justify-center">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="requires_cloud"
+                               {% if teb and teb.requires_cloud %}checked{% endif %}
+                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer cloud</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="gdpr_compliant"
+                               {% if not teb or teb.gdpr_compliant %}checked{% endif %}
+                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Compatível GDPR</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Suporte Agilidade (1–4)</label>
+                    <input type="number" name="agility_support" min="1" max="4" step="1"
+                           value="{{ teb.agility_support if teb and teb.agility_support else 2 }}"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    <p class="text-xs text-gray-400 mt-1">Ponto de operação em AgPI</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Suporte Assurance (1–4)</label>
+                    <input type="number" name="assurance_support" min="1" max="4" step="1"
+                           value="{{ teb.assurance_support if teb and teb.assurance_support else 2 }}"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    <p class="text-xs text-gray-400 mt-1">Ponto de operação em AsPI</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compatibilidades -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Compatibilidades</h2>
+
+            <div class="mb-5">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Posturas compatíveis</label>
+                <div class="flex gap-4">
+                    {% for postura in ['Adaptativa', 'Preditiva', 'Híbrida'] %}
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="compatible_postures" value="{{ postura }}"
+                               {% if teb and postura in (teb.compatible_postures or []) %}checked{% endif %}
+                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">{{ postura }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Metodologias compatíveis</label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {% for m in all_mebs %}
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="compatible_methodologies" value="{{ m.code }}"
+                               {% if teb and m.code in (teb.compatible_methodologies or []) %}checked{% endif %}
+                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">{{ m.code }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Scores MCDM -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Scores MCDM (0 – 1)</h2>
+            <div class="space-y-4">
+                {% set score_fields = [
+                    ('score_traceability', 'Rastreabilidade', 'Auditoria, issues e histórico de decisões'),
+                    ('score_integration',  'Integração ALM',  'Capacidade de integração com outros sistemas'),
+                    ('score_flow_support', 'Suporte Fluxo',   'Visualização de processos e quadros Kanban')
+                ] %}
+                {% for field, label, hint in score_fields %}
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            {{ label }} <span class="text-gray-400 font-normal">— {{ hint }}</span>
+                        </label>
+                        <span class="text-xs font-mono font-semibold text-slate-700" id="teb-score-val-{{ loop.index0 }}">
+                            {{ "%.2f"|format(teb[field] if teb else 0.5) }}
+                        </span>
+                    </div>
+                    <input type="range" name="{{ field }}" min="0" max="1" step="0.01"
+                           value="{{ teb[field] if teb else 0.5 }}"
+                           oninput="document.getElementById('teb-score-val-{{ loop.index0 }}').textContent = parseFloat(this.value).toFixed(2)"
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <a href="{{ url_for('main.gerir_mcdm') }}"
+               class="text-sm text-gray-500 hover:text-gray-700 px-5 py-2 rounded-lg border border-gray-300 transition">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-6 py-2 rounded-lg transition">
+                {{ 'Guardar Alterações' if teb else 'Criar Ferramenta' }}
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

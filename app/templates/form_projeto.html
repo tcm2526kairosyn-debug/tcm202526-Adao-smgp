@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+<div class="bg-white shadow-2xl rounded-[2.5rem] overflow-hidden border border-slate-100">
+
+    <div class="bg-gradient-to-r from-slate-700 to-zinc-900 p-8 text-white">
+        <h1 class="text-2xl font-black uppercase tracking-tight">{{ titulo }}</h1>
+        <p class="text-slate-300 text-sm opacity-80 italic">Gestão de Restrições e Ciclo de Vida do Projeto</p>
+    </div>
+
+    <form method="POST" class="p-8 space-y-8">
+
+        <!-- ── Identificação ──────────────────────────────────────────────── -->
+        <section class="space-y-4">
+            <h3 class="text-slate-700 font-black text-xs uppercase tracking-widest">Identificação</h3>
+
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-2">Nome do Projeto</label>
+                <input type="text" name="nome" value="{{ projeto.nome if projeto else '' }}" required
+                       class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+            </div>
+
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-2">Gestor de Projeto</label>
+                <select name="gestor" required
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                    <option value="">— Selecionar gestor —</option>
+                    {% for u in users %}
+                    <option value="{{ u.username }}"
+                        {% if projeto and projeto.gestor_projeto == u.username %}selected{% endif %}>
+                        {{ u.username }}{% if u.is_admin %} (admin){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </section>
+
+        <!-- ── Equipa de Projeto ──────────────────────────────────────────── -->
+        <section class="space-y-3 pt-4 border-t border-slate-100">
+            <h3 class="text-slate-700 font-black text-xs uppercase tracking-widest">Equipa de Projeto</h3>
+            <p class="text-xs text-slate-400">Selecione o role e a quantidade de elementos.</p>
+
+            <div id="team-rows" class="space-y-2">
+                {% if equipa_parsed %}
+                    {% for member in equipa_parsed %}
+                    <div class="team-row flex items-center gap-3">
+                        <select name="team_role[]"
+                                class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                            <option value="">— Role —</option>
+                            {% for r in [
+                                'Gestor de Projeto','Scrum Master','Product Owner',
+                                'Arquiteto de Software','Tech Lead',
+                                'Senior Developer','Mid Developer','Junior Developer',
+                                'QA Engineer','Business Analyst',
+                                'Designer / UX','DevOps / Sysadmin',
+                                'Data Analyst','Stakeholder / Sponsor'
+                            ] %}
+                            <option value="{{ r }}" {% if member.role == r %}selected{% endif %}>{{ r }}</option>
+                            {% endfor %}
+                            <option value="{{ member.role }}"
+                                {% if member.role not in ['Gestor de Projeto','Scrum Master','Product Owner','Arquiteto de Software','Tech Lead','Senior Developer','Mid Developer','Junior Developer','QA Engineer','Business Analyst','Designer / UX','DevOps / Sysadmin','Data Analyst','Stakeholder / Sponsor'] %}selected{% endif %}>
+                                {% if member.role not in ['Gestor de Projeto','Scrum Master','Product Owner','Arquiteto de Software','Tech Lead','Senior Developer','Mid Developer','Junior Developer','QA Engineer','Business Analyst','Designer / UX','DevOps / Sysadmin','Data Analyst','Stakeholder / Sponsor'] %}{{ member.role }}{% else %}Outro…{% endif %}
+                            </option>
+                        </select>
+                        <input type="number" name="team_qty[]" min="1" max="99" value="{{ member.qty }}"
+                               class="w-20 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm text-center transition-all">
+                        <button type="button" onclick="removeRow(this)"
+                                class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="team-row flex items-center gap-3">
+                    <select name="team_role[]"
+                            class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                        <option value="">— Role —</option>
+                        {% for r in [
+                            'Gestor de Projeto','Scrum Master','Product Owner',
+                            'Arquiteto de Software','Tech Lead',
+                            'Senior Developer','Mid Developer','Junior Developer',
+                            'QA Engineer','Business Analyst',
+                            'Designer / UX','DevOps / Sysadmin',
+                            'Data Analyst','Stakeholder / Sponsor'
+                        ] %}
+                        <option value="{{ r }}">{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="team_qty[]" min="1" max="99" value="1"
+                           class="w-20 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm text-center transition-all">
+                    <button type="button" onclick="removeRow(this)"
+                            class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+                </div>
+                {% endif %}
+            </div>
+
+            <button type="button" onclick="addTeamRow()"
+                    class="mt-1 text-xs font-bold text-slate-600 hover:text-slate-800 transition flex items-center gap-1">
+                <span class="text-base leading-none">+</span> Adicionar role
+            </button>
+        </section>
+
+        <!-- ── Definição e Restrições ─────────────────────────────────────── -->
+        <section class="space-y-4 pt-4 border-t border-slate-100">
+            <h3 class="text-slate-700 font-black text-xs uppercase tracking-widest">Definição e Restrições (Ref 1.1)</h3>
+
+            <div>
+                <label class="block text-xs font-black uppercase text-slate-400 mb-2">Objetivo</label>
+                <textarea name="objetivo" rows="2"
+                          class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">{{ projeto.objetivo if projeto else '' }}</textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Orçamento (€)</label>
+                    <input type="number" step="0.01" name="orcamento" value="{{ projeto.orcamento if projeto else '' }}"
+                           class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Data Início</label>
+                    <input type="date" name="data_inicio" required
+                           value="{{ projeto.data_inicio.isoformat() if projeto and projeto.data_inicio else '' }}"
+                           class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Data Fim</label>
+                    <input type="date" name="data_fim" required
+                           value="{{ projeto.data_fim.isoformat() if projeto and projeto.data_fim else '' }}"
+                           class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Entregáveis por Fase ───────────────────────────────────────── -->
+        <section class="space-y-3 pt-4 border-t border-slate-100">
+            <h3 class="text-slate-700 font-black text-xs uppercase tracking-widest">Entregáveis por Fase</h3>
+            <p class="text-xs text-slate-400">Associe cada entregável à fase do projeto. Pode escrever livremente ou escolher das sugestões.</p>
+
+            <!-- Datalists por fase -->
+            <datalist id="dl-iniciacao">
+                <option value="Project Charter">
+                <option value="Registo de Stakeholders">
+                <option value="Business Case">
+                <option value="Plano de Alto Nível">
+                <option value="Estudo de Viabilidade">
+            </datalist>
+            <datalist id="dl-planeamento">
+                <option value="WBS">
+                <option value="Cronograma (Gantt)">
+                <option value="Plano de Risco">
+                <option value="Plano de Comunicação">
+                <option value="Orçamento Detalhado">
+                <option value="Plano de Qualidade">
+                <option value="Plano de Recursos">
+            </datalist>
+            <datalist id="dl-execucao">
+                <option value="Relatório de Progresso">
+                <option value="Atas de Reunião">
+                <option value="Entregas Parciais">
+                <option value="Pacotes de Trabalho Concluídos">
+                <option value="Protótipo / MVP">
+            </datalist>
+            <datalist id="dl-monitorizacao">
+                <option value="Relatório de Desempenho">
+                <option value="Registo de Problemas">
+                <option value="Análise de Desvio">
+                <option value="Pedidos de Mudança">
+                <option value="Dashboard de KPIs">
+            </datalist>
+            <datalist id="dl-encerramento">
+                <option value="Relatório Final">
+                <option value="Lições Aprendidas">
+                <option value="Documento de Aceitação">
+                <option value="Arquivo do Projeto">
+                <option value="Transferência de Conhecimento">
+            </datalist>
+
+            <div id="deliv-rows" class="space-y-2">
+                {% set fases = ['Iniciação','Planeamento','Execução','Monitorização','Encerramento'] %}
+                {% if entregaveis_parsed %}
+                    {% for fase, items in entregaveis_parsed.items() %}
+                        {% for item in items %}
+                        <div class="deliv-row flex items-center gap-3">
+                            <select name="deliv_phase[]" onchange="updateDelivDatalist(this)"
+                                    class="w-40 shrink-0 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                                {% for f in fases %}
+                                <option value="{{ f }}" {% if f == fase %}selected{% endif %}>{{ f }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="deliv_text[]" value="{{ item }}"
+                                   list="{{ 'dl-' + fase | lower | replace('ã','a') | replace('ç','c') | replace('í','i') | replace('é','e') }}"
+                                   placeholder="Entregável…"
+                                   class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                            <button type="button" onclick="removeRow(this)"
+                                    class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                <div class="deliv-row flex items-center gap-3">
+                    <select name="deliv_phase[]" onchange="updateDelivDatalist(this)"
+                            class="w-40 shrink-0 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                        {% for f in ['Iniciação','Planeamento','Execução','Monitorização','Encerramento'] %}
+                        <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="deliv_text[]" list="dl-iniciacao"
+                           placeholder="Entregável…"
+                           class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+                    <button type="button" onclick="removeRow(this)"
+                            class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+                </div>
+                {% endif %}
+            </div>
+
+            <button type="button" onclick="addDelivRow()"
+                    class="mt-1 text-xs font-bold text-slate-600 hover:text-slate-800 transition flex items-center gap-1">
+                <span class="text-base leading-none">+</span> Adicionar entregável
+            </button>
+        </section>
+
+        <!-- ── Ciclo de Vida ──────────────────────────────────────────────── -->
+        <section class="space-y-4 pt-4 border-t border-slate-100">
+            <h3 class="text-slate-700 font-black text-xs uppercase tracking-widest">Gestão e Ciclo de Vida (Ref 1.2.1)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Fase Atual</label>
+                    <select name="fase"
+                            class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                        {% for f in ['Iniciação','Planeamento','Execução','Monitorização','Encerramento'] %}
+                        <option value="{{ f }}" {% if projeto and projeto.fase_atual == f %}selected{% endif %}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Status</label>
+                    <select name="status"
+                            class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
+                        {% for s in ['Ativo','Concluído','Suspenso'] %}
+                        <option value="{{ s }}" {% if projeto and projeto.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Botões ─────────────────────────────────────────────────────── -->
+        <div class="flex flex-col sm:flex-row justify-end gap-4 pt-8">
+            <a href="{{ url_for('main.listaprojetos') }}"
+               class="px-8 py-4 text-sm font-bold text-slate-400 hover:text-slate-600 transition-all text-center">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="px-10 py-4 bg-slate-800 text-white rounded-2xl font-black text-sm hover:bg-slate-700 shadow-xl shadow-slate-300 transition-all transform hover:-translate-y-1">
+                Salvar Projeto
+            </button>
+        </div>
+
+    </form>
+</div>
+</div>
+
+<script>
+const ROLES = [
+    'Gestor de Projeto','Scrum Master','Product Owner',
+    'Arquiteto de Software','Tech Lead',
+    'Senior Developer','Mid Developer','Junior Developer',
+    'QA Engineer','Business Analyst',
+    'Designer / UX','DevOps / Sysadmin',
+    'Data Analyst','Stakeholder / Sponsor'
+];
+
+const FASES = ['Iniciação','Planeamento','Execução','Monitorização','Encerramento'];
+
+const DATALIST_IDS = {
+    'Iniciação':    'dl-iniciacao',
+    'Planeamento':  'dl-planeamento',
+    'Execução':     'dl-execucao',
+    'Monitorização':'dl-monitorizacao',
+    'Encerramento': 'dl-encerramento'
+};
+
+function removeRow(btn) {
+    const row = btn.closest('.team-row, .deliv-row');
+    if (row) row.remove();
+}
+
+function addTeamRow() {
+    const opts = ROLES.map(r => `<option value="${r}">${r}</option>`).join('');
+    const row = document.createElement('div');
+    row.className = 'team-row flex items-center gap-3';
+    row.innerHTML = `
+        <select name="team_role[]"
+                class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+            <option value="">— Role —</option>${opts}
+        </select>
+        <input type="number" name="team_qty[]" min="1" max="99" value="1"
+               class="w-20 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm text-center transition-all">
+        <button type="button" onclick="removeRow(this)"
+                class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+    `;
+    document.getElementById('team-rows').appendChild(row);
+}
+
+function addDelivRow() {
+    const opts = FASES.map(f => `<option value="${f}">${f}</option>`).join('');
+    const row = document.createElement('div');
+    row.className = 'deliv-row flex items-center gap-3';
+    row.innerHTML = `
+        <select name="deliv_phase[]" onchange="updateDelivDatalist(this)"
+                class="w-40 shrink-0 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+            ${opts}
+        </select>
+        <input type="text" name="deliv_text[]" list="dl-iniciacao"
+               placeholder="Entregável…"
+               class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
+        <button type="button" onclick="removeRow(this)"
+                class="text-slate-300 hover:text-red-400 transition text-lg leading-none px-1">✕</button>
+    `;
+    document.getElementById('deliv-rows').appendChild(row);
+}
+
+function updateDelivDatalist(sel) {
+    const input = sel.nextElementSibling;
+    if (input && input.tagName === 'INPUT') {
+        input.setAttribute('list', DATALIST_IDS[sel.value] || '');
+    }
+}
+</script>
+{% endblock %}

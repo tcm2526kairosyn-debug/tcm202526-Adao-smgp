@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-10 px-4">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 3 — Seleção de Metodologia (Fit_M)</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">
+            Framework KairoSyn · {{ decision.project_name }} ·
+            Abordagem: <strong>{{ decision.suggested_approach }}</strong> ·
+            Motor: <strong>{{ decision.mcdm_engine or 'MAVT' }}</strong>
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+        <!-- ── Sidebar: State Machine (sticky) ─────────────────────────────── -->
+        <div class="lg:col-span-2 lg:sticky lg:top-20">
+            <div class="bg-white rounded-2xl shadow border border-slate-100 p-5 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px]">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-600"></span>
+                    </span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">KairoSyn — State Machine</span>
+                </div>
+                <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff','primaryTextColor': '#475569','primaryBorderColor': '#e2e8f0','lineColor': '#94a3b8','fontSize': '12px','fontFamily': 'Inter, sans-serif'}}}%%
+flowchart TD
+    s1(["Etapa 1<br/><b>Diagnóstico Contextual</b>"])
+    s2(["Etapa 2<br/><b>Resolução da Abordagem</b>"])
+    s3(["Etapa 3<br/><b>Fit_M — Metodologia</b>"])
+    s4(["Etapa 4<br/><b>Fit_T — Ferramentas</b>"])
+    sc(["✓<br/><b>Concluído</b>"])
+    s1 --> s2
+    s2 --> s3
+    s3 --> s4
+    s4 --> sc
+    s4 -.-> s2
+    s4 -.-> s3
+    s3 -.-> s2
+    s3 -.-> s1
+    s2 -.-> s1
+    style s3 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px
+    style s1 fill:#22c55e,color:#fff,stroke:#22c55e,stroke-width:2px
+    style s2 fill:#22c55e,color:#fff,stroke:#22c55e,stroke-width:2px
+                </div>
+                <p class="text-[10px] text-slate-400 text-center mt-3">
+                    Setas a tracejado = re-entry possível
+                </p>
+                <a href="{{ url_for('main.workflow', id=decision.id) }}"
+                   class="mt-3 flex items-center justify-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-slate-700 transition">
+                    Ver mapa completo →
+                </a>
+            </div>
+        </div>
+
+        <!-- ── Conteúdo ─────────────────────────────────────────────────────── -->
+        <div class="lg:col-span-3 space-y-6">
+
+            <!-- Resumo do filtro -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center shadow">
+                    <p class="text-2xl font-bold text-gray-700 dark:text-white">{{ meb_total }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Metodologias na MEB</p>
+                </div>
+                <div class="bg-yellow-50 dark:bg-yellow-900 rounded-xl p-4 text-center shadow">
+                    <p class="text-2xl font-bold text-yellow-700 dark:text-yellow-200">{{ viable_count }}</p>
+                    <p class="text-xs text-yellow-600 mt-1">Passaram Triagem L1</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900 rounded-xl p-4 text-center shadow">
+                    <p class="text-2xl font-bold text-green-700 dark:text-green-200">{{ ranking|length }}</p>
+                    <p class="text-xs text-green-600 mt-1">Ranking MCDM L2</p>
+                </div>
+            </div>
+
+            <!-- Diagrama Sankey -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4">Fluxo de Decisão — Sankey</h2>
+                <div id="sankey-chart" class="w-full" style="height:160px;"></div>
+                <div id="sankey-data" data-sankey="{{ sankey_data }}" class="hidden"></div>
+            </div>
+
+            <!-- Recomendação KairoSyn -->
+            {% if ranking %}
+            {% set top = ranking[0] %}
+            {% set posture_match = (top.posture == decision.suggested_approach) %}
+            {% set misfit_label = 'Excelente' if top.misfit < 0.5 else ('Bom' if top.misfit < 1.0 else ('Moderado' if top.misfit < 1.5 else 'Elevado')) %}
+            {% set misfit_color = 'green' if top.misfit < 0.5 else ('green' if top.misfit < 1.0 else ('yellow' if top.misfit < 1.5 else 'red')) %}
+            <div class="bg-gradient-to-br from-slate-50 to-zinc-100 border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Recomendação KairoSyn — Fit_M</p>
+                        <h3 class="text-xl font-black text-slate-800">{{ top.name }}</h3>
+                        {% if top.description %}
+                        <p class="text-sm text-slate-600 mt-1 max-w-xl">{{ top.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold
+                            {% if top.posture == 'Adaptativa' %}bg-green-100 text-green-700
+                            {% elif top.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                            {% else %}bg-purple-100 text-purple-700{% endif %}">
+                            {{ top.posture }}
+                        </span>
+                        <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">T{{ top.tier }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                        <p class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Score MCDM</p>
+                        <p class="text-2xl font-black text-slate-800 mt-0.5">{{ "%.3f"|format(top.score) }}</p>
+                        <div class="w-full bg-slate-200 rounded-full h-1 mt-1.5">
+                            <div class="bg-slate-600 h-1 rounded-full" style="width:{{ (top.score * 100)|round }}%"></div>
+                        </div>
+                        <p class="text-[9px] text-slate-500 mt-1">Melhor do ranking (L2)</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-{{ misfit_color }}-100">
+                        <p class="text-[9px] font-black uppercase text-{{ misfit_color }}-400 tracking-widest">Misfit Δk</p>
+                        <p class="text-2xl font-black text-{{ misfit_color }}-600 mt-0.5">{{ "%.2f"|format(top.misfit) }}</p>
+                        <p class="text-[9px] text-{{ misfit_color }}-500 mt-1">Ajuste {{ misfit_label }}</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-3 border border-{% if posture_match %}green{% else %}amber{% endif %}-100">
+                        <p class="text-[9px] font-black uppercase text-{% if posture_match %}green{% else %}amber{% endif %}-400 tracking-widest">Postura</p>
+                        <p class="text-sm font-black text-{% if posture_match %}green{% else %}amber{% endif %}-700 mt-0.5">{{ top.posture }}</p>
+                        <p class="text-[9px] text-{% if posture_match %}green{% else %}amber{% endif %}-500 mt-1">
+                            {% if posture_match %}Alinhada com a abordagem{% else %}Diverge da abordagem sugerida{% endif %}
+                        </p>
+                    </div>
+                    {% if ranking|length > 1 %}
+                    {% set alt = ranking[1] %}
+                    {% set gap = top.score - alt.score %}
+                    <div class="bg-white rounded-xl p-3 border border-slate-100">
+                        <p class="text-[9px] font-black uppercase text-slate-400 tracking-widest">2ª Opção</p>
+                        <p class="text-sm font-black text-slate-700 mt-0.5">{{ alt.name }}</p>
+                        <p class="text-[9px] text-slate-400 mt-1">
+                            Δscore {{ "%.3f"|format(gap) }} — {% if gap < 0.05 %}opções muito próximas{% else %}diferença clara{% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if not posture_match %}
+                <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+                    ⚠ A postura da metodologia recomendada ({{ top.posture }}) diverge da abordagem sugerida ({{ decision.suggested_approach }}). Valide se esta escolha é intencional antes de confirmar.
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Radar Chart — perfil MCDM top metodologias -->
+            {% if ranking %}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Perfil MCDM — Top Metodologias</p>
+                <div class="relative" style="max-width:360px; margin:0 auto;">
+                    <canvas id="radar-mcdm"></canvas>
+                </div>
+            </div>
+            <script>window._radarRanking = {{ ranking[:3] | tojson }};</script>
+            {% endif %}
+
+            <!-- Ranking — mobile cards + desktop table -->
+            <form method="POST">
+
+                <!-- Mobile cards (sm:hidden) -->
+                <div class="sm:hidden space-y-3">
+                    {% for item in ranking %}
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow px-4 py-3
+                                {% if decision.selected_methodology_id == item.id %}ring-2 ring-slate-500{% endif %}">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="text-xs font-bold text-gray-400 w-5 shrink-0">#{{ loop.index }}</span>
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-gray-800 dark:text-white text-sm truncate">{{ item.name }}</p>
+                                    <p class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ item.description }}</p>
+                                </div>
+                            </div>
+                            <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                                    class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                                Selecionar
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3 mt-2 flex-wrap">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
+                                {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                                {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                {{ item.posture }}
+                            </span>
+                            <span class="text-xs text-gray-400">T{{ item.tier }}</span>
+                            <span class="text-xs font-mono text-gray-600">Score {{ "%.3f"|format(item.score) }}</span>
+                            <span class="text-xs font-mono
+                                {% if item.misfit < 1.0 %}text-green-600{% elif item.misfit < 1.5 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                Δk {{ "%.2f"|format(item.misfit) }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Desktop table (hidden on mobile) -->
+                <div class="hidden sm:block bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Rank</th>
+                                <th class="px-4 py-3 text-left">Metodologia</th>
+                                <th class="px-4 py-3 text-left">Postura</th>
+                                <th class="px-4 py-3 text-left">Tier</th>
+                                <th class="px-4 py-3 text-left">Value Score</th>
+                                <th class="px-4 py-3 text-left">Misfit Δk</th>
+                                <th class="px-4 py-3 text-center">Selecionar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            {% for item in ranking %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition
+                                       {% if decision.selected_methodology_id == item.id %}bg-slate-50{% endif %}">
+                                <td class="px-4 py-3 font-bold text-gray-600 dark:text-gray-300">{{ loop.index }}</td>
+                                <td class="px-4 py-3">
+                                    <p class="font-semibold text-gray-800 dark:text-white">{{ item.name }}</p>
+                                    {% if item.description %}
+                                    <div class="relative inline-block group/desc">
+                                        <p class="text-xs text-gray-400 mt-0.5 line-clamp-1 cursor-default max-w-[220px]">{{ item.description }}</p>
+                                        <div class="pointer-events-none absolute bottom-full left-0 mb-1.5 z-50
+                                                    hidden group-hover/desc:block
+                                                    w-72 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 shadow-xl leading-relaxed">
+                                            {{ item.description }}
+                                            <div class="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                        {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
+                                        {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                                        {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                        {{ item.posture }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">T{{ item.tier }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                            <div class="bg-slate-600 h-2 rounded-full" style="width:{{ (item.score * 100)|round }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-mono text-gray-600 dark:text-gray-300">{{ "%.3f"|format(item.score) }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-xs font-mono
+                                    {% if item.misfit < 1.0 %}text-green-600{% elif item.misfit < 1.5 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                    {{ "%.2f"|format(item.misfit) }}
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                                            class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition">
+                                        Selecionar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <input type="hidden" name="action" value="CONFIRM_METHODOLOGY">
+
+                <div class="flex justify-between items-center flex-wrap gap-2 mt-4">
+                    <div class="flex gap-2">
+                        <button type="button" onclick="document.querySelector('[name=action]').value='REENTRY_DIAGNOSIS';this.form.submit();"
+                                class="px-4 py-2 rounded-xl border border-orange-200 text-orange-600 hover:bg-orange-50 text-sm transition"
+                                title="Evidência inconsistente — rever diagnóstico de raiz">
+                            ← Rever Diagnóstico
+                        </button>
+                        <button type="button" onclick="document.querySelector('[name=action]').value='REVISE_APPROACH';this.form.submit();"
+                                class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
+                            ← Rever Abordagem
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+        </div><!-- end content col -->
+    </div><!-- end grid -->
+</div>
+
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, flowchart: { curve: 'basis', nodeSpacing: 40, rankSpacing: 50, useMaxWidth: true, htmlLabels: true } });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const ranking = window._radarRanking || [];
+    if (!ranking.length) return;
+
+    const COLORS = [
+        { border: 'rgba(51,65,85,0.85)', bg: 'rgba(51,65,85,0.08)' },
+        { border: 'rgba(22,163,74,0.85)', bg: 'rgba(22,163,74,0.08)' },
+        { border: 'rgba(37,99,235,0.85)', bg: 'rgba(37,99,235,0.08)' },
+    ];
+    const axisLabels = ['Assurance', 'Agility', 'Scalability', 'Hybridisation', 'Postura'];
+
+    const datasets = ranking.map((m, i) => {
+        const c = m.criteria || {};
+        return {
+            label: m.name,
+            data: [
+                c.assurance ?? 0.5,
+                c.agility ?? 0.5,
+                c.scalability ?? 0.5,
+                c.hybridisation ?? 0.5,
+                c.posture_alignment ?? 0.5,
+            ],
+            borderColor: COLORS[i].border,
+            backgroundColor: COLORS[i].bg,
+            borderWidth: 2,
+            pointBackgroundColor: COLORS[i].border,
+            pointRadius: 3,
+        };
+    });
+
+    new Chart(document.getElementById('radar-mcdm'), {
+        type: 'radar',
+        data: { labels: axisLabels, datasets },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 14 } },
+            },
+            scales: {
+                r: {
+                    min: 0, max: 1,
+                    ticks: { stepSize: 0.25, font: { size: 9 }, backdropColor: 'transparent' },
+                    pointLabels: { font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    angleLines: { color: 'rgba(0,0,0,0.08)' },
+                }
+            }
+        }
+    });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<script>
+(function () {
+    const raw = document.getElementById('sankey-data').dataset.sankey;
+    const data = JSON.parse(raw);
+
+    const width = document.getElementById('sankey-chart').clientWidth || 500;
+    const height = 140;
+
+    const svg = d3.select('#sankey-chart')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+    const sankey = d3.sankey()
+        .nodeWidth(18)
+        .nodePadding(12)
+        .extent([[10, 10], [width - 10, height - 10]]);
+
+    const graph = sankey({
+        nodes: data.nodes.map(d => Object.assign({}, d)),
+        links: data.links.map(d => Object.assign({}, d))
+    });
+
+    const colors = ['#475569', '#f59e0b', '#10b981', '#3b82f6'];
+
+    svg.append('g').selectAll('rect')
+        .data(graph.nodes)
+        .join('rect')
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => Math.max(1, d.y1 - d.y0))
+        .attr('width', d => d.x1 - d.x0)
+        .attr('fill', (d, i) => colors[i % colors.length])
+        .attr('rx', 3);
+
+    svg.append('g').attr('fill', 'none').selectAll('path')
+        .data(graph.links)
+        .join('path')
+        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('stroke', (d, i) => colors[i % colors.length])
+        .attr('stroke-width', d => Math.max(1, d.width))
+        .attr('stroke-opacity', 0.35);
+
+    svg.append('g').selectAll('text')
+        .data(graph.nodes)
+        .join('text')
+        .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr('y', d => (d.y1 + d.y0) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+        .attr('font-size', 11)
+        .attr('fill', '#6b7280')
+        .text(d => d.name);
+})();
+</script>
+{% endblock %}

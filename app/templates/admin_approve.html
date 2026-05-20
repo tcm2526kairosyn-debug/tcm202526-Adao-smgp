@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprovação de Registo — KairoSyn SAD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center px-4">
+
+    <div class="mb-6 text-center">
+        <span class="inline-flex items-center space-x-2 text-slate-800 font-bold text-2xl">
+            <span class="bg-slate-800 text-white px-2 py-1 rounded">K</span>
+            <span>KairoSyn SAD</span>
+        </span>
+        <p class="text-gray-500 text-sm mt-1">Painel de Administração</p>
+    </div>
+
+    <div class="bg-white shadow-xl rounded-xl w-full max-w-md p-8">
+
+        {% if already_processed %}
+            <div class="text-center py-4">
+                <div class="text-4xl mb-3">ℹ️</div>
+                <h2 class="text-xl font-bold text-gray-700 mb-2">Pedido já processado</h2>
+                <p class="text-sm text-gray-500">
+                    O pedido de <strong>{{ pending.username }}</strong> já foi
+                    <span class="{% if pending.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
+                        {{ 'aprovado' if pending.status == 'approved' else 'rejeitado' }}
+                    </span>.
+                </p>
+            </div>
+
+        {% elif approved %}
+            <div class="text-center py-4">
+                <div class="text-4xl mb-3">✅</div>
+                <h2 class="text-xl font-bold text-gray-700 mb-2">Utilizador criado com sucesso</h2>
+                <p class="text-sm text-gray-500">
+                    <strong>{{ pending.username }}</strong> foi adicionado ao sistema com a role
+                    <span class="font-semibold {% if role == 'admin' %}text-red-600{% else %}text-slate-700{% endif %}">
+                        {{ role }}
+                    </span>.
+                </p>
+                {% if pending.email %}
+                <p class="text-xs text-gray-400 mt-2">Email registado: {{ pending.email }}</p>
+                {% endif %}
+            </div>
+
+        {% elif rejected %}
+            <div class="text-center py-4">
+                <div class="text-4xl mb-3">❌</div>
+                <h2 class="text-xl font-bold text-gray-700 mb-2">Pedido rejeitado</h2>
+                <p class="text-sm text-gray-500">
+                    O pedido de <strong>{{ pending.username }}</strong> foi rejeitado e não será criado nenhum utilizador.
+                </p>
+            </div>
+
+        {% else %}
+            <h2 class="text-2xl font-bold text-gray-800 mb-1">Aprovar Registo</h2>
+            <p class="text-sm text-gray-500 mb-6">Reveja o pedido e atribua a role antes de confirmar.</p>
+
+            <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200 text-sm space-y-2">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Username</span>
+                    <span class="font-semibold text-gray-800">{{ pending.username }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Email</span>
+                    <span class="text-gray-700">{{ pending.email or '(não fornecido)' }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Pedido em</span>
+                    <span class="text-gray-700">{{ pending.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+
+            <form method="POST" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Role do utilizador</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="role" value="user" checked
+                                   class="text-slate-700 focus:ring-slate-400">
+                            <span class="text-sm font-medium text-gray-700">
+                                <span class="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs font-bold mr-1">user</span>
+                                Acesso standard
+                            </span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="role" value="admin"
+                                   class="text-red-600 focus:ring-red-500">
+                            <span class="text-sm font-medium text-gray-700">
+                                <span class="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold mr-1">admin</span>
+                                Administrador
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" name="action" value="approve"
+                            class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                        Aprovar e Criar Utilizador
+                    </button>
+                    <button type="submit" name="action" value="reject"
+                            onclick="return confirm('Tem a certeza que quer rejeitar este pedido?')"
+                            class="px-4 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2.5 rounded-lg transition text-sm border border-red-200">
+                        Rejeitar
+                    </button>
+                </div>
+            </form>
+        {% endif %}
+
+    </div>
+
+    <p class="mt-6 text-xs text-gray-400 text-center">© 2026 KairoSyn Framework — Tese Doutoramento UMinho</p>
+</body>
+</html>

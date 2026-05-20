@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 px-4">
+
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Gestão de Utilizadores</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Utilizadores registados, roles e pedidos de acesso</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="mb-4 bg-slate-50 border-l-4 border-slate-400 text-slate-600 p-3 rounded text-sm">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Utilizadores Registados -->
+    <div class="mb-10">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                Utilizadores
+                <span class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-normal">{{ users | length }}</span>
+            </h2>
+            <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
+                    class="text-sm bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-1.5 rounded-lg transition">
+                + Adicionar Utilizador
+            </button>
+        </div>
+
+        <!-- Formulário inline de criação -->
+        <div id="form-add-user" class="hidden mb-4 bg-slate-50 border border-slate-200 rounded-lg p-5">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4">Novo Utilizador</h3>
+            <form method="POST" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="hidden" name="action" value="add_user">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Username <span class="text-red-500">*</span></label>
+                    <input type="text" name="username" required
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Password <span class="text-red-500">*</span></label>
+                    <input type="password" name="password" required
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Email <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <input type="email" name="email"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Role</label>
+                    <select name="role"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <option value="user">user</option>
+                        <option value="admin">admin</option>
+                        <option value="inativado">inativado</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2 flex gap-3 pt-1">
+                    <button type="submit"
+                            class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
+                        Criar Utilizador
+                    </button>
+                    <button type="button" onclick="document.getElementById('form-add-user').classList.add('hidden')"
+                            class="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg border border-gray-300 transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Username</th>
+                        <th class="px-4 py-3 text-left">Email</th>
+                        <th class="px-4 py-3 text-center">Role Atual</th>
+                        <th class="px-4 py-3 text-center">Alterar Role</th>
+                        <th class="px-4 py-3 text-center">Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for u in users %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition {% if u.role == 'inativado' %}opacity-60{% endif %}">
+                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">
+                            {{ u.username }}
+                            {% if u.id == current_user.id %}
+                                <span class="ml-1 text-xs text-gray-400">(você)</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ u.email or '—' }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if u.role == 'admin' %}
+                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">admin</span>
+                            {% elif u.role == 'inativado' %}
+                                <span class="bg-gray-200 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full">inativado</span>
+                            {% else %}
+                                <span class="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full">user</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <form method="POST" class="inline-flex items-center gap-2">
+                                <input type="hidden" name="action" value="change_role">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <select name="role"
+                                        class="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-slate-400">
+                                    <option value="user"      {% if u.role == 'user'      %}selected{% endif %}>user</option>
+                                    <option value="admin"     {% if u.role == 'admin'     %}selected{% endif %}>admin</option>
+                                    <option value="inativado" {% if u.role == 'inativado' %}selected{% endif %}>inativado</option>
+                                </select>
+                                <button type="submit"
+                                        class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1 rounded border border-slate-200 transition">
+                                    Guardar
+                                </button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if u.id != current_user.id %}
+                            <form method="POST"
+                                  onsubmit="return confirm('Eliminar o utilizador \'{{ u.username }}\'? Esta acção não pode ser desfeita.')">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit"
+                                        class="text-xs bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-3 py-1 rounded border border-red-200 transition">
+                                    Eliminar
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-gray-300 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pedidos de Reativação -->
+    <div class="mb-10">
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+            Pedidos de Reativação
+            {% set n_reat = reactivation_list | selectattr('status', 'equalto', 'pending') | list | length %}
+            {% if n_reat > 0 %}
+                <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ n_reat }} pendente(s)</span>
+            {% else %}
+                <span class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-normal">{{ reactivation_list | length }}</span>
+            {% endif %}
+        </h2>
+
+        {% if reactivation_list %}
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Utilizador</th>
+                        <th class="px-4 py-3 text-left">Canal de Contacto</th>
+                        <th class="px-4 py-3 text-left">Mensagem</th>
+                        <th class="px-4 py-3 text-left">Data</th>
+                        <th class="px-4 py-3 text-center">Estado</th>
+                        <th class="px-4 py-3 text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for r in reactivation_list %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">{{ r.user.username }}</td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ r.contact_channel or '—' }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs truncate" title="{{ r.message or '' }}">
+                            {{ r.message or '—' }}
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if r.status == 'pending' %}
+                                <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">pendente</span>
+                            {% elif r.status == 'approved' %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">aprovado</span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">rejeitado</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            {% if r.status == 'pending' %}
+                            <form method="POST" class="inline-flex gap-2">
+                                <input type="hidden" name="user_id" value="{{ r.user.id }}">
+                                <input type="hidden" name="req_id" value="{{ r.id }}">
+                                <button type="submit" name="action" value="approve_reactivation"
+                                        class="text-xs bg-green-50 hover:bg-green-100 text-green-700 font-semibold px-3 py-1 rounded border border-green-200 transition">
+                                    Reativar
+                                </button>
+                                <button type="submit" name="action" value="reject_reactivation"
+                                        onclick="return confirm('Rejeitar pedido de {{ r.user.username }}?')"
+                                        class="text-xs bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-3 py-1 rounded border border-red-200 transition">
+                                    Rejeitar
+                                </button>
+                            </form>
+                            {% else %}
+                                <span class="text-gray-300 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-gray-400 text-sm py-4">Nenhum pedido de reativação registado.</p>
+        {% endif %}
+    </div>
+
+    <!-- Pedidos de Registo -->
+    <div>
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+            Pedidos de Registo
+            {% set n_pending = pending_list | selectattr('status', 'equalto', 'pending') | list | length %}
+            {% if n_pending > 0 %}
+                <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ n_pending }} pendente(s)</span>
+            {% else %}
+                <span class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full font-normal">{{ pending_list | length }}</span>
+            {% endif %}
+        </h2>
+
+        {% if pending_list %}
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Username</th>
+                        <th class="px-4 py-3 text-left">Email</th>
+                        <th class="px-4 py-3 text-left">Data Pedido</th>
+                        <th class="px-4 py-3 text-center">Estado</th>
+                        <th class="px-4 py-3 text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for p in pending_list %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">{{ p.username }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ p.email or '—' }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if p.status == 'pending' %}
+                                <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">pendente</span>
+                            {% elif p.status == 'approved' %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">aprovado</span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">rejeitado</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if p.status == 'pending' %}
+                                <a href="{{ url_for('main.admin_approve', token=p.token) }}"
+                                   class="text-slate-700 hover:text-slate-900 font-semibold text-xs">Aprovar / Rejeitar</a>
+                            {% else %}
+                                <span class="text-gray-300 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-gray-400 text-sm py-4">Nenhum pedido de registo registado.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-screen-xl mx-auto py-8 px-0">
+
+    <!-- ── Hero ────────────────────────────────────────────────────────────── -->
+    <div class="relative rounded-3xl overflow-hidden mb-8 border border-slate-200/60 shadow-card-lg"
+         style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 45%, #f4f4f5 100%);">
+
+        <!-- Decorative blobs -->
+        <div class="absolute -top-32 -right-32 w-[28rem] h-[28rem] bg-gradient-to-br from-slate-300/30 to-zinc-300/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-28 -left-28 w-96 h-96 bg-gradient-to-tr from-slate-200/25 to-zinc-200/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-slate-200/15 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative px-8 py-10">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Painel de Controlo · KairoSyn SAD</p>
+                    <h1 class="text-2xl sm:text-4xl font-black tracking-tight leading-tight mb-2 overflow-hidden">
+                        Olá, <span class="bg-gradient-to-r from-slate-700 to-zinc-900 bg-clip-text text-transparent">{{ current_user.username | truncate(20, true, '…') }}</span>
+                    </h1>
+                    <p class="text-slate-500 text-sm max-w-lg leading-relaxed">
+                        Sistema de Apoio à Decisão para Seleção de Metodologias de Gestão de Projetos — Framework KairoSyn
+                    </p>
+                </div>
+                <a href="{{ url_for('main.listaprojetos') }}"
+                   class="flex items-center gap-2 self-start bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-slate-400/30 hover:shadow-slate-500/40 hover:-translate-y-0.5 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Gerir Projetos
+                </a>
+            </div>
+
+            <!-- Stats row -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {% set stats_items = [
+                    (stats.projetos,     'Projetos Ativos',  'from-slate-600 to-slate-800',  'shadow-slate-400/40',
+                     'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'),
+                    (stats.diagnosticos, 'Diagnósticos',     'from-zinc-600 to-zinc-800',    'shadow-zinc-400/40',
+                     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'),
+                    (stats.concluidos,   'Concluídos',       'from-slate-500 to-slate-700',  'shadow-slate-300/40',
+                     'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z'),
+                    (stats.metodologias, 'Metodologias MEB', 'from-zinc-700 to-zinc-900',    'shadow-zinc-500/40',
+                     'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'),
+                ] %}
+                {% for value, label, gradient, glow, path in stats_items %}
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-white/90 shadow-sm flex items-center gap-2 sm:gap-3">
+                    <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br {{ gradient }} flex items-center justify-center shrink-0 shadow-lg {{ glow }}">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="{{ path }}"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xl sm:text-2xl font-black text-slate-800 leading-none">{{ value }}</p>
+                        <p class="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase tracking-normal sm:tracking-wide mt-0.5 leading-tight">{{ label }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Quick Access ─────────────────────────────────────────────────────── -->
+    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-0.5">Acesso Rápido</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+
+        <a href="{{ url_for('main.listaprojetos') }}"
+           class="group relative bg-white rounded-2xl shadow-card border border-slate-100/80 p-6 overflow-hidden hover:shadow-card-md transition-all duration-300 hover:-translate-y-0.5">
+            <div class="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div class="relative flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-600 to-zinc-800 flex items-center justify-center shrink-0 shadow-lg shadow-slate-400/40 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-slate-800 text-sm group-hover:text-slate-900 transition-colors">Gestão de Projetos</p>
+                    <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Portefólio de projetos com versionamento SCD Tipo 2 e diagnósticos KairoSyn associados.</p>
+                </div>
+                <svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+        </a>
+
+        <a href="{{ url_for('main.historico') }}"
+           class="group relative bg-white rounded-2xl shadow-card border border-slate-100/80 p-6 overflow-hidden hover:shadow-card-md transition-all duration-300 hover:-translate-y-0.5">
+            <div class="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div class="relative flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-zinc-600 to-zinc-800 flex items-center justify-center shrink-0 shadow-lg shadow-zinc-400/40 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-slate-800 text-sm group-hover:text-slate-900 transition-colors">Decision Log</p>
+                    <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Histórico completo de diagnósticos com exportação JSON, CSV e PDF — rastreabilidade total.</p>
+                </div>
+                <svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+        </a>
+
+        {% if last_decision %}
+        <a href="{{ url_for('main.workflow', id=last_decision.id) }}"
+           class="group relative bg-white rounded-2xl shadow-card border border-slate-100/80 p-6 overflow-hidden hover:shadow-card-md transition-all duration-300 hover:-translate-y-0.5">
+            <div class="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div class="relative flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center shrink-0 shadow-lg shadow-slate-400/40 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-slate-800 text-sm group-hover:text-slate-900 transition-colors">Retomar Último Workflow</p>
+                    <p class="text-xs text-slate-500 mt-1 font-medium">{{ last_decision.project_name }}</p>
+                    <div class="flex items-center gap-2 mt-2 flex-wrap">
+                        {% if last_decision.suggested_approach %}
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold
+                            {% if last_decision.suggested_approach == 'Adaptativa' %}bg-emerald-100 text-emerald-700
+                            {% elif last_decision.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-700
+                            {% else %}bg-purple-100 text-purple-700{% endif %}">
+                            {{ last_decision.suggested_approach }}
+                        </span>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 italic">{{ last_decision.current_stage | replace('stage_','') | replace('_',' ') | title }}</span>
+                    </div>
+                </div>
+                <svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+        </a>
+        {% else %}
+        <div class="bg-white rounded-2xl shadow-card border border-dashed border-slate-200 p-6 flex items-center gap-4 opacity-50">
+            <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div>
+                <p class="font-bold text-slate-400 text-sm">Sem workflow ativo</p>
+                <p class="text-xs text-slate-400 mt-1">Crie um projeto e inicie o primeiro diagnóstico para começar.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('main.gerir_mcdm') }}"
+           class="group relative bg-white rounded-2xl shadow-card border border-slate-100/80 p-6 overflow-hidden hover:shadow-card-md transition-all duration-300 hover:-translate-y-0.5">
+            <div class="absolute inset-0 bg-amber-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            <div class="relative flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-300/40 group-hover:scale-105 transition-transform duration-300">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="font-bold text-slate-800 text-sm group-hover:text-amber-700 transition-colors">MCDM Engine</p>
+                        <span class="text-[9px] bg-amber-100 text-amber-600 font-bold px-1.5 py-0.5 rounded uppercase">Admin</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Configurar pesos MAVT/AHP, gerir MEB e TEB com versionamento SCD Tipo 2.</p>
+                </div>
+                <svg class="w-4 h-4 text-slate-300 group-hover:text-amber-400 shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+        </a>
+        {% endif %}
+
+    </div>
+
+    <!-- ── KairoSyn Pipeline ─────────────────────────────────────────────────── -->
+    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-0.5">Fluxo KairoSyn — 4 Etapas</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
+
+        {% set pipeline = [
+            ('1', 'Diagnóstico Contextual',       'Questionário 8D · AgPI &amp; AsPI',  'from-slate-500 to-slate-700', 'shadow-slate-300/40'),
+            ('2', 'Resolução da Abordagem',        'Adaptativa · Preditiva · Híbrida',   'from-slate-600 to-slate-800', 'shadow-slate-400/40'),
+            ('3', 'Fit<sub>M</sub> Metodologia',  'MCDM · Ranking L1/L2 · Seleção',     'from-zinc-600 to-zinc-800',   'shadow-zinc-400/40'),
+            ('4', 'Fit<sub>T</sub> Ferramentas',  'Portfólio · Custo · Cobertura',       'from-zinc-700 to-zinc-900',   'shadow-zinc-500/40'),
+        ] %}
+        {% for num, title, desc, gradient, glow in pipeline %}
+        <div class="relative bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 overflow-hidden hover:shadow-card-md transition-all duration-200 group">
+            <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r {{ gradient }}"></div>
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br {{ gradient }} flex items-center justify-center text-white font-black text-sm mb-4 shadow-lg {{ glow }} group-hover:scale-105 transition-transform duration-200">
+                {{ num }}
+            </div>
+            <p class="font-bold text-slate-800 text-sm leading-snug">{{ title | safe }}</p>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">{{ desc | safe }}</p>
+        </div>
+        {% endfor %}
+
+        <div class="absolute top-1/2 left-[calc(25%-12px)] -translate-y-1/2 hidden md:flex items-center justify-center w-6 h-6 z-10 pointer-events-none">
+            <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </div>
+        <div class="absolute top-1/2 left-[calc(50%-12px)] -translate-y-1/2 hidden md:flex items-center justify-center w-6 h-6 z-10 pointer-events-none">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </div>
+        <div class="absolute top-1/2 left-[calc(75%-12px)] -translate-y-1/2 hidden md:flex items-center justify-center w-6 h-6 z-10 pointer-events-none">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

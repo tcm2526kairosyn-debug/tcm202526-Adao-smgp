@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-10 px-4">
+
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">MCDM Engine</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Gestão de metodologias (MEB), ferramentas (TEB) e configuração de pesos</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="mb-4 bg-slate-50 border-l-4 border-slate-400 text-slate-600 p-3 rounded text-sm">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <nav class="flex space-x-6" id="mcdm-tabs">
+            <button onclick="showTab('meb')" id="tab-btn-meb"
+                    class="tab-btn pb-3 text-sm font-semibold border-b-2 border-slate-800 text-slate-800 transition">
+                MEB — Metodologias
+                <span class="ml-1 bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">{{ mebs | length }}</span>
+            </button>
+            <button onclick="showTab('teb')" id="tab-btn-teb"
+                    class="tab-btn pb-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
+                TEB — Ferramentas
+                <span class="ml-1 bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ tebs | length }}</span>
+            </button>
+            <button onclick="showTab('pesos')" id="tab-btn-pesos"
+                    class="tab-btn pb-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
+                Pesos MCDM
+            </button>
+        </nav>
+    </div>
+
+    <!-- ── Tab MEB ── -->
+    <div id="tab-meb">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Methodology Evidence Base</h2>
+                <a href="?inativos={{ '0' if show_inactive else '1' }}#tab-meb"
+                   class="text-xs px-3 py-1 rounded-full border transition
+                          {% if show_inactive %}bg-gray-200 text-gray-700 border-gray-300{% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}">
+                    {% if show_inactive %}Ocultar inativos{% else %}Mostrar inativos{% endif %}
+                </a>
+            </div>
+            <a href="{{ url_for('main.meb_novo') }}"
+               class="text-sm bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-1.5 rounded-lg transition">
+                + Nova Metodologia
+            </a>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Código</th>
+                        <th class="px-4 py-3 text-left">Nome</th>
+                        <th class="px-4 py-3 text-center">Postura</th>
+                        <th class="px-4 py-3 text-center">Tier</th>
+                        <th class="px-4 py-3 text-center">Flex.</th>
+                        <th class="px-4 py-3 text-center">Traç.</th>
+                        <th class="px-4 py-3 text-center">Veloc.</th>
+                        <th class="px-4 py-3 text-center">Risco</th>
+                        <th class="px-4 py-3 text-center">Stake.</th>
+                        <th class="px-4 py-3 text-center">Reg.</th>
+                        <th class="px-4 py-3 text-center">Estado</th>
+                        <th class="px-4 py-3 text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for m in mebs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition {% if not m.is_active %}opacity-50{% endif %}">
+                        <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{{ m.code }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">
+                            {{ m.name }}
+                            {% if not m.is_active and m.inactive_date %}
+                            <div class="text-xs text-gray-400 font-normal">Inativo desde {{ m.inactive_date.strftime('%d/%m/%Y') }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if m.posture == 'Adaptativa' %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Adap.</span>
+                            {% elif m.posture == 'Preditiva' %}
+                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">Pred.</span>
+                            {% else %}
+                                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">Híbr.</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ m.tier }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_flexibility) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_traceability) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_speed) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_risk_control) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_stakeholder_eng) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if m.regulatory_compatible %}
+                                <span class="text-green-500 text-xs font-bold">✓</span>
+                            {% else %}
+                                <span class="text-red-400 text-xs">✗</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if m.is_active %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Ativo</span>
+                            {% else %}
+                                <span class="bg-gray-100 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            {% if m.is_active %}
+                            <a href="{{ url_for('main.meb_editar', id=m.id) }}"
+                               class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1 rounded border border-slate-200 transition mr-1">
+                                Editar
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('main.historico_meb', code=m.code) }}"
+                               class="text-xs bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold px-3 py-1 rounded border border-gray-200 transition mr-1">
+                                Histórico
+                            </a>
+                            <form method="POST" class="inline">
+                                <input type="hidden" name="action" value="toggle_meb">
+                                <input type="hidden" name="meb_id" value="{{ m.id }}">
+                                <button type="submit"
+                                        class="text-xs font-semibold px-3 py-1 rounded border transition
+                                               {% if m.is_active %}bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200
+                                               {% else %}bg-green-50 hover:bg-green-100 text-green-600 border-green-200{% endif %}">
+                                    {{ 'Inativar' if m.is_active else 'Ativar' }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="12" class="px-4 py-6 text-center text-gray-400 text-sm">Nenhuma metodologia registada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Tab TEB ── -->
+    <div id="tab-teb" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Tool Evidence Base</h2>
+                <a href="?inativos={{ '0' if show_inactive else '1' }}#tab-teb"
+                   class="text-xs px-3 py-1 rounded-full border transition
+                          {% if show_inactive %}bg-gray-200 text-gray-700 border-gray-300{% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}">
+                    {% if show_inactive %}Ocultar inativos{% else %}Mostrar inativos{% endif %}
+                </a>
+            </div>
+            <a href="{{ url_for('main.teb_novo') }}"
+               class="text-sm bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-1.5 rounded-lg transition">
+                + Nova Ferramenta
+            </a>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Código</th>
+                        <th class="px-4 py-3 text-left">Nome</th>
+                        <th class="px-4 py-3 text-center">Categoria</th>
+                        <th class="px-4 py-3 text-center">Custo</th>
+                        <th class="px-4 py-3 text-center">€/mês</th>
+                        <th class="px-4 py-3 text-center">Usab.</th>
+                        <th class="px-4 py-3 text-center">Integr.</th>
+                        <th class="px-4 py-3 text-center">Report.</th>
+                        <th class="px-4 py-3 text-center">Escal.</th>
+                        <th class="px-4 py-3 text-center">GDPR</th>
+                        <th class="px-4 py-3 text-center">Estado</th>
+                        <th class="px-4 py-3 text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for t in tebs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition {% if not t.is_active %}opacity-50{% endif %}">
+                        <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{{ t.code }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">
+                            {{ t.name }}
+                            {% if not t.is_active and t.inactive_date %}
+                            <div class="text-xs text-gray-400 font-normal">Inativo desde {{ t.inactive_date.strftime('%d/%m/%Y') }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300 text-xs">{{ t.category }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if t.cost_tier == 'free' %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">free</span>
+                            {% elif t.cost_tier == 'low' %}
+                                <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">low</span>
+                            {% elif t.cost_tier == 'medium' %}
+                                <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">medium</span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">high</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ "%.0f"|format(t.cost_monthly_eur) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_ease_of_use) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_integration) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_reporting) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_scalability) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if t.gdpr_compliant %}
+                                <span class="text-green-500 text-xs font-bold">✓</span>
+                            {% else %}
+                                <span class="text-red-400 text-xs">✗</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if t.is_active %}
+                                <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Ativo</span>
+                            {% else %}
+                                <span class="bg-gray-100 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            {% if t.is_active %}
+                            <a href="{{ url_for('main.teb_editar', id=t.id) }}"
+                               class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1 rounded border border-slate-200 transition mr-1">
+                                Editar
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('main.historico_teb', code=t.code) }}"
+                               class="text-xs bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold px-3 py-1 rounded border border-gray-200 transition mr-1">
+                                Histórico
+                            </a>
+                            <form method="POST" class="inline">
+                                <input type="hidden" name="action" value="toggle_teb">
+                                <input type="hidden" name="teb_id" value="{{ t.id }}">
+                                <button type="submit"
+                                        class="text-xs font-semibold px-3 py-1 rounded border transition
+                                               {% if t.is_active %}bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200
+                                               {% else %}bg-green-50 hover:bg-green-100 text-green-600 border-green-200{% endif %}">
+                                    {{ 'Inativar' if t.is_active else 'Ativar' }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="12" class="px-4 py-6 text-center text-gray-400 text-sm">Nenhuma ferramenta registada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Tab Pesos ── -->
+    <div id="tab-pesos" class="hidden">
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200 mb-6">Configuração de Pesos MCDM</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- Pesos MEB -->
+            {% if meb_weights %}
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos MEB — Etapa 3</h3>
+                    <a href="{{ url_for('main.historico_pesos', context='MEB') }}"
+                       class="text-xs text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1">
+                        Histórico
+                        {% if meb_versions_count > 1 %}
+                        <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full font-bold">{{ meb_versions_count }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+                <p class="text-xs text-gray-400 mb-1">
+                    Versão ativa desde {{ meb_weights.active_date.strftime('%d/%m/%Y %H:%M') if meb_weights.active_date else '—' }}
+                    {% if meb_weights.updated_by %} · por <strong>{{ meb_weights.updated_by }}</strong>{% endif %}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Critérios para ranking de metodologias. A soma deve ser <strong>1.0</strong>.</p>
+
+                <form method="POST" id="form-meb-pesos">
+                    <input type="hidden" name="action" value="update_pesos">
+                    <input type="hidden" name="context" value="MEB">
+
+                    {% set meb_labels_pt = ['Flexibilidade', 'Rastreabilidade', 'Velocidade', 'Controlo Risco', 'Stakeholders'] %}
+                    {% for i in range(meb_weights.weights | length) %}
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                {{ meb_labels_pt[i] }}
+                                <span class="text-gray-400 font-normal">({{ meb_weights.labels[i] }})</span>
+                            </label>
+                            <span class="text-xs font-mono font-semibold text-slate-700" id="meb-val-{{ i }}">
+                                {{ "%.2f"|format(meb_weights.weights[i]) }}
+                            </span>
+                        </div>
+                        <input type="range" name="w_{{ i }}" min="0" max="1" step="0.01"
+                               value="{{ meb_weights.weights[i] }}"
+                               oninput="updateWeight('meb', {{ i }}, this.value)"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-slate-700">
+                    </div>
+                    {% endfor %}
+
+                    <div class="flex items-center justify-between mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            Soma:
+                            <span id="meb-sum" class="font-mono font-bold text-slate-700">
+                                {{ "%.2f"|format(meb_weights.weights | sum) }}
+                            </span>
+                        </span>
+                        <button type="submit"
+                                class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
+                            Guardar Pesos MEB
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Pesos TEB -->
+            {% if teb_weights %}
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos TEB — Etapa 4</h3>
+                    <a href="{{ url_for('main.historico_pesos', context='TEB') }}"
+                       class="text-xs text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1">
+                        Histórico
+                        {% if teb_versions_count > 1 %}
+                        <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full font-bold">{{ teb_versions_count }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+                <p class="text-xs text-gray-400 mb-1">
+                    Versão ativa desde {{ teb_weights.active_date.strftime('%d/%m/%Y %H:%M') if teb_weights.active_date else '—' }}
+                    {% if teb_weights.updated_by %} · por <strong>{{ teb_weights.updated_by }}</strong>{% endif %}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Critérios para ranking de ferramentas. A soma deve ser <strong>1.0</strong>.</p>
+
+                <form method="POST" id="form-teb-pesos">
+                    <input type="hidden" name="action" value="update_pesos">
+                    <input type="hidden" name="context" value="TEB">
+
+                    {% set teb_labels_pt = ['Usabilidade', 'Integração', 'Reporting', 'Escalabilidade'] %}
+                    {% for i in range(teb_weights.weights | length) %}
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                {{ teb_labels_pt[i] }}
+                                <span class="text-gray-400 font-normal">({{ teb_weights.labels[i] }})</span>
+                            </label>
+                            <span class="text-xs font-mono font-semibold text-slate-700" id="teb-val-{{ i }}">
+                                {{ "%.2f"|format(teb_weights.weights[i]) }}
+                            </span>
+                        </div>
+                        <input type="range" name="w_{{ i }}" min="0" max="1" step="0.01"
+                               value="{{ teb_weights.weights[i] }}"
+                               oninput="updateWeight('teb', {{ i }}, this.value)"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-slate-700">
+                    </div>
+                    {% endfor %}
+
+                    <div class="flex items-center justify-between mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            Soma:
+                            <span id="teb-sum" class="font-mono font-bold text-slate-700">
+                                {{ "%.2f"|format(teb_weights.weights | sum) }}
+                            </span>
+                        </span>
+                        <button type="submit"
+                                class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
+                            Guardar Pesos TEB
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const MEB_N = {{ (meb_weights.weights | length) if meb_weights else 0 }};
+const TEB_N = {{ (teb_weights.weights | length) if teb_weights else 0 }};
+
+function updateWeight(ctx, idx, val) {
+    document.getElementById(ctx + '-val-' + idx).textContent = parseFloat(val).toFixed(2);
+    const n = ctx === 'meb' ? MEB_N : TEB_N;
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+        const el = document.querySelector('#form-' + ctx + '-pesos input[name="w_' + i + '"]');
+        if (el) sum += parseFloat(el.value);
+    }
+    const sumEl = document.getElementById(ctx + '-sum');
+    sumEl.textContent = sum.toFixed(2);
+    sumEl.className = 'font-mono font-bold ' + (Math.abs(sum - 1.0) < 0.01 ? 'text-green-600' : 'text-red-500');
+}
+
+function showTab(name) {
+    ['meb', 'teb', 'pesos'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === name) {
+            btn.classList.add('border-slate-800', 'text-slate-700');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+        } else {
+            btn.classList.remove('border-slate-800', 'text-slate-700');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        }
+    });
+}
+
+// Activar tab pelo hash da URL
+const hash = window.location.hash;
+if (hash === '#tab-teb') showTab('teb');
+else if (hash === '#tab-pesos') showTab('pesos');
+</script>
+{% endblock %}
