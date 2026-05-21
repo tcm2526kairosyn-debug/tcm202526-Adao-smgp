@@ -7,7 +7,11 @@ def create_app():
     app = Flask(__name__)
 
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-insecure-key')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://user:secret@db:5432/postgres')
+    db_url = os.environ.get('DATABASE_URL', 'postgresql://user:secret@db:5432/postgres')
+    # Railway uses 'postgres://' prefix — SQLAlchemy requires 'postgresql://'
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     app.config['RESEND_API_KEY'] = os.environ.get('RESEND_API_KEY', '')
