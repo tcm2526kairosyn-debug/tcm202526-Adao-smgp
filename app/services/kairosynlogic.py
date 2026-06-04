@@ -192,11 +192,12 @@ def _context_weights(base: np.ndarray, agpi: float, aspi: float) -> np.ndarray:
     return adjusted / adjusted.sum()
 
 
-def run_fit_m_level2(viable: list, engine_name: str = 'MAVT',
+def run_fit_m_level2(viable: list, governance_register: dict = None, engine_name: str = 'MAVT',
                      agpi: float = 2.0, aspi: float = 2.0) -> list:
     """
     Build X_M matrix (4 stored + posture_alignment) and rank via MCDM.
     viable: list of (MethodologyEvidenceBase, posture_align_score) from Level 1
+    governance_register: dict with threshold constraints to apply as penalty
     Returns ranked list of dicts: [{id, code, name, posture, score, posture_alignment}]
     """
     if not viable:
@@ -215,20 +216,43 @@ def run_fit_m_level2(viable: list, engine_name: str = 'MAVT',
     ranked_indices = engine.rank(X, weights)
 
     _TIER_BONUS = {1: 0.02, 2: 0.0}
+    _THRESHOLD_PENALTY = 0.05  # 5% penalty per unmet threshold constraint
+
+    # Extract threshold constraints for methodology selection (scope='M')
+    threshold_constraints = {}
+    if governance_register:
+        for c in governance_register.get("threshold", []):
+            if c.get("scope") == "M":
+                threshold_constraints[c["constraint"]] = c["value"]
 
     result = []
     for idx, score in ranked_indices:
         m, align_score = viable[idx]
         adjusted = round(score + _TIER_BONUS.get(m.tier, 0.0), 4)
+
+        # Apply threshold penalties
+        penalty = 0.0
+        if "requires_fixed_scope" in threshold_constraints:
+            required = threshold_constraints["requires_fixed_scope"]
+            has_scope = m.requires_fixed_scope or False
+            if required and not has_scope:
+                penalty += _THRESHOLD_PENALTY
+            elif not required and has_scope:
+                penalty += _THRESHOLD_PENALTY * 0.5  # lighter penalty if more restrictive than needed
+
+        adjusted_with_penalty = round(max(0.0, adjusted - penalty), 4)
+
         result.append({
             "id": m.id,
             "code": m.code,
             "name": m.name,
             "posture": m.posture,
             "tier": m.tier,
-            "score": adjusted,
+            "score": adjusted_with_penalty,
             "misfit": round(1.0 - align_score, 3),
             "posture_alignment": align_score,
+            "requires_fixed_scope": m.requires_fixed_scope or False,
+            "threshold_penalty": round(penalty, 4),
             "description": m.description or "",
             "criteria": {
                 "assurance": round(m.score_assurance or 0.5, 3),

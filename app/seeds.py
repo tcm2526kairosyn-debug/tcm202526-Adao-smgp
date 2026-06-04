@@ -118,6 +118,24 @@ def _seed_meb():
             description="Processo standard para projetos de Data Science e Machine Learning. "
                         "Iterativo com forte ênfase na compreensão dos dados."
         ),
+        dict(
+            code="ISO21502", name="ISO 21502", posture="Preditiva", tier=2,
+            requires_fixed_scope=True, regulatory_compatible=True,
+            min_agpi=1.0, max_aspi=3.0,
+            ag_posture=1, as_posture=4,
+            score_assurance=0.92, score_agility=0.28, score_scalability=0.70, score_hybridisation=0.38,
+            description="Norma ISO internacional para gestão de projetos. "
+                        "Orientada a processos com forte governança e conformidade regulatória."
+        ),
+        dict(
+            code="PM2", name="PM2 (Comissão Europeia)", posture="Híbrida", tier=2,
+            requires_fixed_scope=False, regulatory_compatible=True,
+            min_agpi=2.0, max_aspi=2.5,
+            ag_posture=3, as_posture=3,
+            score_assurance=0.72, score_agility=0.68, score_scalability=0.80, score_hybridisation=0.82,
+            description="Framework de gestão de projetos desenvolvida pela Comissão Europeia. "
+                        "Combina estrutura com flexibilidade; amplamente utilizada em projetos públicos europeus."
+        ),
     ]
 
     for m in methodologies:
@@ -140,7 +158,7 @@ def _seed_teb():
             code="MS_PROJECT", name="Microsoft Project", category="Planning",
             cost_tier="medium", cost_monthly_eur=30.0,
             compatible_postures=["Preditiva", "Híbrida"],
-            compatible_methodologies=["PMBOK6", "PRINCE2", "DSDM"],
+            compatible_methodologies=["PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
             requires_cloud=False, gdpr_compliant=True,
             agility_support=1, assurance_support=4,
             score_traceability=0.85, score_integration=0.60, score_flow_support=0.45,
@@ -149,7 +167,7 @@ def _seed_teb():
             code="PROJECTLIBRE", name="ProjectLibre", category="Planning",
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Preditiva", "Híbrida"],
-            compatible_methodologies=["PMBOK6", "PRINCE2"],
+            compatible_methodologies=["PMBOK6", "PRINCE2", "ISO21502", "PM2"],
             requires_cloud=False, gdpr_compliant=True,
             agility_support=1, assurance_support=3,
             score_traceability=0.65, score_integration=0.35, score_flow_support=0.35,
@@ -214,7 +232,7 @@ def _seed_teb():
             code="SLACK", name="Slack", category="Communication",
             cost_tier="low", cost_monthly_eur=7.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
-            compatible_methodologies=["SCRUM", "KANBAN", "XP", "SAFe", "DSDM", "PMBOK6", "PRINCE2", "CRISP_DM"],
+            compatible_methodologies=["SCRUM", "KANBAN", "XP", "SAFe", "DSDM", "PMBOK6", "PRINCE2", "CRISP_DM", "ISO21502", "PM2"],
             requires_cloud=True, gdpr_compliant=True,
             agility_support=3, assurance_support=2,
             score_traceability=0.30, score_integration=0.85, score_flow_support=0.40,
@@ -223,7 +241,7 @@ def _seed_teb():
             code="TEAMS", name="Microsoft Teams", category="Communication",
             cost_tier="low", cost_monthly_eur=5.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
-            compatible_methodologies=["PMBOK6", "PRINCE2", "SAFe", "DSDM", "SCRUM", "KANBAN"],
+            compatible_methodologies=["PMBOK6", "PRINCE2", "SAFe", "DSDM", "SCRUM", "KANBAN", "ISO21502", "PM2"],
             requires_cloud=True, gdpr_compliant=True,
             agility_support=2, assurance_support=3,
             score_traceability=0.45, score_integration=0.80, score_flow_support=0.40,
@@ -233,7 +251,7 @@ def _seed_teb():
             code="CONFLUENCE", name="Confluence", category="Documentation",
             cost_tier="low", cost_monthly_eur=5.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
-            compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "PMBOK6", "PRINCE2", "DSDM"],
+            compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
             requires_cloud=True, gdpr_compliant=True,
             agility_support=2, assurance_support=4,
             score_traceability=0.80, score_integration=0.85, score_flow_support=0.50,
