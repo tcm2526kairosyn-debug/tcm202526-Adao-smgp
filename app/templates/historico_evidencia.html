@@ -97,8 +97,6 @@
                     {% if tipo == 'MEB' %}
                     <p><strong>Postura:</strong> {{ v.posture }}</p>
                     <p><strong>Tier:</strong> {{ v.tier }}</p>
-                    <p><strong>AgPI mín:</strong> {{ v.min_agpi }}</p>
-                    <p><strong>AsPI máx:</strong> {{ v.max_aspi }}</p>
                     <p><strong>Reg.:</strong> {{ 'Sim' if v.regulatory_compatible else 'Não' }}</p>
                     {% else %}
                     <p><strong>Categoria:</strong> {{ v.category }}</p>
@@ -112,11 +110,10 @@
                 <div class="space-y-1.5 mb-4">
                     {% if tipo == 'MEB' %}
                     {% set scores = [
-                        ('Flexibilidade', v.score_flexibility),
-                        ('Rastreabilidade', v.score_traceability),
-                        ('Velocidade', v.score_speed),
-                        ('Risco', v.score_risk_control),
-                        ('Stakeholders', v.score_stakeholder_eng)
+                        ('Assurance', v.score_assurance),
+                        ('Agilidade', v.score_agility),
+                        ('Escalabilidade', v.score_scalability),
+                        ('Hibridização', v.score_hybridisation)
                     ] %}
                     {% else %}
                     {% set scores = [
@@ -161,8 +158,8 @@
 
 <!-- Dados para o gráfico -->
 {% if tipo == 'MEB' %}
-{% set score_labels = ['Flexibilidade','Rastreabilidade','Velocidade','Risco','Stakeholders'] %}
-{% set score_keys = ['score_flexibility','score_traceability','score_speed','score_risk_control','score_stakeholder_eng'] %}
+{% set score_labels = ['Assurance','Agilidade','Escalabilidade','Hibridização'] %}
+{% set score_keys = ['score_assurance','score_agility','score_scalability','score_hybridisation'] %}
 {% else %}
 {% set score_labels = ['Usabilidade','Integração','Reporting','Escalabilidade'] %}
 {% set score_keys = ['score_ease_of_use','score_integration','score_reporting','score_scalability'] %}
@@ -171,7 +168,7 @@
 <div id="chart-data"
      data-dates='{{ versoes | map(attribute="active_date") | map("string") | list | tojson }}'
      data-labels='{{ score_labels | tojson }}'
-     data-scores='{{ versoes | map(attribute=score_keys[0]) | list | tojson }},{{ versoes | map(attribute=score_keys[1]) | list | tojson }},{{ versoes | map(attribute=score_keys[2]) | list | tojson }},{{ versoes | map(attribute=score_keys[3]) | list | tojson }}{% if tipo == "MEB" %},{{ versoes | map(attribute=score_keys[4]) | list | tojson }}{% endif %}'
+     data-scores='{{ versoes | map(attribute=score_keys[0]) | list | tojson }},{{ versoes | map(attribute=score_keys[1]) | list | tojson }},{{ versoes | map(attribute=score_keys[2]) | list | tojson }},{{ versoes | map(attribute=score_keys[3]) | list | tojson }}'
      data-nscores="{{ score_labels | length }}"
      class="hidden"></div>
 

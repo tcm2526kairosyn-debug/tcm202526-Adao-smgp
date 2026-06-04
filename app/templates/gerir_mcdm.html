@@ -60,11 +60,10 @@
                         <th class="px-4 py-3 text-left">Nome</th>
                         <th class="px-4 py-3 text-center">Postura</th>
                         <th class="px-4 py-3 text-center">Tier</th>
-                        <th class="px-4 py-3 text-center">Flex.</th>
-                        <th class="px-4 py-3 text-center">Traç.</th>
-                        <th class="px-4 py-3 text-center">Veloc.</th>
-                        <th class="px-4 py-3 text-center">Risco</th>
-                        <th class="px-4 py-3 text-center">Stake.</th>
+                        <th class="px-4 py-3 text-center">Assurance</th>
+                        <th class="px-4 py-3 text-center">Agil.</th>
+                        <th class="px-4 py-3 text-center">Scal.</th>
+                        <th class="px-4 py-3 text-center">Hibrid.</th>
                         <th class="px-4 py-3 text-center">Reg.</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-center">Ações</th>
@@ -90,11 +89,10 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ m.tier }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_flexibility) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_traceability) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_speed) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_risk_control) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_stakeholder_eng) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_assurance) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_agility) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_scalability) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_hybridisation) }}</td>
                         <td class="px-4 py-3 text-center">
                             {% if m.regulatory_compatible %}
                                 <span class="text-green-500 text-xs font-bold">✓</span>
@@ -169,7 +167,7 @@
                         <th class="px-4 py-3 text-center">Usab.</th>
                         <th class="px-4 py-3 text-center">Integr.</th>
                         <th class="px-4 py-3 text-center">Report.</th>
-                        <th class="px-4 py-3 text-center">Escal.</th>
+                        <th class="px-4 py-3 text-center">Scal.</th>
                         <th class="px-4 py-3 text-center">GDPR</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-center">Ações</th>

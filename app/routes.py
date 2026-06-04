@@ -716,7 +716,7 @@ def etapa3(id):
         return redirect(url_for('main.etapa2', id=id))
 
     engine = decision.mcdm_engine or 'MAVT'
-    ranking = run_fit_m_level2(viable, engine, agpi=agpi, aspi=aspi)
+    ranking = run_fit_m_level2(viable, gov_register, engine, agpi=agpi, aspi=aspi)
 
     decision.meb_filtered = [item["id"] for item in ranking]
     decision.methodology_ranking = ranking
