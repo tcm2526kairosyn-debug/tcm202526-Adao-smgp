@@ -144,4 +144,12 @@ def run_migrations(db):
             "ADD COLUMN IF NOT EXISTS score_flow_support FLOAT DEFAULT 0.5"
         ))
 
+        # MEB — drop legacy columns no longer used by the motor
+        for col in ('min_agpi', 'max_aspi', 'score_flexibility',
+                    'score_traceability', 'score_speed', 'score_risk_control',
+                    'score_stakeholder_eng'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
         conn.commit()
