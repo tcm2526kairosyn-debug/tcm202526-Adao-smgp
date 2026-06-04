@@ -89,8 +89,6 @@ class MethodologyEvidenceBase(db.Model):
     max_team_size = db.Column(db.Integer)
     requires_fixed_scope = db.Column(db.Boolean, default=False)
     regulatory_compatible = db.Column(db.Boolean, default=True)
-    min_agpi = db.Column(db.Float, default=1.0)
-    max_aspi = db.Column(db.Float, default=4.0)
 
     # Posture coordinates in (AgPI, AsPI) space — used for Chebyshev alignment
     ag_posture = db.Column(db.Integer, default=2)  # {1,2,3,4}
@@ -101,13 +99,6 @@ class MethodologyEvidenceBase(db.Model):
     score_agility = db.Column(db.Float, default=0.5)
     score_scalability = db.Column(db.Float, default=0.5)
     score_hybridisation = db.Column(db.Float, default=0.5)
-
-    # Legacy columns kept for backward compatibility
-    score_flexibility = db.Column(db.Float, default=0.5)
-    score_traceability = db.Column(db.Float, default=0.5)
-    score_speed = db.Column(db.Float, default=0.5)
-    score_risk_control = db.Column(db.Float, default=0.5)
-    score_stakeholder_eng = db.Column(db.Float, default=0.5)
 
     description = db.Column(db.Text)
 

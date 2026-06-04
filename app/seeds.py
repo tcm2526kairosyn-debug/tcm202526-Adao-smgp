@@ -49,7 +49,6 @@ def _seed_meb():
         dict(
             code="SCRUM", name="Scrum", posture="Adaptativa", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=2.5, max_aspi=2.5,
             ag_posture=4, as_posture=1,
             score_assurance=0.45, score_agility=0.90, score_scalability=0.65, score_hybridisation=0.70,
             description="Framework ágil iterativa com sprints de 1-4 semanas. "
@@ -58,7 +57,6 @@ def _seed_meb():
         dict(
             code="KANBAN", name="Kanban", posture="Adaptativa", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=2.0, max_aspi=3.0,
             ag_posture=3, as_posture=1,
             score_assurance=0.35, score_agility=0.95, score_scalability=0.70, score_hybridisation=0.75,
             description="Sistema de fluxo contínuo orientado a limitar o trabalho "
@@ -67,7 +65,6 @@ def _seed_meb():
         dict(
             code="PMBOK6", name="PMBoK 6ª Edição", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
-            min_agpi=1.0, max_aspi=3.0,
             ag_posture=1, as_posture=4,
             score_assurance=0.90, score_agility=0.30, score_scalability=0.75, score_hybridisation=0.40,
             description="Guia de boas práticas do PMI. Forte em rastreabilidade, "
@@ -76,7 +73,6 @@ def _seed_meb():
         dict(
             code="PRINCE2", name="PRINCE2 Agile", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
-            min_agpi=1.0, max_aspi=3.5,
             ag_posture=1, as_posture=4,
             score_assurance=0.95, score_agility=0.25, score_scalability=0.65, score_hybridisation=0.35,
             description="Metodologia orientada a processos com forte governança. "
@@ -85,7 +81,6 @@ def _seed_meb():
         dict(
             code="SAFe", name="SAFe 6.0", posture="Híbrida", tier=2,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=2.0, max_aspi=3.0,
             ag_posture=3, as_posture=3,
             score_assurance=0.70, score_agility=0.70, score_scalability=0.95, score_hybridisation=0.85,
             description="Framework de escalonamento ágil para organizações de grande "
@@ -94,7 +89,6 @@ def _seed_meb():
         dict(
             code="XP", name="Extreme Programming (XP)", posture="Adaptativa", tier=2,
             requires_fixed_scope=False, regulatory_compatible=False,
-            min_agpi=3.0, max_aspi=2.0,
             ag_posture=4, as_posture=2,
             score_assurance=0.40, score_agility=0.90, score_scalability=0.45, score_hybridisation=0.50,
             description="Metodologia ágil de engenharia de software com práticas como "
@@ -103,7 +97,6 @@ def _seed_meb():
         dict(
             code="DSDM", name="DSDM Atern", posture="Híbrida", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=2.0, max_aspi=3.5,
             ag_posture=3, as_posture=3,
             score_assurance=0.75, score_agility=0.65, score_scalability=0.65, score_hybridisation=0.80,
             description="Framework ágil orientada a negócio com foco em entregas no "
@@ -112,7 +105,6 @@ def _seed_meb():
         dict(
             code="CRISP_DM", name="CRISP-DM", posture="Híbrida", tier=2,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=1.5, max_aspi=3.5,
             ag_posture=2, as_posture=3,
             score_assurance=0.65, score_agility=0.55, score_scalability=0.60, score_hybridisation=0.65,
             description="Processo standard para projetos de Data Science e Machine Learning. "
@@ -121,7 +113,6 @@ def _seed_meb():
         dict(
             code="ISO21502", name="ISO 21502", posture="Preditiva", tier=2,
             requires_fixed_scope=True, regulatory_compatible=True,
-            min_agpi=1.0, max_aspi=3.0,
             ag_posture=1, as_posture=4,
             score_assurance=0.92, score_agility=0.28, score_scalability=0.70, score_hybridisation=0.38,
             description="Norma ISO internacional para gestão de projetos. "
@@ -130,7 +121,6 @@ def _seed_meb():
         dict(
             code="PM2", name="PM2 (Comissão Europeia)", posture="Híbrida", tier=2,
             requires_fixed_scope=False, regulatory_compatible=True,
-            min_agpi=2.0, max_aspi=2.5,
             ag_posture=3, as_posture=3,
             score_assurance=0.72, score_agility=0.68, score_scalability=0.80, score_hybridisation=0.82,
             description="Framework de gestão de projetos desenvolvida pela Comissão Europeia. "
