@@ -152,4 +152,10 @@ def run_migrations(db):
                 f"ALTER TABLE methodology_evidence_base DROP COLUMN IF EXISTS {col}"
             ))
 
+        # TEB — drop legacy columns never used by the motor
+        for col in ('requires_cloud', 'score_ease_of_use', 'score_reporting', 'score_scalability'):
+            conn.execute(text(
+                f"ALTER TABLE tool_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
         conn.commit()
