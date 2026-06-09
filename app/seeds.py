@@ -103,7 +103,7 @@ def _seed_meb():
                         "prazo. Equilibra flexibilidade e controlo."
         ),
         dict(
-            code="CRISP_DM", name="CRISP-DM", posture="Híbrida", tier=2,
+            code="CRISP_DM", name="CRISP-DM", posture="Híbrida", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
             ag_posture=2, as_posture=3,
             score_assurance=0.65, score_agility=0.55, score_scalability=0.60, score_hybridisation=0.65,
@@ -111,7 +111,7 @@ def _seed_meb():
                         "Iterativo com forte ênfase na compreensão dos dados."
         ),
         dict(
-            code="ISO21502", name="ISO 21502", posture="Preditiva", tier=2,
+            code="ISO21502", name="ISO 21502", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
             ag_posture=1, as_posture=4,
             score_assurance=0.92, score_agility=0.28, score_scalability=0.70, score_hybridisation=0.38,
@@ -119,7 +119,7 @@ def _seed_meb():
                         "Orientada a processos com forte governança e conformidade regulatória."
         ),
         dict(
-            code="PM2", name="PM2 (Comissão Europeia)", posture="Híbrida", tier=2,
+            code="PM2", name="PM2 (Comissão Europeia)", posture="Híbrida", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
             ag_posture=3, as_posture=3,
             score_assurance=0.72, score_agility=0.68, score_scalability=0.80, score_hybridisation=0.82,
