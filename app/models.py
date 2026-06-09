@@ -127,7 +127,6 @@ class ToolEvidenceBase(db.Model):
     compatible_methodologies = db.Column(db.JSON)  # ["SCRUM", "KANBAN"]
 
     # Hard constraints
-    requires_cloud = db.Column(db.Boolean, default=False)
     gdpr_compliant = db.Column(db.Boolean, default=True)
 
     # Context coordinates in (AgPI, AsPI) space — used for Chebyshev alignment
@@ -138,11 +137,6 @@ class ToolEvidenceBase(db.Model):
     score_traceability = db.Column(db.Float, default=0.5)
     score_integration = db.Column(db.Float, default=0.5)
     score_flow_support = db.Column(db.Float, default=0.5)
-
-    # Legacy columns kept for backward compatibility
-    score_ease_of_use = db.Column(db.Float, default=0.5)
-    score_reporting = db.Column(db.Float, default=0.5)
-    score_scalability = db.Column(db.Float, default=0.5)
 
     # SCD Type-2 audit
     is_active = db.Column(db.Boolean, default=True, nullable=False)

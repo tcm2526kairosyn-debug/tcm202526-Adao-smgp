@@ -74,12 +74,6 @@
                 </div>
                 <div class="flex flex-col gap-3 justify-center">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="requires_cloud"
-                               {% if teb and teb.requires_cloud %}checked{% endif %}
-                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
-                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer cloud</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="gdpr_compliant"
                                {% if not teb or teb.gdpr_compliant %}checked{% endif %}
                                class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">

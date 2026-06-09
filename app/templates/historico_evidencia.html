@@ -102,7 +102,6 @@
                     <p><strong>Categoria:</strong> {{ v.category }}</p>
                     <p><strong>Custo:</strong> {{ v.cost_tier }} ({{ "%.0f"|format(v.cost_monthly_eur) }}€/mês)</p>
                     <p><strong>GDPR:</strong> {{ 'Sim' if v.gdpr_compliant else 'Não' }}</p>
-                    <p><strong>Cloud:</strong> {{ 'Sim' if v.requires_cloud else 'Não' }}</p>
                     {% endif %}
                 </div>
 
@@ -117,10 +116,9 @@
                     ] %}
                     {% else %}
                     {% set scores = [
-                        ('Usabilidade', v.score_ease_of_use),
+                        ('Rastreabilidade', v.score_traceability),
                         ('Integração', v.score_integration),
-                        ('Reporting', v.score_reporting),
-                        ('Escalabilidade', v.score_scalability)
+                        ('Fluxo', v.score_flow_support)
                     ] %}
                     {% endif %}
                     {% for label, val in scores %}
@@ -161,14 +159,14 @@
 {% set score_labels = ['Assurance','Agilidade','Escalabilidade','Hibridização'] %}
 {% set score_keys = ['score_assurance','score_agility','score_scalability','score_hybridisation'] %}
 {% else %}
-{% set score_labels = ['Usabilidade','Integração','Reporting','Escalabilidade'] %}
-{% set score_keys = ['score_ease_of_use','score_integration','score_reporting','score_scalability'] %}
+{% set score_labels = ['Rastreabilidade','Integração','Fluxo'] %}
+{% set score_keys = ['score_traceability','score_integration','score_flow_support'] %}
 {% endif %}
 
 <div id="chart-data"
      data-dates='{{ versoes | map(attribute="active_date") | map("string") | list | tojson }}'
      data-labels='{{ score_labels | tojson }}'
-     data-scores='{{ versoes | map(attribute=score_keys[0]) | list | tojson }},{{ versoes | map(attribute=score_keys[1]) | list | tojson }},{{ versoes | map(attribute=score_keys[2]) | list | tojson }},{{ versoes | map(attribute=score_keys[3]) | list | tojson }}'
+     data-scores='unused'
      data-nscores="{{ score_labels | length }}"
      class="hidden"></div>
 

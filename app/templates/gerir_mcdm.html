@@ -164,10 +164,9 @@
                         <th class="px-4 py-3 text-center">Categoria</th>
                         <th class="px-4 py-3 text-center">Custo</th>
                         <th class="px-4 py-3 text-center">€/mês</th>
-                        <th class="px-4 py-3 text-center">Usab.</th>
+                        <th class="px-4 py-3 text-center">Rastr.</th>
                         <th class="px-4 py-3 text-center">Integr.</th>
-                        <th class="px-4 py-3 text-center">Report.</th>
-                        <th class="px-4 py-3 text-center">Scal.</th>
+                        <th class="px-4 py-3 text-center">Fluxo</th>
                         <th class="px-4 py-3 text-center">GDPR</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-center">Ações</th>
@@ -196,10 +195,9 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ "%.0f"|format(t.cost_monthly_eur) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_ease_of_use) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_traceability) }}</td>
                         <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_integration) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_reporting) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_scalability) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_flow_support) }}</td>
                         <td class="px-4 py-3 text-center">
                             {% if t.gdpr_compliant %}
                                 <span class="text-green-500 text-xs font-bold">✓</span>
