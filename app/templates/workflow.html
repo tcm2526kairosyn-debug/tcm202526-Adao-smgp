@@ -508,7 +508,7 @@ window._wfData = {
     const sensEl = document.getElementById('sensitivity-chart');
     if (sensEl && d.sensitivity && d.sensitivity.per_criterion) {
         const pc = d.sensitivity.per_criterion;
-        const rangeColor = (r) => r >= 0.3 ? 'rgba(22,163,74,0.75)' : r >= 0.1 ? 'rgba(202,138,4,0.75)' : 'rgba(239,68,68,0.75)';
+        const rangeColor = (r) => r >= 0.4 ? 'rgba(22,163,74,0.75)' : r >= 0.15 ? 'rgba(202,138,4,0.75)' : 'rgba(239,68,68,0.75)';
         const currentMarkerPlugin = {
             id: 'currentWeightMarker',
             afterDatasetsDraw(chart) {
