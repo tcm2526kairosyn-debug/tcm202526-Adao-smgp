@@ -182,7 +182,7 @@
                             <div class="text-xs text-gray-400 font-normal">Inativo desde {{ t.inactive_date.strftime('%d/%m/%Y') }}</div>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300 text-xs">{{ t.category }}</td>
+                        <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300 text-xs">{{ (t.category or []) | join(' / ') }}</td>
                         <td class="px-4 py-3 text-center">
                             {% if t.cost_tier == 'free' %}
                                 <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">free</span>

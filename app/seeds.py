@@ -145,7 +145,7 @@ def _seed_teb():
     tools = [
         # Planning
         dict(
-            code="MS_PROJECT", name="Microsoft Project", category="Planning",
+            code="MS_PROJECT", name="Microsoft Project", category=["Planning"],
             cost_tier="medium", cost_monthly_eur=30.0,
             compatible_postures=["Preditiva", "Híbrida"],
             compatible_methodologies=["PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
@@ -154,7 +154,7 @@ def _seed_teb():
             score_traceability=0.85, score_integration=0.60, score_flow_support=0.45,
         ),
         dict(
-            code="PROJECTLIBRE", name="ProjectLibre", category="Planning",
+            code="PROJECTLIBRE", name="ProjectLibre", category=["Planning"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Preditiva", "Híbrida"],
             compatible_methodologies=["PMBOK6", "PRINCE2", "ISO21502", "PM2"],
@@ -164,7 +164,7 @@ def _seed_teb():
         ),
         # Tracking
         dict(
-            code="JIRA", name="Jira", category="Tracking",
+            code="JIRA", name="Jira", category=["Tracking"],
             cost_tier="low", cost_monthly_eur=8.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "XP", "DSDM"],
@@ -173,7 +173,7 @@ def _seed_teb():
             score_traceability=0.85, score_integration=0.90, score_flow_support=0.85,
         ),
         dict(
-            code="TRELLO", name="Trello", category="Tracking",
+            code="TRELLO", name="Trello", category=["Tracking"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "XP"],
@@ -182,7 +182,7 @@ def _seed_teb():
             score_traceability=0.40, score_integration=0.65, score_flow_support=0.90,
         ),
         dict(
-            code="ASANA", name="Asana", category="Tracking",
+            code="ASANA", name="Asana", category=["Tracking"],
             cost_tier="low", cost_monthly_eur=10.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "DSDM", "SAFe"],
@@ -191,7 +191,7 @@ def _seed_teb():
             score_traceability=0.65, score_integration=0.75, score_flow_support=0.80,
         ),
         dict(
-            code="GITHUB_ISSUES", name="GitHub Issues", category="Tracking",
+            code="GITHUB_ISSUES", name="GitHub Issues", category=["Tracking"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "XP"],
@@ -200,7 +200,7 @@ def _seed_teb():
             score_traceability=0.55, score_integration=0.85, score_flow_support=0.70,
         ),
         dict(
-            code="MONDAY", name="Monday.com", category="Tracking",
+            code="MONDAY", name="Monday.com", category=["Tracking"],
             cost_tier="medium", cost_monthly_eur=12.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
             compatible_methodologies=["SCRUM", "KANBAN", "PMBOK6", "DSDM"],
@@ -209,7 +209,7 @@ def _seed_teb():
             score_traceability=0.75, score_integration=0.80, score_flow_support=0.80,
         ),
         dict(
-            code="CLICKUP", name="ClickUp", category="Tracking",
+            code="CLICKUP", name="ClickUp", category=["Tracking"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
             compatible_methodologies=["SCRUM", "KANBAN", "PMBOK6"],
@@ -219,7 +219,7 @@ def _seed_teb():
         ),
         # Communication
         dict(
-            code="SLACK", name="Slack", category="Communication",
+            code="SLACK", name="Slack", category=["Communication"],
             cost_tier="low", cost_monthly_eur=7.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "SAFe", "DSDM", "PMBOK6", "PRINCE2", "CRISP_DM", "ISO21502", "PM2"],
@@ -228,7 +228,7 @@ def _seed_teb():
             score_traceability=0.30, score_integration=0.85, score_flow_support=0.40,
         ),
         dict(
-            code="TEAMS", name="Microsoft Teams", category="Communication",
+            code="TEAMS", name="Microsoft Teams", category=["Communication"],
             cost_tier="low", cost_monthly_eur=5.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
             compatible_methodologies=["PMBOK6", "PRINCE2", "SAFe", "DSDM", "SCRUM", "KANBAN", "ISO21502", "PM2"],
@@ -238,7 +238,7 @@ def _seed_teb():
         ),
         # Documentation
         dict(
-            code="CONFLUENCE", name="Confluence", category="Documentation",
+            code="CONFLUENCE", name="Confluence", category=["Documentation"],
             cost_tier="low", cost_monthly_eur=5.0,
             compatible_postures=["Adaptativa", "Híbrida", "Preditiva"],
             compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
@@ -247,7 +247,7 @@ def _seed_teb():
             score_traceability=0.80, score_integration=0.85, score_flow_support=0.50,
         ),
         dict(
-            code="NOTION", name="Notion", category="Documentation",
+            code="NOTION", name="Notion", category=["Documentation"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "CRISP_DM"],
@@ -257,7 +257,7 @@ def _seed_teb():
         ),
         # Collaboration
         dict(
-            code="MIRO", name="Miro", category="Collaboration",
+            code="MIRO", name="Miro", category=["Collaboration"],
             cost_tier="free", cost_monthly_eur=0.0,
             compatible_postures=["Adaptativa", "Híbrida"],
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "DSDM", "SAFe", "CRISP_DM"],

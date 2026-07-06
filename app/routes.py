@@ -751,6 +751,21 @@ def etapa3(id):
 def etapa4(id):
     decision = ProjectDecision.query.get_or_404(id)
 
+    # Resolve common data (needed for both GET and CONFIRM_TOOLS POST)
+    selected_meth = None
+    if decision.selected_methodology_id:
+        selected_meth = MethodologyEvidenceBase.query.get(decision.selected_methodology_id)
+
+    if not selected_meth:
+        flash("Selecione uma metodologia na Etapa 3 antes de continuar.", "warning")
+        return redirect(url_for('main.etapa3', id=id))
+
+    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
+    agpi = decision.agpi_score or 2.0
+    aspi = decision.aspi_score or 2.0
+    projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
+    budget = (projeto.orcamento * 0.01) if (projeto and projeto.orcamento) else None
+
     if request.method == "POST":
         action = request.form.get('action', 'CONFIRM_TOOLS')
         previous = decision.current_stage
@@ -767,27 +782,27 @@ def etapa4(id):
             db.session.commit()
             return redirect(url_for('main.etapa3', id=id))
 
+        # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
+        viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
+        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
+                                               agpi=agpi, aspi=aspi)
+        portfolio = []
+        seen_codes = set()
+        for cat, tools in ranked_by_category.items():
+            chosen_code = request.form.get(f'sel_{cat}')
+            selected = next((t for t in tools if t['code'] == chosen_code), tools[0] if tools else None)
+            if selected and selected['code'] not in seen_codes:
+                portfolio.append(selected)
+                seen_codes.add(selected['code'])
+
+        decision.tool_portfolio = portfolio
+        decision.teb_filtered = [t.id for t in viable_tools]
         _log_transition(decision, previous, 'stage_complete', 'CONFIRM_TOOLS')
         db.session.commit()
         flash("Diagnóstico KairoSyn concluído com sucesso!", "success")
         return redirect(url_for('main.workflow', id=id))
 
-    # GET — run Fit_T
-    selected_meth = None
-    if decision.selected_methodology_id:
-        selected_meth = MethodologyEvidenceBase.query.get(decision.selected_methodology_id)
-
-    if not selected_meth:
-        flash("Selecione uma metodologia na Etapa 3 antes de continuar.", "warning")
-        return redirect(url_for('main.etapa3', id=id))
-
-    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
-    agpi = decision.agpi_score or 2.0
-    aspi = decision.aspi_score or 2.0
-
-    projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
-    budget = (projeto.orcamento * 0.01) if (projeto and projeto.orcamento) else None
-
+    # GET — run Fit_T and present options
     viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
 
     if not viable_tools:
@@ -797,20 +812,14 @@ def etapa4(id):
         flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    portfolio = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
-                                    agpi=agpi, aspi=aspi)
-
+    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
+                                           agpi=agpi, aspi=aspi)
     decision.teb_filtered = [t.id for t in viable_tools]
-    decision.tool_portfolio = portfolio
     db.session.commit()
 
-    # Group portfolio by category for display
-    by_category = {}
-    for item in portfolio:
-        by_category.setdefault(item['category'], []).append(item)
-
-    return render_template("etapa4.html", decision=decision, portfolio=portfolio,
-                           by_category=by_category, selected_meth=selected_meth,
+    return render_template("etapa4.html", decision=decision,
+                           ranked_by_category=ranked_by_category,
+                           selected_meth=selected_meth,
                            viable_count=len(viable_tools))
 
 
@@ -1046,14 +1055,14 @@ def gerir_mcdm():
             MethodologyEvidenceBase.is_active.desc(), MethodologyEvidenceBase.tier, MethodologyEvidenceBase.code
         ).all()
         tebs = ToolEvidenceBase.query.order_by(
-            ToolEvidenceBase.is_active.desc(), ToolEvidenceBase.category, ToolEvidenceBase.code
+            ToolEvidenceBase.is_active.desc(), ToolEvidenceBase.code
         ).all()
     else:
         mebs = MethodologyEvidenceBase.query.filter_by(is_active=True).order_by(
             MethodologyEvidenceBase.tier, MethodologyEvidenceBase.code
         ).all()
         tebs = ToolEvidenceBase.query.filter_by(is_active=True).order_by(
-            ToolEvidenceBase.category, ToolEvidenceBase.code
+            ToolEvidenceBase.code
         ).all()
 
     meb_weights = MCDMWeights.query.filter_by(context='MEB', is_active=True).first()
@@ -1237,7 +1246,7 @@ def teb_novo():
         teb = ToolEvidenceBase(
             code=code,
             name=request.form.get('name', '').strip(),
-            category=request.form.get('category', ''),
+            category=request.form.getlist('categories'),
             cost_tier=request.form.get('cost_tier', 'free'),
             cost_monthly_eur=float(request.form.get('cost_monthly_eur', 0.0)),
             compatible_postures=request.form.getlist('compatible_postures'),
@@ -1274,7 +1283,7 @@ def teb_editar(id):
         new_teb = ToolEvidenceBase(
             code=teb.code,
             name=request.form.get('name', '').strip(),
-            category=request.form.get('category', ''),
+            category=request.form.getlist('categories'),
             cost_tier=request.form.get('cost_tier', 'free'),
             cost_monthly_eur=float(request.form.get('cost_monthly_eur', 0.0)),
             compatible_postures=request.form.getlist('compatible_postures'),

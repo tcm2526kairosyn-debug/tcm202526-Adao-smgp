@@ -3,7 +3,7 @@
 <div class="max-w-7xl mx-auto py-10 px-4">
 
     <div class="mb-6 text-center">
-        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 4 — Portfólio de Ferramentas (Fit_T)</h1>
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 4 — Seleção de Ferramentas (Fit_T)</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-1">
             Framework KairoSyn · Metodologia: <strong>{{ selected_meth.name }}</strong> · {{ viable_count }} ferramentas analisadas
         </p>
@@ -51,69 +51,85 @@ flowchart TD
                     Ver mapa completo →
                 </a>
             </div>
+
+            <!-- Score chart -->
+            {% if ranked_by_category %}
+            <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Scores por Categoria</p>
+                <canvas id="portfolio-bar"></canvas>
+            </div>
+            {% endif %}
         </div>
 
         <!-- ── Conteúdo ─────────────────────────────────────────────────────── -->
         <div class="lg:col-span-3 space-y-6">
 
-            <!-- Bar chart — scores do portfólio -->
-            {% if portfolio %}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Score do Portfólio por Ferramenta</p>
-                <canvas id="portfolio-bar"></canvas>
-            </div>
-            <script>window._portfolioData = {{ portfolio | tojson }};</script>
-            {% endif %}
-
-            <!-- Portfólio por categoria -->
-            {% if by_category %}
-            <div class="space-y-6">
-                {% for category, tools in by_category.items() %}
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5">
-                    <h2 class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-slate-600 inline-block"></span>
-                        {{ category }}
-                    </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {% for tool in tools %}
-                        <div class="border border-gray-100 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <p class="font-semibold text-gray-800 dark:text-white">{{ tool.name }}</p>
-                                    <p class="text-xs text-gray-400">{{ tool.code }}</p>
+            <form method="POST" id="tool-form">
+                {% if ranked_by_category %}
+                <div class="space-y-6">
+                    {% for category, tools in ranked_by_category.items() %}
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5">
+                        <h2 class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-slate-600 inline-block"></span>
+                            {{ category }}
+                            <span class="ml-auto text-[10px] text-slate-400 font-normal normal-case">Selecione uma ferramenta</span>
+                        </h2>
+                        <div class="space-y-3">
+                            {% for tool in tools %}
+                            {% set rank = loop.index %}
+                            <label class="tool-option flex items-center gap-4 p-3 rounded-xl border-2 cursor-pointer transition
+                                          {% if rank == 1 %}border-slate-600 bg-slate-50{% else %}border-gray-100 hover:border-slate-300{% endif %}"
+                                   data-cat="{{ category }}">
+                                <input type="radio"
+                                       name="sel_{{ category }}"
+                                       value="{{ tool.code }}"
+                                       class="sr-only tool-radio"
+                                       {% if rank == 1 %}checked{% endif %}>
+                                <!-- Rank badge -->
+                                <span class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black
+                                    {% if rank == 1 %}bg-slate-700 text-white
+                                    {% elif rank == 2 %}bg-slate-200 text-slate-600
+                                    {% else %}bg-gray-100 text-gray-400{% endif %}">
+                                    {{ rank }}
+                                </span>
+                                <!-- Tool info -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <p class="font-semibold text-gray-800 dark:text-white text-sm">{{ tool.name }}</p>
+                                        <span class="text-[10px] text-gray-400 font-mono">{{ tool.code }}</span>
+                                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold
+                                            {% if tool.cost_tier == 'free' %}bg-green-100 text-green-700
+                                            {% elif tool.cost_tier == 'low' %}bg-blue-100 text-blue-700
+                                            {% elif tool.cost_tier == 'medium' %}bg-yellow-100 text-yellow-700
+                                            {% else %}bg-red-100 text-red-700{% endif %}">
+                                            {% if tool.cost_tier == 'free' %}Gratuito
+                                            {% else %}{{ tool.cost_monthly_eur }}€/mês{% endif %}
+                                        </span>
+                                    </div>
+                                    <!-- Score bar -->
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                            <div class="h-1.5 rounded-full transition-all
+                                                {% if rank == 1 %}bg-slate-600{% else %}bg-slate-300{% endif %}"
+                                                 style="width:{{ (tool.score * 100)|round }}%"></div>
+                                        </div>
+                                        <span class="text-xs font-mono text-gray-500 shrink-0">{{ "%.3f"|format(tool.score) }}</span>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold
-                                        {% if tool.cost_tier == 'free' %}bg-green-100 text-green-700
-                                        {% elif tool.cost_tier == 'low' %}bg-blue-100 text-blue-700
-                                        {% elif tool.cost_tier == 'medium' %}bg-yellow-100 text-yellow-700
-                                        {% else %}bg-red-100 text-red-700{% endif %}">
-                                        {% if tool.cost_tier == 'free' %}Gratuito
-                                        {% else %}{{ tool.cost_monthly_eur }}€/mês{% endif %}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2 mt-3">
-                                <div class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                                    <div class="bg-slate-600 h-1.5 rounded-full" style="width:{{ (tool.score * 100)|round }}%"></div>
-                                </div>
-                                <span class="text-xs font-mono text-gray-500">{{ "%.3f"|format(tool.score) }}</span>
-                            </div>
+                            </label>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
-                <p class="text-yellow-700 font-semibold">Nenhuma ferramenta compatível encontrada.</p>
-                <p class="text-yellow-600 text-sm mt-1">Tente rever a metodologia selecionada.</p>
-            </div>
-            {% endif %}
+                {% else %}
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+                    <p class="text-yellow-700 font-semibold">Nenhuma ferramenta compatível encontrada.</p>
+                    <p class="text-yellow-600 text-sm mt-1">Tente rever a metodologia selecionada.</p>
+                </div>
+                {% endif %}
 
-            <form method="POST">
-                <div class="flex justify-between items-center flex-wrap gap-2">
+                <div class="flex justify-between items-center flex-wrap gap-2 pt-2">
                     <div class="flex gap-2">
                         <button type="submit" name="action" value="REENTRY_APPROACH"
                                 class="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm transition"
@@ -125,7 +141,7 @@ flowchart TD
                             ← Rever Metodologia
                         </button>
                     </div>
-                    {% if by_category %}
+                    {% if ranked_by_category %}
                     <button type="submit" name="action" value="CONFIRM_TOOLS"
                             class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-xl transition shadow">
                         Confirmar Portfólio ✓
@@ -138,15 +154,39 @@ flowchart TD
     </div><!-- end grid -->
 </div>
 
+{% if ranked_by_category %}
+<script>window._rankedByCategory = {{ ranked_by_category | tojson }};</script>
+{% endif %}
+
 <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: true, flowchart: { curve: 'basis', nodeSpacing: 40, rankSpacing: 50, useMaxWidth: true, htmlLabels: true } });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
+// Radio button visual selection
+document.querySelectorAll('.tool-radio').forEach(radio => {
+    radio.addEventListener('change', function () {
+        const cat = this.closest('label').dataset.cat;
+        document.querySelectorAll(`[data-cat="${cat}"]`).forEach(lbl => {
+            lbl.classList.remove('border-slate-600', 'bg-slate-50');
+            lbl.classList.add('border-gray-100');
+            const bar = lbl.querySelector('.h-1\\.5.rounded-full.transition-all');
+            if (bar) { bar.classList.remove('bg-slate-600'); bar.classList.add('bg-slate-300'); }
+        });
+        const selected = this.closest('label');
+        selected.classList.remove('border-gray-100');
+        selected.classList.add('border-slate-600', 'bg-slate-50');
+        const bar = selected.querySelector('.h-1\\.5.rounded-full.transition-all');
+        if (bar) { bar.classList.remove('bg-slate-300'); bar.classList.add('bg-slate-600'); }
+    });
+});
+
+// Bar chart — show top-1 per category as default selection
 (function () {
-    const portfolio = window._portfolioData || [];
-    if (!portfolio.length) return;
+    const data = window._rankedByCategory || {};
+    const cats = Object.keys(data);
+    if (!cats.length) return;
 
     const CAT_COLORS = {
         'Planning':       'rgba(51,65,85,0.8)',
@@ -157,20 +197,24 @@ flowchart TD
     };
     const DEFAULT_COLOR = 'rgba(100,116,139,0.8)';
 
-    const sorted = [...portfolio].sort((a, b) => b.score - a.score);
-    const labels = sorted.map(t => t.name);
-    const scores = sorted.map(t => t.score);
-    const colors = sorted.map(t => CAT_COLORS[t.category] || DEFAULT_COLOR);
+    // Flatten: all tools from all categories for the chart
+    const all = [];
+    cats.forEach(cat => {
+        data[cat].forEach((t, i) => {
+            all.push({ name: t.name + (i === 0 ? '' : ' ②③'[i - 1] || ''), score: t.score, cat });
+        });
+    });
+    all.sort((a, b) => b.score - a.score);
 
     new Chart(document.getElementById('portfolio-bar'), {
         type: 'bar',
         data: {
-            labels,
+            labels: all.map(t => t.name),
             datasets: [{
                 label: 'Score MCDM',
-                data: scores,
-                backgroundColor: colors,
-                borderRadius: 5,
+                data: all.map(t => t.score),
+                backgroundColor: all.map(t => CAT_COLORS[t.cat] || DEFAULT_COLOR),
+                borderRadius: 4,
                 borderSkipped: false,
             }]
         },
@@ -181,13 +225,13 @@ flowchart TD
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (c) => `Score: ${c.parsed.x.toFixed(3)} — ${sorted[c.dataIndex].category}`
+                        label: (c) => `Score: ${c.parsed.x.toFixed(3)} — ${all[c.dataIndex].cat}`
                     }
                 }
             },
             scales: {
-                x: { min: 0, max: 1, ticks: { font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+                x: { min: 0, max: 1, ticks: { font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { ticks: { font: { size: 10 } }, grid: { display: false } }
             }
         }
     });
