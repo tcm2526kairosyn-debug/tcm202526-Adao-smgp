@@ -158,4 +158,15 @@ def run_migrations(db):
                 f"ALTER TABLE tool_evidence_base DROP COLUMN IF EXISTS {col}"
             ))
 
+        # TEB — convert category from VARCHAR to JSON array (multi-category support)
+        conn.execute(text("""
+            ALTER TABLE tool_evidence_base
+            ALTER COLUMN category TYPE JSON
+            USING CASE
+                WHEN category IS NULL THEN '[]'::json
+                WHEN category::text LIKE '[%' THEN category::json
+                ELSE json_build_array(category)
+            END
+        """))
+
         conn.commit()

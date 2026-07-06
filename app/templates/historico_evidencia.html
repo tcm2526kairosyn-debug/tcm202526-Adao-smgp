@@ -99,7 +99,7 @@
                     <p><strong>Tier:</strong> {{ v.tier }}</p>
                     <p><strong>Reg.:</strong> {{ 'Sim' if v.regulatory_compatible else 'Não' }}</p>
                     {% else %}
-                    <p><strong>Categoria:</strong> {{ v.category }}</p>
+                    <p><strong>Categoria:</strong> {{ (v.category or []) | join(' / ') }}</p>
                     <p><strong>Custo:</strong> {{ v.cost_tier }} ({{ "%.0f"|format(v.cost_monthly_eur) }}€/mês)</p>
                     <p><strong>GDPR:</strong> {{ 'Sim' if v.gdpr_compliant else 'Não' }}</p>
                     {% endif %}

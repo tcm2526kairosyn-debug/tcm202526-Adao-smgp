@@ -305,13 +305,14 @@ def run_fit_t_level_a(selected_meth, governance_register: dict, agpi: float, asp
 
 
 def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT',
-                      agpi: float = 2.0, aspi: float = 2.0) -> list:
+                      agpi: float = 2.0, aspi: float = 2.0, top_n: int = 3) -> dict:
     """
     Build MCDM matrix (3 stored + context_alignment) for tools.
-    Returns a portfolio (top tool per category).
+    Returns top_n ranked tools per category so the user can choose.
+    Format: {category: [tool_dict, ...]} sorted by score descending.
     """
     if not viable_tools:
-        return []
+        return {}
 
     stored_criteria = ['score_traceability', 'score_integration', 'score_flow_support']
 
@@ -338,14 +339,14 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT',
             "score": round(score, 4)
         })
 
-    # Greedy portfolio: pick top-scored tool per category
-    portfolio = {}
+    # Group by category, keep top_n per category (already sorted by score from engine)
+    by_category = {}
     for item in all_scored:
-        cat = item["category"]
-        if cat not in portfolio:
-            portfolio[cat] = item
+        cats = item["category"] if isinstance(item["category"], list) else [item["category"]]
+        for cat in cats:
+            by_category.setdefault(cat, []).append(item)
 
-    return list(portfolio.values())
+    return {cat: tools[:top_n] for cat, tools in by_category.items()}
 
 
 # ── Sensitivity Analysis ──────────────────────────────────────────────────────

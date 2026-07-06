@@ -118,7 +118,7 @@ class ToolEvidenceBase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(30), nullable=False)   # not unique — SCD Type-2
     name = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.String(50))   # Planning | Tracking | Communication | Documentation | Collaboration
+    category = db.Column(db.JSON)          # ["Planning", "Tracking", ...]  — multi-category support
     cost_tier = db.Column(db.String(10))  # free | low | medium | high
     cost_monthly_eur = db.Column(db.Float, default=0.0)
 
