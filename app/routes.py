@@ -899,14 +899,14 @@ def export_decision(id):
         "questionnaire_version": decision.questionnaire_version,
         "current_stage": decision.current_stage,
         "reentry_cause": decision.reentry_cause,
-        # Etapa 1
-        "agpi_score": decision.agpi_score,
-        "aspi_score": decision.aspi_score,
+        # Stage 1
+        "adpo_score": decision.agpi_score,
+        "aspo_score": decision.aspi_score,
         "context_data": decision.context_data,
         "evidence_notes": decision.evidence_notes,
-        # Etapa 2
+        # Stage 2
         "suggested_approach": decision.suggested_approach,
-        "governance_register": decision.governance_register,
+        "decision_control_register": decision.governance_register,
         # Etapa 3
         "meb_filtered": decision.meb_filtered,
         "methodology_ranking": decision.methodology_ranking,
@@ -925,9 +925,9 @@ def export_decision(id):
         writer = csv.writer(output)
         flat_fields = ["id", "projeto_id", "project_name", "created_at", "questionnaire_version",
                        "current_stage", "reentry_cause",
-                       "agpi_score", "aspi_score",
+                       "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
-        json_fields = ["context_data", "evidence_notes", "governance_register",
+        json_fields = ["context_data", "evidence_notes", "decision_control_register",
                        "meb_filtered", "methodology_ranking", "sensitivity_analysis",
                        "teb_filtered", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
