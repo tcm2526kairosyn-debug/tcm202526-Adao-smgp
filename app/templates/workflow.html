@@ -83,8 +83,6 @@ flowchart TD
     s4 -.->|"Thresholds / Governance"| s2
     s4 -.->|"Tool mismatch"| s3
     s3 -.->|"Governance infeasible"| s2
-    s3 -.->|"Evidência inconsistente"| s1
-    s2 -.->|"Confiança insuficiente"| s1
     {% if decision.current_stage == 'stage_1_diagnosis' %}style s1 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage == 'stage_2_approach' %}style s2 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage in ('stage_3_fit_m','stage_3_evaluation') %}style s3 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
