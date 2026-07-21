@@ -29,8 +29,8 @@
                 </span>
             </div>
             <div class="flex items-center gap-2 flex-wrap mb-3">
-                <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">AgPI {{ "%.2f"|format(decision.agpi_score or 0) }}</span>
-                <span class="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-mono">AsPI {{ "%.2f"|format(decision.aspi_score or 0) }}</span>
+                <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">AdPO {{ "%.2f"|format(decision.agpi_score or 0) }}</span>
+                <span class="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-mono">AsPO {{ "%.2f"|format(decision.aspi_score or 0) }}</span>
                 <span class="text-xs text-gray-500">{{ decision.current_stage | replace('stage_', '') | replace('_', ' ') | title }}</span>
             </div>
             {% if decision.selected_methodology %}
@@ -57,8 +57,8 @@
                 <tr class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-left text-xs uppercase font-semibold">
                     <th class="px-4 py-3 border-b-2">Data</th>
                     <th class="px-4 py-3 border-b-2">Projeto</th>
-                    <th class="px-4 py-3 border-b-2 text-center">AgPI</th>
-                    <th class="px-4 py-3 border-b-2 text-center">AsPI</th>
+                    <th class="px-4 py-3 border-b-2 text-center">AdPO</th>
+                    <th class="px-4 py-3 border-b-2 text-center">AsPO</th>
                     <th class="px-4 py-3 border-b-2">Abordagem</th>
                     <th class="px-4 py-3 border-b-2">Metodologia</th>
                     <th class="px-4 py-3 border-b-2">Fase</th>

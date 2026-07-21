@@ -37,15 +37,13 @@ def admin_required(f):
 TRANSITIONS = {
     ('stage_1_diagnosis',  'SUBMIT_DIAGNOSIS'):    'stage_2_approach',
     ('stage_2_approach',   'CONFIRM_APPROACH'):    'stage_3_fit_m',
-    ('stage_2_approach',   'REVISE_CONTEXT'):      'stage_1_diagnosis',
     ('stage_3_fit_m',      'CONFIRM_METHODOLOGY'): 'stage_4_fit_t',
     ('stage_3_fit_m',      'REENTRY_GOVERNANCE'):  'stage_2_approach',
     ('stage_3_fit_m',      'REVISE_APPROACH'):     'stage_2_approach',
     ('stage_4_fit_t',      'CONFIRM_TOOLS'):       'stage_complete',
     ('stage_4_fit_t',      'REENTRY_METHODOLOGY'): 'stage_3_fit_m',
     ('stage_4_fit_t',      'REVISE_METHODOLOGY'):  'stage_3_fit_m',
-    ('stage_4_fit_t',      'REENTRY_APPROACH'):    'stage_2_approach',  # S4→S2: governance change
-    ('stage_3_fit_m',      'REENTRY_DIAGNOSIS'):   'stage_1_diagnosis', # S3→S1: evidence update
+    ('stage_4_fit_t',      'REENTRY_APPROACH'):    'stage_2_approach',
     # legacy actions kept for backwards compat
     ('stage_1_diagnosis',  'NEXT'):                'stage_2_approach',
     ('stage_2_approach',   'NEXT'):                'stage_3_fit_m',
@@ -648,14 +646,6 @@ def etapa2(id):
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
 
-        if action == 'REVISE_CONTEXT':
-            _log_transition(decision, previous, 'stage_1_diagnosis', action)
-            db.session.commit()
-            params = {'from_decision_id': id}
-            if decision.projeto_id:
-                params['projeto_id'] = decision.projeto_id
-            return redirect(url_for('main.diagnostico', **params))
-
         _log_transition(decision, previous, 'stage_3_fit_m', 'CONFIRM_APPROACH')
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
@@ -674,15 +664,6 @@ def etapa3(id):
         selected_id = request.form.get('selected_methodology_id')
         action = request.form.get('action', 'CONFIRM_METHODOLOGY')
         previous = decision.current_stage
-
-        if action == 'REENTRY_DIAGNOSIS':
-            decision.reentry_cause = 'evidence_inconsistency'
-            _log_transition(decision, previous, 'stage_1_diagnosis', action)
-            db.session.commit()
-            params = {'from_decision_id': id}
-            if decision.projeto_id:
-                params['projeto_id'] = decision.projeto_id
-            return redirect(url_for('main.diagnostico', **params))
 
         if action in ('REENTRY_GOVERNANCE', 'REVISE_APPROACH'):
             decision.reentry_cause = 'governance_infeasibility'

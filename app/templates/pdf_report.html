@@ -218,12 +218,12 @@
 <h2>Etapa 2 — Índices e Abordagem de Gestão</h2>
 <div class="grid-2 no-break" style="margin-bottom:14px;">
   <div class="index-card card-slate">
-    <div class="label">AgPI — Pressão de Agilidade</div>
+    <div class="label">AdPO — Pressão de Adaptação</div>
     <div class="value">{{ "%.2f"|format(decision.agpi_score or 0) }}</div>
     <div class="sub">Escala 1–4</div>
   </div>
   <div class="index-card card-red">
-    <div class="label">AsPI — Pressão de Assurance</div>
+    <div class="label">AsPO — Pressão de Assurance</div>
     <div class="value">{{ "%.2f"|format(decision.aspi_score or 0) }}</div>
     <div class="sub">Escala 1–4</div>
   </div>
@@ -243,7 +243,7 @@
 {% if decision.context_data %}
 <h2>Etapa 1 — Perfil Contextual (8 Dimensões)</h2>
 <div class="no-break" style="margin-bottom:6px;">
-  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Agilidade (AgPI)</div>
+  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Adaptação (AdPO)</div>
   <div class="dim-grid">
     {% for key, label in [('complexity','Complexidade do Âmbito'),('novelty','Incerteza / Novidade'),('dynamism','Dinamismo dos Requisitos'),('team_autonomy','Autonomia da Equipa')] %}
     {% set val = decision.context_data.get(key, 0) %}
@@ -260,7 +260,7 @@
   </div>
 </div>
 <div class="no-break" style="margin-top:8px;">
-  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Assurance (AsPI)</div>
+  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Assurance (AsPO)</div>
   <div class="dim-grid">
     {% for key, label in [('criticality','Criticidade'),('compliance','Rigidez Regulatória'),('traceability','Rastreabilidade'),('stakeholder_formality','Formalidade Stakeholders')] %}
     {% set val = decision.context_data.get(key, 0) %}

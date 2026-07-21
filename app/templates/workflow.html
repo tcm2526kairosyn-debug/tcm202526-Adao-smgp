@@ -24,13 +24,6 @@
             </div>
         </div>
         <div class="flex gap-2 flex-wrap">
-            {% if decision.current_stage not in ('stage_complete',) %}
-            <form action="{{ url_for('main.update_state', id=decision.id, action='REVISE_CONTEXT') }}" method="POST">
-                <button class="px-4 py-2 bg-slate-50 text-slate-500 rounded-xl font-semibold hover:bg-amber-50 hover:text-amber-600 transition border border-slate-200 text-sm">
-                    ↺ Rever Contexto
-                </button>
-            </form>
-            {% endif %}
             {% if decision.current_stage == 'stage_2_approach' %}
             <a href="{{ url_for('main.etapa2', id=decision.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-700 transition text-sm shadow shadow-slate-300">
                 Continuar → Etapa 2
@@ -100,16 +93,16 @@ flowchart TD
             </div>
         </div>
 
-        <!-- Índices AgPI / AsPI -->
+        <!-- Índices AdPO / AsPO -->
         <div class="lg:col-span-5 space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-50 rounded-2xl p-5 text-center shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AgPI</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AdPO</p>
                     <p class="text-4xl font-black text-slate-800">{{ "%.2f"|format(decision.agpi_score or 0) }}</p>
                     <p class="text-[10px] text-slate-400 mt-1">Pressão de Agilidade</p>
                 </div>
                 <div class="bg-red-50 rounded-2xl p-5 text-center shadow-sm">
-                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">AsPI</p>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">AsPO</p>
                     <p class="text-4xl font-black text-red-700">{{ "%.2f"|format(decision.aspi_score or 0) }}</p>
                     <p class="text-[10px] text-red-400 mt-1">Pressão de Assurance</p>
                 </div>
@@ -131,7 +124,7 @@ flowchart TD
             <!-- Decision Map -->
             {% if decision.agpi_score and decision.aspi_score %}
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Mapa de Decisão — AgPI × AsPI</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Mapa de Decisão — AdPO × AsPO</p>
                 <canvas id="decision-map" height="180"></canvas>
             </div>
             {% endif %}
@@ -436,10 +429,10 @@ window._wfData = {
             data: { datasets: [{ label: d.projectName, data: [{ x: d.agpi, y: d.aspi }], backgroundColor: 'rgba(51,65,85,0.9)', pointRadius: 9, pointHoverRadius: 11 }] },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label} — AgPI: ${c.parsed.x.toFixed(2)}, AsPI: ${c.parsed.y.toFixed(2)}` } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label} — AdPO: ${c.parsed.x.toFixed(2)}, AsPO: ${c.parsed.y.toFixed(2)}` } } },
                 scales: {
-                    x: { min: 1, max: 4, title: { display: true, text: 'AgPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                    y: { min: 1, max: 4, title: { display: true, text: 'AsPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    x: { min: 1, max: 4, title: { display: true, text: 'AdPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    y: { min: 1, max: 4, title: { display: true, text: 'AsPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
                 }
             },
             plugins: [zonePlugin]

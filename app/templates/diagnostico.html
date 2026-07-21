@@ -97,13 +97,13 @@ flowchart TD
             {% if prev_decision %}
             <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm text-slate-600">
                 <span class="text-lg leading-none mt-0.5">↺</span>
-                <span>A rever diagnóstico anterior <strong>(#{{ prev_decision.id }})</strong> — AgPI {{ "%.2f"|format(prev_decision.agpi_score) }} · AsPI {{ "%.2f"|format(prev_decision.aspi_score) }} · {{ prev_decision.suggested_approach }}. Ajuste os valores conforme necessário.</span>
+                <span>A rever diagnóstico anterior <strong>(#{{ prev_decision.id }})</strong> — AdPO {{ "%.2f"|format(prev_decision.agpi_score) }} · AsPO {{ "%.2f"|format(prev_decision.aspi_score) }} · {{ prev_decision.suggested_approach }}. Ajuste os valores conforme necessário.</span>
             </div>
             {% endif %}
 
-            <!-- Dimensões AgPI -->
+            <!-- Dimensões AdPO -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Agilidade (AgPI)</h2>
+                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Agilidade (AdPO)</h2>
                 <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de uma abordagem adaptativa/ágil.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -170,9 +170,9 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Dimensões AsPI -->
+            <!-- Dimensões AsPO -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-red-500">
-                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPI)</h2>
+                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPO)</h2>
                 <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de controlo, conformidade e rastreabilidade.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
