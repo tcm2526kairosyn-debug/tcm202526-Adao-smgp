@@ -179,8 +179,8 @@ flowchart TD
     {% endif %}
 
     <!-- ── Governance Register ──────────────────────────────────────────── -->
-    {% if decision.governance_register %}
-    {% set gov = decision.governance_register %}
+    {% if decision.decision_control_register %}
+    {% set gov = decision.decision_control_register %}
     {% if gov.hard or gov.threshold or gov.soft %}
     <div class="bg-white rounded-2xl shadow border border-slate-100 p-6">
         <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Governance Register</h2>
@@ -478,10 +478,12 @@ window._wfData = {
             new Chart(radarEl, {
                 type: 'radar',
                 data: {
-                    labels: ['Assurance', 'Agility', 'Scalability', 'Hybridisation', 'Postura'],
+                    labels: ['C1 Resp.', 'C2 Align.', 'C3 Trace.', 'C4 Compl.', 'C5 Pace', 'C6 Integr.', 'C7 Distrib.'],
                     datasets: top3.map((m, i) => ({
                         label: m.name,
-                        data: [m.criteria.assurance ?? 0.5, m.criteria.agility ?? 0.5, m.criteria.scalability ?? 0.5, m.criteria.hybridisation ?? 0.5, m.criteria.posture_alignment ?? 0.5],
+                        data: [m.criteria.c1_responsiveness ?? 0.5, m.criteria.c2_alignment ?? 0.5, m.criteria.c3_traceability ?? 0.5,
+                               m.criteria.c4_compliance ?? 0.5, m.criteria.c5_pace_criticality ?? 0.5,
+                               m.criteria.c6_integration_risk ?? 0.5, m.criteria.c7_distributed_support ?? 0.5],
                         borderColor: COLORS[i].border, backgroundColor: COLORS[i].bg,
                         borderWidth: 2, pointBackgroundColor: COLORS[i].border, pointRadius: 3,
                     }))

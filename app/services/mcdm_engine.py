@@ -22,18 +22,17 @@ class MCDMEngine:
         return self._ahp(X, weights)
 
     def _mavt(self, X: np.ndarray, weights: np.ndarray) -> list[tuple[int, float]]:
-        """Weighted sum on min-max normalised matrix. V_k = sum(w_j * x_kj_norm)."""
+        """
+        Weighted sum. V_k = sum(w_j * x_kj).
+
+        X columns are already value functions on a fixed [0,1] scale (e.g. the
+        C1-C7 / CD1-CD8 rubric anchors), so no min-max rescaling is applied —
+        rescaling over the surviving candidate set would make each score
+        depend on which other alternatives happened to pass Level 1/A, an
+        artifact the value-function encoding is specifically meant to avoid.
+        """
         X = X.astype(float)
-        if X.shape[0] == 1:
-            # Single alternative — score is the raw weighted sum (no normalization needed)
-            scores = X @ weights
-            return [(0, float(scores[0]))]
-        col_min = X.min(axis=0)
-        col_max = X.max(axis=0)
-        denom = col_max - col_min
-        denom[denom == 0] = 1  # avoid division by zero when all scores equal
-        X_norm = (X - col_min) / denom
-        scores = X_norm @ weights
+        scores = X @ weights
         return sorted(enumerate(scores.tolist()), key=lambda t: t[1], reverse=True)
 
     def _ahp(self, X: np.ndarray, weights: np.ndarray) -> list[tuple[int, float]]:

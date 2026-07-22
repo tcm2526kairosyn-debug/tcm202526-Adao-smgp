@@ -90,15 +90,27 @@ class MethodologyEvidenceBase(db.Model):
     requires_fixed_scope = db.Column(db.Boolean, default=False)
     regulatory_compatible = db.Column(db.Boolean, default=True)
 
-    # Posture coordinates in (AgPI, AsPI) space — used for Chebyshev alignment
+    # Posture coordinates in (AdPO, AsPO) space — used for Level 1 alignment
+    # classification only (admissibility tier), never as a Level 2 MAVT column.
     ag_posture = db.Column(db.Integer, default=2)  # {1,2,3,4}
     as_posture = db.Column(db.Integer, default=2)  # {1,2,3,4}
 
-    # MCDM criterion scores — spec-aligned (normalized 0–1)
-    score_assurance = db.Column(db.Float, default=0.5)
-    score_agility = db.Column(db.Float, default=0.5)
-    score_scalability = db.Column(db.Float, default=0.5)
-    score_hybridisation = db.Column(db.Float, default=0.5)
+    # Candidate typology — prevents treating overlays/norms/complementary methods
+    # as autonomous substitutes for a primary methodological envelope (Level 1).
+    candidate_type = db.Column(db.String(40))   # framework | method | guide | norm | domain_process_model
+    candidate_role = db.Column(db.String(40))   # primary_envelope | complementary | reference_overlay | normative_overlay
+    eligible_as_primary_envelope = db.Column(db.Boolean, default=True)
+
+    # Stage 3 Level 2 fit criteria C1-C7 (benefit-oriented, normalized 0-1).
+    # These are the ONLY criteria consumed by the MAVT matrix — no posture or
+    # context signal is re-introduced here (see kairosynlogic.run_fit_m_level2).
+    score_c1_responsiveness = db.Column(db.Float, default=0.5)      # cadence, WIP control, change absorption
+    score_c2_alignment = db.Column(db.Float, default=0.5)           # stakeholder alignment, discovery, sensemaking
+    score_c3_traceability = db.Column(db.Float, default=0.5)        # evidence traceability, audit artefacts
+    score_c4_compliance = db.Column(db.Float, default=0.5)          # compliance readiness, formal gates
+    score_c5_pace_criticality = db.Column(db.Float, default=0.5)    # pace under escalation/assurance/risk
+    score_c6_integration_risk = db.Column(db.Float, default=0.5)    # hw/sw co-evolution, dependency handling
+    score_c7_distributed_support = db.Column(db.Float, default=0.5) # coordination, scaling, distributed delivery
 
     description = db.Column(db.Text)
 
@@ -129,14 +141,21 @@ class ToolEvidenceBase(db.Model):
     # Hard constraints
     gdpr_compliant = db.Column(db.Boolean, default=True)
 
-    # Context coordinates in (AgPI, AsPI) space — used for Chebyshev alignment
+    # Posture metadata in (AdPO, AsPO) space — retained for Level A audit/display;
+    # NOT consumed by Level B MAVT scoring (see kairosynlogic.run_fit_t_level_b).
     agility_support = db.Column(db.Integer, default=2)   # {1,2,3,4}
     assurance_support = db.Column(db.Integer, default=2)  # {1,2,3,4}
 
-    # MCDM criterion scores — spec-aligned (normalized 0–1)
-    score_traceability = db.Column(db.Float, default=0.5)
-    score_integration = db.Column(db.Float, default=0.5)
-    score_flow_support = db.Column(db.Float, default=0.5)
+    # Stage 4 Level B implementation capability dimensions CD1-CD8 (normalized 0-1).
+    # These are the ONLY criteria consumed by the MAVT matrix.
+    contribution_cd1 = db.Column(db.Float, default=0.5)  # evidence & traceability depth
+    contribution_cd2 = db.Column(db.Float, default=0.5)  # verification cadence & review controls
+    contribution_cd3 = db.Column(db.Float, default=0.5)  # iteration & flow control
+    contribution_cd4 = db.Column(db.Float, default=0.5)  # discovery & feedback capacity
+    contribution_cd5 = db.Column(db.Float, default=0.5)  # risk, safety & security evidence routines
+    contribution_cd6 = db.Column(db.Float, default=0.5)  # compliance & audit readiness
+    contribution_cd7 = db.Column(db.Float, default=0.5)  # lifecycle integration & evidence automation
+    contribution_cd8 = db.Column(db.Float, default=0.5)  # dependency & interface management
 
     # SCD Type-2 audit
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -181,7 +200,7 @@ class ProjectDecision(db.Model):
 
     # Etapa 2
     suggested_approach = db.Column(db.String(50))  # Preditiva | Adaptativa | Híbrida
-    governance_register = db.Column(db.JSON)        # {hard: [], threshold: [], soft: []}
+    decision_control_register = db.Column(db.JSON)  # {hard: [], threshold: [], soft: []}
     reentry_cause = db.Column(db.String(100))       # governance_infeasibility | tool_infeasibility
 
     # Etapa 3

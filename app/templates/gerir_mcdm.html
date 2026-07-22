@@ -60,10 +60,14 @@
                         <th class="px-4 py-3 text-left">Nome</th>
                         <th class="px-4 py-3 text-center">Postura</th>
                         <th class="px-4 py-3 text-center">Tier</th>
-                        <th class="px-4 py-3 text-center">Assurance</th>
-                        <th class="px-4 py-3 text-center">Agil.</th>
-                        <th class="px-4 py-3 text-center">Scal.</th>
-                        <th class="px-4 py-3 text-center">Hibrid.</th>
+                        <th class="px-4 py-3 text-center" title="Envelope primário?">Env.</th>
+                        <th class="px-4 py-3 text-center">C1</th>
+                        <th class="px-4 py-3 text-center">C2</th>
+                        <th class="px-4 py-3 text-center">C3</th>
+                        <th class="px-4 py-3 text-center">C4</th>
+                        <th class="px-4 py-3 text-center">C5</th>
+                        <th class="px-4 py-3 text-center">C6</th>
+                        <th class="px-4 py-3 text-center">C7</th>
                         <th class="px-4 py-3 text-center">Reg.</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-center">Ações</th>
@@ -78,6 +82,9 @@
                             {% if not m.is_active and m.inactive_date %}
                             <div class="text-xs text-gray-400 font-normal">Inativo desde {{ m.inactive_date.strftime('%d/%m/%Y') }}</div>
                             {% endif %}
+                            {% if m.candidate_role %}
+                            <div class="text-[10px] text-gray-400 font-normal">{{ m.candidate_role }}</div>
+                            {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center">
                             {% if m.posture == 'Adaptativa' %}
@@ -89,10 +96,20 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ m.tier }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_assurance) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_agility) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_scalability) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_hybridisation) }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if m.eligible_as_primary_envelope %}
+                                <span class="text-green-500 text-xs font-bold" title="Compete em Level 2">✓</span>
+                            {% else %}
+                                <span class="text-gray-400 text-xs" title="Overlay/complementar — não compete como envelope primário">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c1_responsiveness) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c2_alignment) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c3_traceability) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c4_compliance) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c5_pace_criticality) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c6_integration_risk) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c7_distributed_support) }}</td>
                         <td class="px-4 py-3 text-center">
                             {% if m.regulatory_compatible %}
                                 <span class="text-green-500 text-xs font-bold">✓</span>
@@ -164,9 +181,14 @@
                         <th class="px-4 py-3 text-center">Categoria</th>
                         <th class="px-4 py-3 text-center">Custo</th>
                         <th class="px-4 py-3 text-center">€/mês</th>
-                        <th class="px-4 py-3 text-center">Rastr.</th>
-                        <th class="px-4 py-3 text-center">Integr.</th>
-                        <th class="px-4 py-3 text-center">Fluxo</th>
+                        <th class="px-4 py-3 text-center">CD1</th>
+                        <th class="px-4 py-3 text-center">CD2</th>
+                        <th class="px-4 py-3 text-center">CD3</th>
+                        <th class="px-4 py-3 text-center">CD4</th>
+                        <th class="px-4 py-3 text-center">CD5</th>
+                        <th class="px-4 py-3 text-center">CD6</th>
+                        <th class="px-4 py-3 text-center">CD7</th>
+                        <th class="px-4 py-3 text-center">CD8</th>
                         <th class="px-4 py-3 text-center">GDPR</th>
                         <th class="px-4 py-3 text-center">Estado</th>
                         <th class="px-4 py-3 text-center">Ações</th>
@@ -195,9 +217,14 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ "%.0f"|format(t.cost_monthly_eur) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_traceability) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_integration) }}</td>
-                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.score_flow_support) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd1) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd2) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd3) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd4) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd5) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd6) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd7) }}</td>
+                        <td class="px-4 py-3 text-center">{{ "%.2f"|format(t.contribution_cd8) }}</td>
                         <td class="px-4 py-3 text-center">
                             {% if t.gdpr_compliant %}
                                 <span class="text-green-500 text-xs font-bold">✓</span>
@@ -272,7 +299,8 @@
                     <input type="hidden" name="action" value="update_pesos">
                     <input type="hidden" name="context" value="MEB">
 
-                    {% set meb_labels_pt = ['Assurance', 'Agilidade', 'Escalabilidade', 'Hibridização', 'Alinhamento Postura'] %}
+                    {% set meb_labels_pt = ['C1 Responsiveness', 'C2 Alignment', 'C3 Traceability', 'C4 Compliance',
+                                             'C5 Pace/Criticality', 'C6 Integration Risk', 'C7 Distributed Support'] %}
                     {% for i in range(meb_weights.weights | length) %}
                     <div class="mb-4">
                         <div class="flex justify-between items-center mb-1">
@@ -330,7 +358,8 @@
                     <input type="hidden" name="action" value="update_pesos">
                     <input type="hidden" name="context" value="TEB">
 
-                    {% set teb_labels_pt = ['Rastreabilidade', 'Integração', 'Suporte Fluxo', 'Alinhamento Contexto'] %}
+                    {% set teb_labels_pt = ['CD1 Traceability', 'CD2 Verification', 'CD3 Flow Control', 'CD4 Discovery',
+                                             'CD5 Risk/Safety', 'CD6 Compliance', 'CD7 Integration', 'CD8 Dependency'] %}
                     {% for i in range(teb_weights.weights | length) %}
                     <div class="mb-4">
                         <div class="flex justify-between items-center mb-1">

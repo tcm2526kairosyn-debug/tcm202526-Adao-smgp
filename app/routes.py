@@ -14,7 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .extensions import db
 from .models import User, PendingRegistration, ReactivationRequest, Projeto, ProjectDecision, MethodologyEvidenceBase, ToolEvidenceBase, MCDMWeights
 from .services.kairosynlogic import (
-    compute_indices, resolve_approach, build_governance_register,
+    compute_indices, resolve_approach, build_decision_control_register,
     run_fit_m_level1, run_fit_m_level2,
     run_fit_t_level_a, run_fit_t_level_b,
     run_sensitivity_analysis,
@@ -636,12 +636,12 @@ def etapa2(id):
     if request.method == "POST":
         confirmed_approach = request.form.get('confirmed_approach', decision.suggested_approach)
         context = decision.context_data or {}
-        gov_register = build_governance_register(confirmed_approach, context, decision.agpi_score, decision.aspi_score)
+        decision_control_register = build_decision_control_register(confirmed_approach, context, decision.agpi_score, decision.aspi_score)
 
         context['confirmed_approach'] = confirmed_approach
         decision.context_data = context
         decision.suggested_approach = confirmed_approach
-        decision.governance_register = gov_register
+        decision.decision_control_register = decision_control_register
 
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
@@ -682,12 +682,12 @@ def etapa3(id):
         flash("Selecione uma metodologia antes de continuar.", "warning")
 
     # GET — run Fit_M
-    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
+    decision_control_register = decision.decision_control_register or {"hard": [], "threshold": [], "soft": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
 
     approach = decision.suggested_approach or 'Híbrida'
-    viable = run_fit_m_level1(gov_register, agpi, aspi, approach=approach)
+    viable = run_fit_m_level1(decision_control_register, agpi, aspi, approach=approach)
 
     if not viable:
         decision.reentry_cause = 'governance_infeasibility'
@@ -697,7 +697,7 @@ def etapa3(id):
         return redirect(url_for('main.etapa2', id=id))
 
     engine = decision.mcdm_engine or 'MAVT'
-    ranking = run_fit_m_level2(viable, gov_register, engine, agpi=agpi, aspi=aspi)
+    ranking = run_fit_m_level2(viable, decision_control_register, engine)
 
     decision.meb_filtered = [item["id"] for item in ranking]
     decision.methodology_ranking = ranking
@@ -741,7 +741,7 @@ def etapa4(id):
         flash("Selecione uma metodologia na Etapa 3 antes de continuar.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
+    decision_control_register = decision.decision_control_register or {"hard": [], "threshold": [], "soft": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
     projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
@@ -764,9 +764,8 @@ def etapa4(id):
             return redirect(url_for('main.etapa3', id=id))
 
         # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
-        viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
-        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
-                                               agpi=agpi, aspi=aspi)
+        viable_tools = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
         portfolio = []
         seen_codes = set()
         for cat, tools in ranked_by_category.items():
@@ -784,7 +783,7 @@ def etapa4(id):
         return redirect(url_for('main.workflow', id=id))
 
     # GET — run Fit_T and present options
-    viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
+    viable_tools = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
 
     if not viable_tools:
         decision.reentry_cause = 'tool_infeasibility'
@@ -793,8 +792,7 @@ def etapa4(id):
         flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
-                                           agpi=agpi, aspi=aspi)
+    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
     decision.teb_filtered = [t.id for t in viable_tools]
     db.session.commit()
 
@@ -817,8 +815,6 @@ def workflow(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass  # degradação graciosa — não bloqueia o workflow
@@ -885,8 +881,6 @@ def export_decision(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass
@@ -906,7 +900,7 @@ def export_decision(id):
         "evidence_notes": decision.evidence_notes,
         # Stage 2
         "suggested_approach": decision.suggested_approach,
-        "decision_control_register": decision.governance_register,
+        "decision_control_register": decision.decision_control_register,
         # Etapa 3
         "meb_filtered": decision.meb_filtered,
         "methodology_ranking": decision.methodology_ranking,
@@ -959,8 +953,6 @@ def export_decision_pdf(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass
@@ -1121,10 +1113,16 @@ def meb_novo():
             regulatory_compatible='regulatory_compatible' in request.form,
             ag_posture=int(request.form.get('ag_posture', 2)),
             as_posture=int(request.form.get('as_posture', 2)),
-            score_assurance=float(request.form.get('score_assurance', 0.5)),
-            score_agility=float(request.form.get('score_agility', 0.5)),
-            score_scalability=float(request.form.get('score_scalability', 0.5)),
-            score_hybridisation=float(request.form.get('score_hybridisation', 0.5)),
+            candidate_type=request.form.get('candidate_type', '').strip() or None,
+            candidate_role=request.form.get('candidate_role', '').strip() or None,
+            eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
+            score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
+            score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
+            score_c4_compliance=float(request.form.get('score_c4_compliance', 0.5)),
+            score_c5_pace_criticality=float(request.form.get('score_c5_pace_criticality', 0.5)),
+            score_c6_integration_risk=float(request.form.get('score_c6_integration_risk', 0.5)),
+            score_c7_distributed_support=float(request.form.get('score_c7_distributed_support', 0.5)),
             is_active=True,
             active_date=datetime.utcnow(),
             updated_by=current_user.username,
@@ -1158,10 +1156,16 @@ def meb_editar(id):
             regulatory_compatible='regulatory_compatible' in request.form,
             ag_posture=int(request.form.get('ag_posture', 2)),
             as_posture=int(request.form.get('as_posture', 2)),
-            score_assurance=float(request.form.get('score_assurance', 0.5)),
-            score_agility=float(request.form.get('score_agility', 0.5)),
-            score_scalability=float(request.form.get('score_scalability', 0.5)),
-            score_hybridisation=float(request.form.get('score_hybridisation', 0.5)),
+            candidate_type=request.form.get('candidate_type', '').strip() or None,
+            candidate_role=request.form.get('candidate_role', '').strip() or None,
+            eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
+            score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
+            score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
+            score_c4_compliance=float(request.form.get('score_c4_compliance', 0.5)),
+            score_c5_pace_criticality=float(request.form.get('score_c5_pace_criticality', 0.5)),
+            score_c6_integration_risk=float(request.form.get('score_c6_integration_risk', 0.5)),
+            score_c7_distributed_support=float(request.form.get('score_c7_distributed_support', 0.5)),
             is_active=True,
             active_date=now,
             updated_by=current_user.username,
@@ -1235,9 +1239,14 @@ def teb_novo():
             gdpr_compliant='gdpr_compliant' in request.form,
             agility_support=int(request.form.get('agility_support', 2)),
             assurance_support=int(request.form.get('assurance_support', 2)),
-            score_traceability=float(request.form.get('score_traceability', 0.5)),
-            score_integration=float(request.form.get('score_integration', 0.5)),
-            score_flow_support=float(request.form.get('score_flow_support', 0.5)),
+            contribution_cd1=float(request.form.get('contribution_cd1', 0.5)),
+            contribution_cd2=float(request.form.get('contribution_cd2', 0.5)),
+            contribution_cd3=float(request.form.get('contribution_cd3', 0.5)),
+            contribution_cd4=float(request.form.get('contribution_cd4', 0.5)),
+            contribution_cd5=float(request.form.get('contribution_cd5', 0.5)),
+            contribution_cd6=float(request.form.get('contribution_cd6', 0.5)),
+            contribution_cd7=float(request.form.get('contribution_cd7', 0.5)),
+            contribution_cd8=float(request.form.get('contribution_cd8', 0.5)),
             is_active=True,
             active_date=datetime.utcnow(),
             updated_by=current_user.username,
@@ -1272,9 +1281,14 @@ def teb_editar(id):
             gdpr_compliant='gdpr_compliant' in request.form,
             agility_support=int(request.form.get('agility_support', 2)),
             assurance_support=int(request.form.get('assurance_support', 2)),
-            score_traceability=float(request.form.get('score_traceability', 0.5)),
-            score_integration=float(request.form.get('score_integration', 0.5)),
-            score_flow_support=float(request.form.get('score_flow_support', 0.5)),
+            contribution_cd1=float(request.form.get('contribution_cd1', 0.5)),
+            contribution_cd2=float(request.form.get('contribution_cd2', 0.5)),
+            contribution_cd3=float(request.form.get('contribution_cd3', 0.5)),
+            contribution_cd4=float(request.form.get('contribution_cd4', 0.5)),
+            contribution_cd5=float(request.form.get('contribution_cd5', 0.5)),
+            contribution_cd6=float(request.form.get('contribution_cd6', 0.5)),
+            contribution_cd7=float(request.form.get('contribution_cd7', 0.5)),
+            contribution_cd8=float(request.form.get('contribution_cd8', 0.5)),
             is_active=True,
             active_date=now,
             updated_by=current_user.username,

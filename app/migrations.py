@@ -169,4 +169,61 @@ def run_migrations(db):
             END
         """))
 
+        # MEB — candidate typology (Level 1 admissibility, avoids overlay/norm
+        # candidates competing as autonomous methodological envelopes)
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS candidate_type VARCHAR(40)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS candidate_role VARCHAR(40)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS eligible_as_primary_envelope BOOLEAN DEFAULT TRUE"
+        ))
+
+        # MEB — Stage 3 Level 2 fit criteria C1-C7 (replace Assurance/Agility/
+        # Scalability/Hybridisation, which duplicated the AdPO/AsPO signal)
+        for col in ('score_c1_responsiveness', 'score_c2_alignment', 'score_c3_traceability',
+                    'score_c4_compliance', 'score_c5_pace_criticality',
+                    'score_c6_integration_risk', 'score_c7_distributed_support'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base ADD COLUMN IF NOT EXISTS {col} FLOAT DEFAULT 0.5"
+            ))
+
+        # MEB — drop criteria superseded by C1-C7 (caused MAVT circularity with AdPO/AsPO)
+        for col in ('score_assurance', 'score_agility', 'score_scalability', 'score_hybridisation'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
+        # TEB — Stage 4 Level B implementation capability dimensions CD1-CD8
+        # (replace traceability/integration/flow_support, expanded to full backbone)
+        for col in ('contribution_cd1', 'contribution_cd2', 'contribution_cd3', 'contribution_cd4',
+                    'contribution_cd5', 'contribution_cd6', 'contribution_cd7', 'contribution_cd8'):
+            conn.execute(text(
+                f"ALTER TABLE tool_evidence_base ADD COLUMN IF NOT EXISTS {col} FLOAT DEFAULT 0.5"
+            ))
+
+        # TEB — drop criteria superseded by CD1-CD8 (caused MAVT circularity with context_alignment)
+        for col in ('score_traceability', 'score_integration', 'score_flow_support'):
+            conn.execute(text(
+                f"ALTER TABLE tool_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
+        # ProjectDecision — align naming with the alignment note's canonical term
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='project_decision' AND column_name='governance_register'
+                ) THEN
+                    ALTER TABLE project_decision RENAME COLUMN governance_register TO decision_control_register;
+                END IF;
+            END $$;
+        """))
+
         conn.commit()

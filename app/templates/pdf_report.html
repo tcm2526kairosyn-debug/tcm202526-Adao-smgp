@@ -279,8 +279,8 @@
 {% endif %}
 
 <!-- GOVERNANCE REGISTER -->
-{% if decision.governance_register %}
-{% set gov = decision.governance_register %}
+{% if decision.decision_control_register %}
+{% set gov = decision.decision_control_register %}
 {% if gov.hard or gov.threshold or gov.soft %}
 <h2>Etapa 2 — Governance Register</h2>
 <div class="no-break">
@@ -373,11 +373,13 @@
   <thead>
     <tr>
       <th>Metodologia</th>
-      <th>Assurance</th>
-      <th>Agility</th>
-      <th>Scalability</th>
-      <th>Hybridisation</th>
-      <th>Postura Alin.</th>
+      <th>C1 Resp.</th>
+      <th>C2 Align.</th>
+      <th>C3 Trace.</th>
+      <th>C4 Compl.</th>
+      <th>C5 Pace</th>
+      <th>C6 Integr.</th>
+      <th>C7 Distrib.</th>
     </tr>
   </thead>
   <tbody>
@@ -390,7 +392,7 @@
         <span class="badge" style="background:#334155;color:#fff;margin-left:4px;">✓</span>
         {% endif %}
       </td>
-      {% for key in ['assurance','agility','scalability','hybridisation','posture_alignment'] %}
+      {% for key in ['c1_responsiveness','c2_alignment','c3_traceability','c4_compliance','c5_pace_criticality','c6_integration_risk','c7_distributed_support'] %}
       {% set v = item.criteria.get(key, 0) %}
       <td>
         <div class="crit-bar-wrap">

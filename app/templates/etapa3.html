@@ -293,18 +293,20 @@ flowchart TD
         { border: 'rgba(22,163,74,0.85)', bg: 'rgba(22,163,74,0.08)' },
         { border: 'rgba(37,99,235,0.85)', bg: 'rgba(37,99,235,0.08)' },
     ];
-    const axisLabels = ['Assurance', 'Agility', 'Scalability', 'Hybridisation', 'Postura'];
+    const axisLabels = ['C1 Resp.', 'C2 Align.', 'C3 Trace.', 'C4 Compl.', 'C5 Pace', 'C6 Integr.', 'C7 Distrib.'];
 
     const datasets = ranking.map((m, i) => {
         const c = m.criteria || {};
         return {
             label: m.name,
             data: [
-                c.assurance ?? 0.5,
-                c.agility ?? 0.5,
-                c.scalability ?? 0.5,
-                c.hybridisation ?? 0.5,
-                c.posture_alignment ?? 0.5,
+                c.c1_responsiveness ?? 0.5,
+                c.c2_alignment ?? 0.5,
+                c.c3_traceability ?? 0.5,
+                c.c4_compliance ?? 0.5,
+                c.c5_pace_criticality ?? 0.5,
+                c.c6_integration_risk ?? 0.5,
+                c.c7_distributed_support ?? 0.5,
             ],
             borderColor: COLORS[i].border,
             backgroundColor: COLORS[i].bg,

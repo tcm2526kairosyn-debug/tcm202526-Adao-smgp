@@ -134,14 +134,21 @@
             </div>
         </div>
 
-        <!-- Scores MCDM -->
+        <!-- Critérios CD1-CD8 (Stage 4 Level B) -->
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Scores MCDM (0 – 1)</h2>
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
+                Critérios CD1-CD8 (0 – 1) — únicos critérios usados no MAVT de Level B
+            </h2>
             <div class="space-y-4">
                 {% set score_fields = [
-                    ('score_traceability', 'Rastreabilidade', 'Auditoria, issues e histórico de decisões'),
-                    ('score_integration',  'Integração ALM',  'Capacidade de integração com outros sistemas'),
-                    ('score_flow_support', 'Suporte Fluxo',   'Visualização de processos e quadros Kanban')
+                    ('contribution_cd1', 'CD1 — Evidence & Traceability',     'Profundidade de rastreabilidade e evidência'),
+                    ('contribution_cd2', 'CD2 — Verification/Review',        'Cadência de verificação e controlos de revisão'),
+                    ('contribution_cd3', 'CD3 — Iteration & Flow',           'Controlo de iteração e fluxo de trabalho'),
+                    ('contribution_cd4', 'CD4 — Discovery & Feedback',       'Capacidade de descoberta e feedback'),
+                    ('contribution_cd5', 'CD5 — Risk/Safety/Security',       'Rotinas de evidência de risco e segurança'),
+                    ('contribution_cd6', 'CD6 — Compliance & Audit',         'Preparação para conformidade e auditoria'),
+                    ('contribution_cd7', 'CD7 — Lifecycle Integration',      'Integração de ciclo de vida e automação de evidência'),
+                    ('contribution_cd8', 'CD8 — Dependency & Interface',     'Gestão de dependências e interfaces')
                 ] %}
                 {% for field, label, hint in score_fields %}
                 <div>
