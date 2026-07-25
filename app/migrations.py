@@ -226,4 +226,15 @@ def run_migrations(db):
             END $$;
         """))
 
+        # ProjectDecision — Level 1 / Level A exclusion causes (audit invariant:
+        # every screening exclusion is preserved with its cause)
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS meb_exclusions JSON"
+        ))
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS teb_exclusions JSON"
+        ))
+
         conn.commit()

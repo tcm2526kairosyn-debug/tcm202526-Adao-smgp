@@ -174,7 +174,12 @@ def run_fit_m_level1(decision_control_register: dict, agpi: float, aspi: float,
           pass through and are retained only for audit — never re-scored in
           Level 2
 
-    Returns list of (MethodologyEvidenceBase, alignment_tier) tuples.
+    Every exclusion is recorded with its cause so the screening is auditable
+    (invariant: "preservar causas de exclusão").
+
+    Returns (viable, exclusions):
+      viable     — list of (MethodologyEvidenceBase, alignment_tier) tuples
+      exclusions — list of {code, name, cause, detail} dicts
     """
     from ..models import MethodologyEvidenceBase
 
@@ -188,10 +193,17 @@ def run_fit_m_level1(decision_control_register: dict, agpi: float, aspi: float,
                              for c in decision_control_register.get("threshold", []) if c["scope"] == "M"}
 
     viable = []
+    exclusions = []
+
+    def _exclude(m, cause, detail):
+        exclusions.append({"code": m.code, "name": m.name, "cause": cause, "detail": detail})
+
     for m in candidates:
         # (a) Binding constraint: regulatory
         if "regulatory_compatible" in hard_constraints:
             if m.regulatory_compatible != hard_constraints["regulatory_compatible"]:
+                _exclude(m, "binding_regulatory_incompatible",
+                         "Binding constraint: regulatory_compatible exigido pelo decision-control register.")
                 continue
 
         # (b) Acceptance threshold: requires_fixed_scope — binary, not compensatory
@@ -199,24 +211,33 @@ def run_fit_m_level1(decision_control_register: dict, agpi: float, aspi: float,
             required = threshold_constraints["requires_fixed_scope"]
             has_scope = m.requires_fixed_scope or False
             if required and not has_scope:
+                _exclude(m, "threshold_requires_fixed_scope",
+                         "Acceptance threshold: âmbito fixo exigido, não suportado pela metodologia.")
                 continue
 
         # (c) candidate_role — only candidates eligible as a primary envelope compete
         if m.eligible_as_primary_envelope is False:
+            _exclude(m, "not_eligible_primary_envelope",
+                     f"candidate_role='{m.candidate_role}' — não elegível como envelope metodológico primário.")
             continue
 
         # (d) approach compatibility
         if not _approach_compatible(m.posture, approach):
+            _exclude(m, "approach_incompatible",
+                     f"Postura nominal '{m.posture}' incompatível com abordagem resolvida '{approach}'.")
             continue
 
         # (e) posture alignment — 'distant' is incompatible, excluded here
         tier = _posture_alignment_tier(agpi, aspi, m.ag_posture or 2, m.as_posture or 2)
         if tier == 'distant':
+            _exclude(m, "posture_distant",
+                     f"Distância de Chebyshev ≥ 2 entre (AdPO={agpi:.0f}, AsPO={aspi:.0f}) "
+                     f"e postura declarada ({m.ag_posture}, {m.as_posture}).")
             continue
 
         viable.append((m, tier))
 
-    return viable
+    return viable, exclusions
 
 
 def run_fit_m_level2(viable: list, decision_control_register: dict = None, engine_name: str = 'MAVT') -> list:
@@ -268,11 +289,15 @@ def run_fit_m_level2(viable: list, decision_control_register: dict = None, engin
 # ── Etapa 4 ───────────────────────────────────────────────────────────────────
 
 def run_fit_t_level_a(selected_meth, decision_control_register: dict, agpi: float, aspi: float,
-                      budget_eur: float = None) -> list:
+                      budget_eur: float = None) -> tuple:
     """
-    Filter TEB by Hard constraints, methodology and posture compatibility.
-    selected_meth: MethodologyEvidenceBase object
-    Returns list of ToolEvidenceBase objects that passed.
+    Level A — filter TEB by Hard constraints, methodology and posture
+    compatibility. selected_meth: MethodologyEvidenceBase object.
+    Every exclusion is recorded with its cause (audit invariant).
+
+    Returns (viable, exclusions):
+      viable     — list of ToolEvidenceBase objects that passed
+      exclusions — list of {code, name, cause, detail} dicts
     """
     from ..models import ToolEvidenceBase
 
@@ -281,27 +306,40 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, agpi: floa
               for c in decision_control_register.get("hard", []) if c["scope"] == "T"}
 
     viable = []
+    exclusions = []
+
+    def _exclude(t, cause, detail):
+        exclusions.append({"code": t.code, "name": t.name, "cause": cause, "detail": detail})
+
     for t in tools:
         # Hard constraint: GDPR
         if "gdpr_compliant" in hard_t:
             if t.gdpr_compliant != hard_t["gdpr_compliant"]:
+                _exclude(t, "binding_gdpr_incompatible",
+                         "Binding constraint: gdpr_compliant exigido pelo decision-control register.")
                 continue
 
         # Methodology compatibility
         if selected_meth.code not in (t.compatible_methodologies or []):
+            _exclude(t, "methodology_incompatible",
+                     f"Não declara compatibilidade com a metodologia selecionada ({selected_meth.code}).")
             continue
 
         # Posture compatibility
         if selected_meth.posture not in (t.compatible_postures or []):
+            _exclude(t, "posture_incompatible",
+                     f"Não declara compatibilidade com a postura '{selected_meth.posture}'.")
             continue
 
         # Budget constraint (optional)
         if budget_eur is not None and t.cost_monthly_eur > budget_eur:
+            _exclude(t, "budget_exceeded",
+                     f"Custo mensal {t.cost_monthly_eur:.0f}€ excede o orçamento de {budget_eur:.0f}€.")
             continue
 
         viable.append(t)
 
-    return viable
+    return viable, exclusions
 
 
 def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int = 3) -> dict:

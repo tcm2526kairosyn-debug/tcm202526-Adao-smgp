@@ -687,10 +687,11 @@ def etapa3(id):
     aspi = decision.aspi_score or 2.0
 
     approach = decision.suggested_approach or 'Híbrida'
-    viable = run_fit_m_level1(decision_control_register, agpi, aspi, approach=approach)
+    viable, meb_exclusions = run_fit_m_level1(decision_control_register, agpi, aspi, approach=approach)
 
     if not viable:
         decision.reentry_cause = 'governance_infeasibility'
+        decision.meb_exclusions = meb_exclusions
         _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE')
         db.session.commit()
         flash("Nenhuma metodologia viável encontrada. Reveja a abordagem.", "warning")
@@ -700,6 +701,7 @@ def etapa3(id):
     ranking = run_fit_m_level2(viable, decision_control_register, engine)
 
     decision.meb_filtered = [item["id"] for item in ranking]
+    decision.meb_exclusions = meb_exclusions
     decision.methodology_ranking = ranking
     db.session.commit()
 
@@ -722,6 +724,7 @@ def etapa3(id):
 
     return render_template("etapa3.html", decision=decision, ranking=ranking,
                            meb_total=meb_total, viable_count=len(viable),
+                           meb_exclusions=meb_exclusions,
                            sankey_data=json.dumps(sankey_data))
 
 
@@ -764,7 +767,8 @@ def etapa4(id):
             return redirect(url_for('main.etapa3', id=id))
 
         # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
-        viable_tools = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+        viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+        decision.teb_exclusions = teb_exclusions
         ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
         portfolio = []
         seen_codes = set()
@@ -783,7 +787,8 @@ def etapa4(id):
         return redirect(url_for('main.workflow', id=id))
 
     # GET — run Fit_T and present options
-    viable_tools = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+    viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+    decision.teb_exclusions = teb_exclusions
 
     if not viable_tools:
         decision.reentry_cause = 'tool_infeasibility'
@@ -799,6 +804,7 @@ def etapa4(id):
     return render_template("etapa4.html", decision=decision,
                            ranked_by_category=ranked_by_category,
                            selected_meth=selected_meth,
+                           teb_exclusions=teb_exclusions,
                            viable_count=len(viable_tools))
 
 
@@ -903,12 +909,14 @@ def export_decision(id):
         "decision_control_register": decision.decision_control_register,
         # Etapa 3
         "meb_filtered": decision.meb_filtered,
+        "meb_exclusions": decision.meb_exclusions,
         "methodology_ranking": decision.methodology_ranking,
         "selected_methodology": decision.selected_methodology,
         "mcdm_engine": decision.mcdm_engine,
         "sensitivity_analysis": sensitivity,
         # Etapa 4
         "teb_filtered": decision.teb_filtered,
+        "teb_exclusions": decision.teb_exclusions,
         "tool_portfolio": decision.tool_portfolio,
         # Auditoria
         "transition_history": decision.transition_history,
@@ -922,8 +930,8 @@ def export_decision(id):
                        "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
-                       "meb_filtered", "methodology_ranking", "sensitivity_analysis",
-                       "teb_filtered", "tool_portfolio", "transition_history"]
+                       "meb_filtered", "meb_exclusions", "methodology_ranking", "sensitivity_analysis",
+                       "teb_filtered", "teb_exclusions", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
             json.dumps(payload[f], ensure_ascii=False) if payload[f] is not None else ""

@@ -207,11 +207,13 @@ class ProjectDecision(db.Model):
     selected_methodology = db.Column(db.String(100))
     selected_methodology_id = db.Column(db.Integer, db.ForeignKey('methodology_evidence_base.id'), nullable=True)
     meb_filtered = db.Column(db.JSON)        # IDs que passaram Level 1
+    meb_exclusions = db.Column(db.JSON)      # [{code, name, cause, detail}] — auditoria Level 1
     methodology_ranking = db.Column(db.JSON) # [{id, code, name, score, misfit}, ...]
     mcdm_engine = db.Column(db.String(20), default='MAVT')
 
     # Etapa 4
     teb_filtered = db.Column(db.JSON)   # IDs que passaram Level A
+    teb_exclusions = db.Column(db.JSON) # [{code, name, cause, detail}] — auditoria Level A
     tool_portfolio = db.Column(db.JSON) # [{id, code, name, score, category}, ...]
 
     # State machine

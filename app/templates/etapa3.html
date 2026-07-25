@@ -78,6 +78,29 @@ flowchart TD
                 <div id="sankey-data" data-sankey="{{ sankey_data }}" class="hidden"></div>
             </div>
 
+            <!-- Auditoria Level 1 — causas de exclusão -->
+            {% if meb_exclusions %}
+            <details class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+                <summary class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none">
+                    Auditoria da Triagem L1 — {{ meb_exclusions|length }} exclusõe{{ 's' if meb_exclusions|length != 1 else '' }} registada{{ 's' if meb_exclusions|length != 1 else '' }}
+                </summary>
+                <div class="mt-4 space-y-2">
+                    {% for ex in meb_exclusions %}
+                    <div class="flex items-start gap-3 text-sm border-l-2 border-red-200 pl-3 py-1">
+                        <span class="font-mono font-bold text-gray-700 dark:text-gray-200 shrink-0">{{ ex.code }}</span>
+                        <div>
+                            <span class="inline-block px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-bold uppercase tracking-wide">{{ ex.cause | replace('_', ' ') }}</span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ ex.detail }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-[10px] text-gray-400 mt-3 italic">
+                    Exclusões não-compensatórias: nenhuma pontuação C1-C7 pode recuperar um candidato excluído no Level 1.
+                </p>
+            </details>
+            {% endif %}
+
             <!-- Recomendação KairoSyn -->
             {% if ranking %}
             {% set top = ranking[0] %}
