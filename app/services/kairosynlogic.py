@@ -38,13 +38,15 @@ MEB_WEIGHTS = _MEB_WEIGHTS_DEFAULT
 TEB_WEIGHTS = _TEB_WEIGHTS_DEFAULT
 
 
-# ── Etapa 1 ───────────────────────────────────────────────────────────────────
+# ── Etapa 2 — Organisers (AdPO/AsPO) ─────────────────────────────────────────
+# Stage 1 is context diagnosis only; the organisers are computed on entry to
+# Stage 2 from the Stage 1 contextual profile (see routes.etapa2).
 
 def compute_indices(context_data: dict) -> tuple[float, float]:
     """
-    Compute AgPI and AsPI as ordinal indices {1,2,3,4} per KairoSyn spec (Stage 2).
+    Compute AdPO and AsPO as ordinal indices {1,2,3,4} per KairoSyn spec (Stage 2).
     Rule: count how many dimensions score >= 3, map that count to {1,2,3,4}.
-    AgPI and AsPI are ordinal organisers, not cardinal averages.
+    AdPO and AsPO are ordinal organisers, not cardinal averages.
     """
     agpi_dims = ['complexity', 'novelty', 'dynamism', 'team_autonomy']
     aspi_dims = ['criticality', 'compliance', 'traceability', 'stakeholder_formality']

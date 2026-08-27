@@ -582,9 +582,9 @@ def diagnostico():
             for dim in context_data
         }
 
-        agpi, aspi = compute_indices(context_data)
-        approach = resolve_approach(agpi, aspi)
-
+        # Stage 1 = context diagnosis only. The organisers AdPO/AsPO and the
+        # suggested approach are Stage 2 responsibilities — computed on entry
+        # to etapa2, not here.
         projeto_id_raw = request.form.get('projeto_id')
         projeto_id = int(projeto_id_raw) if projeto_id_raw else None
 
@@ -596,9 +596,6 @@ def diagnostico():
             project_name=request.form.get('project_name', 'Sem nome').strip() or 'Sem nome',
             user_id=current_user.id,
             projeto_id=projeto_id,
-            agpi_score=agpi,
-            aspi_score=aspi,
-            suggested_approach=approach,
             context_data=context_data,
             evidence_notes={k: v for k, v in evidence_notes.items() if v},
             questionnaire_version='v2',
@@ -632,6 +629,17 @@ def diagnostico():
 @login_required
 def etapa2(id):
     decision = ProjectDecision.query.get_or_404(id)
+
+    # Stage 2 responsibility: compute the organisers AdPO/AsPO and resolve the
+    # suggested approach on first entry (Stage 1 produces only the contextual
+    # diagnosis). Computed once — a later revisit must not clobber an approach
+    # the user has meanwhile confirmed/overridden.
+    if decision.agpi_score is None or decision.aspi_score is None:
+        agpi, aspi = compute_indices(decision.context_data or {})
+        decision.agpi_score = agpi
+        decision.aspi_score = aspi
+        decision.suggested_approach = resolve_approach(agpi, aspi)
+        db.session.commit()
 
     if request.method == "POST":
         confirmed_approach = request.form.get('confirmed_approach', decision.suggested_approach)
