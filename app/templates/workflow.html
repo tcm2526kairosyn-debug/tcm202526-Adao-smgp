@@ -43,6 +43,22 @@
                     ↺ Rever diagnóstico
                 </a>
                 {% endif %}
+                <form method="POST" action="{{ url_for('main.reassess_decision', id=decision.id) }}"
+                      onsubmit="return confirm('Criar uma nova execução a partir da Etapa 2? Esta decisão mantém-se como registo concluído e rastreável.')">
+                    <input type="hidden" name="target" value="stage_2_approach">
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                        ↺ Reavaliar abordagem (E2)
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('main.reassess_decision', id=decision.id) }}"
+                      onsubmit="return confirm('Criar uma nova execução a partir da Etapa 3? Esta decisão mantém-se como registo concluído e rastreável.')">
+                    <input type="hidden" name="target" value="stage_3_fit_m">
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                        ↺ Reavaliar metodologia (E3)
+                    </button>
+                </form>
                 {% if projeto %}
                 <a href="{{ url_for('main.projeto_diagnosticos', projeto_uuid=projeto.projeto_uuid) }}"
                    class="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-semibold hover:bg-slate-200 transition text-sm">
@@ -83,6 +99,8 @@ flowchart TD
     s4 -.->|"Thresholds / Governance"| s2
     s4 -.->|"Tool mismatch"| s3
     s3 -.->|"Governance infeasible"| s2
+    sc -.->|"Reassessment (nova execução)"| s2
+    sc -.->|"Reassessment (nova execução)"| s3
     {% if decision.current_stage == 'stage_1_diagnosis' %}style s1 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage == 'stage_2_approach' %}style s2 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage in ('stage_3_fit_m','stage_3_evaluation') %}style s3 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}

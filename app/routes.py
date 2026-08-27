@@ -816,6 +816,100 @@ def etapa4(id):
                            viable_count=len(viable_tools))
 
 
+# ── Reassessment pós-conclusão (nova execução clonada) ───────────────────────
+
+_REASSESS_TARGETS = {
+    'stage_2_approach': {
+        'action': 'REASSESSMENT_APPROACH',
+        'cause': 'organiser_drift_or_decision_control_reconfiguration',
+        'redirect': 'main.etapa2',
+    },
+    'stage_3_fit_m': {
+        'action': 'REASSESSMENT_METHODOLOGY',
+        'cause': 'evidence_update_or_configuration_infeasibility',
+        'redirect': 'main.etapa3',
+    },
+}
+
+
+@main.route("/decision/<int:id>/reassess", methods=["POST"])
+@login_required
+def reassess_decision(id):
+    """
+    REASSESSMENT a partir de Concluído: origina uma NOVA execução versionada
+    que entra diretamente no Stage adequado (Etapa 2 ou Etapa 3), preservando
+    a decisão concluída como registo imutável. O estado Completed não torna a
+    decisão irreversível — mas a reavaliação nunca reabre o registo original:
+    a linhagem fica gravada na transition_history de ambas as decisões
+    (source_decision_id / spawned_decision_id).
+    """
+    origin = ProjectDecision.query.get_or_404(id)
+    target = request.form.get('target')
+
+    if origin.current_stage != 'stage_complete':
+        flash("Reassessment só está disponível para decisões concluídas.", "warning")
+        return redirect(url_for('main.workflow', id=id))
+    if target not in _REASSESS_TARGETS:
+        flash("Destino de reassessment inválido.", "warning")
+        return redirect(url_for('main.workflow', id=id))
+
+    spec = _REASSESS_TARGETS[target]
+    justification = request.form.get('justification', '').strip()
+    now = datetime.utcnow().isoformat()
+
+    new_decision = ProjectDecision(
+        project_name=origin.project_name,
+        user_id=current_user.id,
+        projeto_id=origin.projeto_id,
+        questionnaire_version=origin.questionnaire_version,
+        mcdm_engine=origin.mcdm_engine,
+        # Outputs de Stage 1 transitam — o diagnóstico contextual mantém-se
+        context_data=dict(origin.context_data or {}),
+        evidence_notes=dict(origin.evidence_notes or {}),
+        current_stage=target,
+        reentry_cause=spec['cause'],
+        transition_history=[{
+            "from": "stage_complete",
+            "to": target,
+            "action": spec['action'],
+            "timestamp": now,
+            "user": current_user.username,
+            "source_decision_id": origin.id,
+            "justification": justification or None,
+        }],
+    )
+
+    # Entrada direta na Etapa 3 exige os outputs de Stage 2 já resolvidos;
+    # entrada na Etapa 2 deixa os organisers a None para serem recalculados
+    # (responsabilidade de Stage 2).
+    if target == 'stage_3_fit_m':
+        new_decision.agpi_score = origin.agpi_score
+        new_decision.aspi_score = origin.aspi_score
+        new_decision.suggested_approach = origin.suggested_approach
+        new_decision.decision_control_register = dict(origin.decision_control_register or {})
+
+    db.session.add(new_decision)
+    db.session.flush()  # obtém o id da nova decisão para a linhagem
+
+    # Anotar a linhagem na decisão de origem (audit log; o current_stage
+    # permanece 'stage_complete' — o registo concluído não é reaberto)
+    origin_history = list(origin.transition_history or [])
+    origin_history.append({
+        "from": "stage_complete",
+        "to": target,
+        "action": spec['action'],
+        "timestamp": now,
+        "user": current_user.username,
+        "spawned_decision_id": new_decision.id,
+        "justification": justification or None,
+    })
+    origin.transition_history = origin_history
+
+    db.session.commit()
+    flash(f"Nova execução #{new_decision.id} criada a partir da decisão concluída #{origin.id}.", "success")
+    return redirect(url_for(spec['redirect'], id=new_decision.id))
+
+
 # ── Workflow / Estado atual ───────────────────────────────────────────────────
 
 @main.route("/workflow/<int:id>")
