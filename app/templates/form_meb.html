@@ -160,6 +160,22 @@
                         </span>
                     </label>
                 </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
+                        Compatível como componente de envelope de
+                        <span class="text-gray-400 font-normal">— primários com os quais este candidato pode compor um envelope (nunca compete no MAVT)</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {% for pcode in primary_codes if not meb or pcode != meb.code %}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="compatible_as_component_of" value="{{ pcode }}"
+                                   {% if meb and pcode in (meb.compatible_as_component_of or []) %}checked{% endif %}
+                                   class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                            <span class="text-sm font-mono text-gray-600 dark:text-gray-300">{{ pcode }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
 

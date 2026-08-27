@@ -17,7 +17,7 @@ from .services.kairosynlogic import (
     compute_indices, resolve_approach, build_decision_control_register,
     run_fit_m_level1, run_fit_m_level2,
     run_fit_t_level_a, run_fit_t_level_b,
-    run_sensitivity_analysis,
+    run_sensitivity_analysis, get_envelope_component_candidates,
 )
 
 main = Blueprint('main', __name__)
@@ -60,15 +60,21 @@ STAGE_REDIRECT = {
 }
 
 
-def _log_transition(decision, previous, new_state, action):
+def _log_transition(decision, previous, new_state, action, cause=None):
     history = list(decision.transition_history or [])
-    history.append({
+    entry = {
         "from": previous,
         "to": new_state,
         "action": action,
         "timestamp": datetime.utcnow().isoformat(),
         "user": current_user.username
-    })
+    }
+    if cause:
+        # A causa fica preservada permanentemente no audit log; a coluna
+        # decision.reentry_cause é apenas o estado "pendente" (limpa quando a
+        # etapa de destino volta a ser confirmada).
+        entry["reentry_cause"] = cause
+    history.append(entry)
     decision.transition_history = history
     decision.current_stage = new_state
 
@@ -654,6 +660,7 @@ def etapa2(id):
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
 
+        decision.reentry_cause = None  # re-entry/reassessment tratado — causa preservada na history
         _log_transition(decision, previous, 'stage_3_fit_m', 'CONFIRM_APPROACH')
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
@@ -675,7 +682,7 @@ def etapa3(id):
 
         if action in ('REENTRY_GOVERNANCE', 'REVISE_APPROACH'):
             decision.reentry_cause = 'governance_infeasibility'
-            _log_transition(decision, previous, 'stage_2_approach', action)
+            _log_transition(decision, previous, 'stage_2_approach', action, cause='governance_infeasibility')
             db.session.commit()
             return redirect(url_for('main.etapa2', id=id))
 
@@ -683,6 +690,32 @@ def etapa3(id):
             meth = MethodologyEvidenceBase.query.get(int(selected_id))
             decision.selected_methodology_id = meth.id
             decision.selected_methodology = meth.name
+
+            # Composite envelope: optional non-competing components (overlays,
+            # norms, complementary methods) — accepted only with an explicit
+            # justification and only if declared compatible with the primary.
+            components = []
+            dropped = 0
+            for cid in request.form.getlist('component_ids'):
+                comp = MethodologyEvidenceBase.query.get(int(cid))
+                if not comp or meth.code not in (comp.compatible_as_component_of or []):
+                    continue
+                justification = (request.form.get(f'component_justification_{cid}') or '').strip()
+                if not justification:
+                    dropped += 1
+                    continue
+                components.append({
+                    "id": comp.id, "code": comp.code, "name": comp.name,
+                    "role": comp.candidate_role, "justification": justification,
+                })
+            decision.methodological_envelope = {
+                "primary": {"id": meth.id, "code": meth.code, "name": meth.name},
+                "components": components,
+            }
+            if dropped:
+                flash(f"{dropped} componente(s) do envelope ignorado(s) por falta de justificação.", "warning")
+
+            decision.reentry_cause = None
             _log_transition(decision, previous, 'stage_4_fit_t', 'CONFIRM_METHODOLOGY')
             db.session.commit()
             return redirect(url_for('main.etapa4', id=id))
@@ -700,7 +733,7 @@ def etapa3(id):
     if not viable:
         decision.reentry_cause = 'governance_infeasibility'
         decision.meb_exclusions = meb_exclusions
-        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE')
+        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE', cause='governance_infeasibility')
         db.session.commit()
         flash("Nenhuma metodologia viável encontrada. Reveja a abordagem.", "warning")
         return redirect(url_for('main.etapa2', id=id))
@@ -730,9 +763,21 @@ def etapa3(id):
         ]
     }
 
+    # Opções de envelope composto: para cada candidato ranqueado, os componentes
+    # (overlays/normas/métodos complementares) que declaram compatibilidade com ele
+    by_id = {m.id: m for m, _ in viable}
+    envelope_options = {
+        str(item["id"]): [
+            {"id": c.id, "code": c.code, "name": c.name, "role": c.candidate_role}
+            for c in get_envelope_component_candidates(by_id.get(item["id"]))
+        ]
+        for item in ranking
+    }
+
     return render_template("etapa3.html", decision=decision, ranking=ranking,
                            meb_total=meb_total, viable_count=len(viable),
                            meb_exclusions=meb_exclusions,
+                           envelope_options=envelope_options,
                            sankey_data=json.dumps(sankey_data))
 
 
@@ -764,13 +809,13 @@ def etapa4(id):
 
         if action == 'REENTRY_APPROACH':
             decision.reentry_cause = 'governance_threshold'
-            _log_transition(decision, previous, 'stage_2_approach', action)
+            _log_transition(decision, previous, 'stage_2_approach', action, cause='governance_threshold')
             db.session.commit()
             return redirect(url_for('main.etapa2', id=id))
 
         if action in ('REENTRY_METHODOLOGY', 'REVISE_METHODOLOGY'):
             decision.reentry_cause = 'tool_infeasibility'
-            _log_transition(decision, previous, 'stage_3_fit_m', action)
+            _log_transition(decision, previous, 'stage_3_fit_m', action, cause='tool_infeasibility')
             db.session.commit()
             return redirect(url_for('main.etapa3', id=id))
 
@@ -789,6 +834,7 @@ def etapa4(id):
 
         decision.tool_portfolio = portfolio
         decision.teb_filtered = [t.id for t in viable_tools]
+        decision.reentry_cause = None
         _log_transition(decision, previous, 'stage_complete', 'CONFIRM_TOOLS')
         db.session.commit()
         flash("Diagnóstico KairoSyn concluído com sucesso!", "success")
@@ -800,7 +846,7 @@ def etapa4(id):
 
     if not viable_tools:
         decision.reentry_cause = 'tool_infeasibility'
-        _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY')
+        _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY', cause='tool_infeasibility')
         db.session.commit()
         flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
         return redirect(url_for('main.etapa3', id=id))
@@ -874,6 +920,7 @@ def reassess_decision(id):
             "action": spec['action'],
             "timestamp": now,
             "user": current_user.username,
+            "reentry_cause": spec['cause'],
             "source_decision_id": origin.id,
             "justification": justification or None,
         }],
@@ -900,6 +947,7 @@ def reassess_decision(id):
         "action": spec['action'],
         "timestamp": now,
         "user": current_user.username,
+        "reentry_cause": spec['cause'],
         "spawned_decision_id": new_decision.id,
         "justification": justification or None,
     })
@@ -1014,6 +1062,7 @@ def export_decision(id):
         "meb_exclusions": decision.meb_exclusions,
         "methodology_ranking": decision.methodology_ranking,
         "selected_methodology": decision.selected_methodology,
+        "methodological_envelope": decision.methodological_envelope,
         "mcdm_engine": decision.mcdm_engine,
         "sensitivity_analysis": sensitivity,
         # Etapa 4
@@ -1032,7 +1081,8 @@ def export_decision(id):
                        "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
-                       "meb_filtered", "meb_exclusions", "methodology_ranking", "sensitivity_analysis",
+                       "meb_filtered", "meb_exclusions", "methodology_ranking",
+                       "methodological_envelope", "sensitivity_analysis",
                        "teb_filtered", "teb_exclusions", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
@@ -1199,6 +1249,12 @@ def restaurar_pesos(id):
     return redirect(url_for('main.historico_pesos', context=target.context))
 
 
+def _meb_primary_codes():
+    return [m.code for m in MethodologyEvidenceBase.query.filter_by(
+        is_active=True, eligible_as_primary_envelope=True
+    ).order_by(MethodologyEvidenceBase.code).all()]
+
+
 @main.route('/admin/meb/novo', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -1207,10 +1263,10 @@ def meb_novo():
         code = request.form.get('code', '').strip().upper()
         if not code:
             flash('O código é obrigatório.')
-            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
         if MethodologyEvidenceBase.query.filter_by(code=code, is_active=True).first():
             flash(f'Já existe uma metodologia ativa com o código "{code}".')
-            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
 
         meb = MethodologyEvidenceBase(
             code=code,
@@ -1226,6 +1282,7 @@ def meb_novo():
             candidate_type=request.form.get('candidate_type', '').strip() or None,
             candidate_role=request.form.get('candidate_role', '').strip() or None,
             eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            compatible_as_component_of=request.form.getlist('compatible_as_component_of'),
             score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
             score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
             score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
@@ -1242,7 +1299,7 @@ def meb_novo():
         flash(f'Metodologia "{meb.name}" criada.')
         return redirect(url_for('main.gerir_mcdm'))
 
-    return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+    return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
 
 
 @main.route('/admin/meb/<int:id>/editar', methods=['GET', 'POST'])
@@ -1269,6 +1326,7 @@ def meb_editar(id):
             candidate_type=request.form.get('candidate_type', '').strip() or None,
             candidate_role=request.form.get('candidate_role', '').strip() or None,
             eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            compatible_as_component_of=request.form.getlist('compatible_as_component_of'),
             score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
             score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
             score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
@@ -1285,7 +1343,7 @@ def meb_editar(id):
         flash(f'Metodologia "{new_meb.name}" atualizada (versão anterior arquivada).')
         return redirect(url_for('main.gerir_mcdm'))
 
-    return render_template('form_meb.html', meb=meb, titulo='Editar Metodologia')
+    return render_template('form_meb.html', meb=meb, titulo='Editar Metodologia', primary_codes=_meb_primary_codes())
 
 
 @main.route('/admin/meb/<string:code>/historico')

@@ -366,6 +366,34 @@
 </table>
 {% endif %}
 
+<!-- ENVELOPE METODOLÓGICO COMPOSTO -->
+{% set env = decision.methodological_envelope %}
+{% if env and env.components %}
+<h2>Etapa 3 — Envelope Metodológico Composto</h2>
+<p style="font-size:10px; color:#64748b; margin-bottom:6px;">
+  Primário: <strong>{{ env.primary.name }}</strong>. Os componentes abaixo integram o envelope com
+  justificação explícita — não competem no ranking MAVT (screening por candidate_role, Level 1).
+</p>
+<table class="no-break">
+  <thead>
+    <tr>
+      <th>Componente</th>
+      <th>Papel</th>
+      <th>Justificação</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in env.components %}
+    <tr>
+      <td><strong>{{ c.name }}</strong> <span style="font-family:monospace; font-size:9px; color:#94a3b8;">{{ c.code }}</span></td>
+      <td>{{ (c.role or '') | replace('_', ' ') }}</td>
+      <td style="font-size:10px;">{{ c.justification }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 <!-- CRITÉRIOS MCDM POR METODOLOGIA -->
 {% if decision.methodology_ranking and decision.methodology_ranking | selectattr('criteria') | list %}
 <h2>Etapa 3 — Perfil de Critérios MCDM por Metodologia</h2>

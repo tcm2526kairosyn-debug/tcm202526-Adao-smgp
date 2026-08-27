@@ -131,6 +131,23 @@ flowchart TD
                 <p class="text-2xl font-black text-{{ approach_color }}-700">{{ decision.suggested_approach or '—' }}</p>
                 {% if decision.selected_methodology %}
                 <p class="text-xs text-{{ approach_color }}-600 mt-1">Metodologia: <strong>{{ decision.selected_methodology }}</strong></p>
+                {% set env = decision.methodological_envelope %}
+                {% if env and env.components %}
+                <div class="mt-2 pt-2 border-t border-{{ approach_color }}-100">
+                    <p class="text-[10px] font-bold text-{{ approach_color }}-500 uppercase tracking-wider mb-1">Envelope composto</p>
+                    {% for c in env.components %}
+                    <div class="relative inline-block group/envc mr-1 mb-1">
+                        <span class="px-2 py-0.5 bg-white/70 text-{{ approach_color }}-700 border border-{{ approach_color }}-200 rounded-full text-[10px] font-semibold cursor-default">
+                            + {{ c.name }}
+                        </span>
+                        <div class="pointer-events-none absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover/envc:block
+                                    w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 shadow-xl leading-relaxed">
+                            <span class="font-bold uppercase text-[9px] text-slate-300">{{ c.role | replace('_',' ') }}</span><br>{{ c.justification }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% endif %}
                 {% if decision.mcdm_engine %}
                 <p class="text-[10px] text-{{ approach_color }}-400 mt-0.5">Motor MCDM: {{ decision.mcdm_engine }}</p>
@@ -145,10 +162,14 @@ flowchart TD
             </div>
             {% endif %}
 
-            <!-- Re-entry cause -->
+            <!-- Re-entry / reassessment pendente (limpo quando o estado seguinte é confirmado) -->
             {% if decision.reentry_cause %}
+            {% set is_reassess = decision.reentry_cause in ('organiser_drift_or_decision_control_reconfiguration', 'evidence_update_or_configuration_infeasibility') %}
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                <p class="text-xs font-bold text-amber-700">⚠ Re-entry: {{ decision.reentry_cause | replace('_', ' ') | title }}</p>
+                <p class="text-xs font-bold text-amber-700">⚠ {{ 'Reassessment' if is_reassess else 'Re-entry' }}: {{ decision.reentry_cause | replace('_', ' ') | title }}</p>
+                {% if is_reassess %}
+                <p class="text-[10px] text-amber-600 mt-1">Nova execução gerada a partir de uma decisão concluída — ver linhagem na transition history.</p>
+                {% endif %}
             </div>
             {% endif %}
         </div>

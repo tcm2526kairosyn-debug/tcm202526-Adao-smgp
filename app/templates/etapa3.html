@@ -196,7 +196,8 @@ flowchart TD
                                     <p class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ item.description }}</p>
                                 </div>
                             </div>
-                            <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                            <button type="button" data-mid="{{ item.id }}" data-mname="{{ item.name }}"
+                                    onclick="selectPrimary(this)"
                                     class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
                                 Selecionar
                             </button>
@@ -274,7 +275,8 @@ flowchart TD
                                     {{ "%.2f"|format(item.misfit) }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                                    <button type="button" data-mid="{{ item.id }}" data-mname="{{ item.name }}"
+                                            onclick="selectPrimary(this)"
                                             class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition">
                                         Selecionar
                                     </button>
@@ -286,6 +288,31 @@ flowchart TD
                 </div>
 
                 <input type="hidden" name="action" value="CONFIRM_METHODOLOGY">
+                <input type="hidden" name="selected_methodology_id" id="env-selected-id" value="">
+
+                <!-- Envelope metodológico composto (§5.1 da nota de alinhamento):
+                     componentes NÃO competem no MAVT — juntam-se ao envelope
+                     apenas com justificação explícita -->
+                <div id="envelope-panel" class="hidden mt-4 bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-slate-600">
+                    <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Envelope Metodológico — primário: <span id="env-primary-name" class="text-slate-800 dark:text-white"></span>
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1 mb-4">
+                        Opcionalmente, adicione guias/normas/métodos complementares como componentes do envelope.
+                        Cada componente exige justificação — os componentes não entram no ranking MAVT.
+                    </p>
+                    <div id="env-components" class="space-y-3"></div>
+                    <div class="flex gap-2 justify-end mt-5">
+                        <button type="button" onclick="cancelEnvelope()"
+                                class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-6 py-2 rounded-xl transition">
+                            Confirmar envelope →
+                        </button>
+                    </div>
+                </div>
 
                 <div class="flex justify-between items-center flex-wrap gap-2 mt-4">
                     <div class="flex gap-2">
@@ -296,6 +323,51 @@ flowchart TD
                     </div>
                 </div>
             </form>
+
+            <div id="envelope-options" data-options='{{ envelope_options | tojson }}' class="hidden"></div>
+            <script>
+            function selectPrimary(btn) {
+                const mid = btn.dataset.mid, mname = btn.dataset.mname;
+                const form = btn.closest('form');
+                document.getElementById('env-selected-id').value = mid;
+                const options = JSON.parse(document.getElementById('envelope-options').dataset.options || '{}');
+                const comps = options[mid] || [];
+                if (!comps.length) { form.submit(); return; }
+
+                document.getElementById('env-primary-name').textContent = mname;
+                const container = document.getElementById('env-components');
+                container.innerHTML = '';
+                comps.forEach(c => {
+                    const row = document.createElement('div');
+                    row.className = 'border border-gray-200 dark:border-gray-600 rounded-lg p-3';
+                    row.innerHTML =
+                        '<label class="flex items-center gap-2 cursor-pointer">' +
+                        '<input type="checkbox" name="component_ids" value="' + c.id + '" ' +
+                        'class="w-4 h-4 text-slate-700 rounded border-gray-300" ' +
+                        'onchange="toggleJustification(this, ' + c.id + ')">' +
+                        '<span class="text-sm font-semibold text-gray-700 dark:text-gray-200">' + c.name + '</span>' +
+                        '<span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded uppercase font-bold">' + (c.role || '') + '</span>' +
+                        '</label>' +
+                        '<textarea name="component_justification_' + c.id + '" rows="2" disabled ' +
+                        'placeholder="Justificação obrigatória — porque deve este componente integrar o envelope?" ' +
+                        'class="hidden mt-2 w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>';
+                    container.appendChild(row);
+                });
+                const panel = document.getElementById('envelope-panel');
+                panel.classList.remove('hidden');
+                panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+            function toggleJustification(cb, cid) {
+                const ta = document.querySelector('[name=component_justification_' + cid + ']');
+                ta.disabled = !cb.checked;
+                ta.required = cb.checked;
+                ta.classList.toggle('hidden', !cb.checked);
+            }
+            function cancelEnvelope() {
+                document.getElementById('envelope-panel').classList.add('hidden');
+                document.getElementById('env-selected-id').value = '';
+            }
+            </script>
 
         </div><!-- end content col -->
     </div><!-- end grid -->

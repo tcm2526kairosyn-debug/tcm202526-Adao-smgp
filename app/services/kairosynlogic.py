@@ -288,6 +288,28 @@ def run_fit_m_level2(viable: list, decision_control_register: dict = None, engin
     return sorted(result, key=lambda x: x["score"], reverse=True)
 
 
+def get_envelope_component_candidates(primary_meth) -> list:
+    """
+    Candidates that may join a composite methodological_envelope as
+    NON-COMPETING components of the given primary (alignment note §5.1:
+    guides, norms and complementary methods integrate the envelope when
+    justified, instead of competing as autonomous top-1 candidates).
+
+    Admissibility is metadata-driven: a candidate is offered only when the
+    primary's code appears in its compatible_as_component_of list. Components
+    never enter the Level 2 MAVT matrix — the human justification recorded at
+    selection time is the decision-control mechanism.
+    """
+    from ..models import MethodologyEvidenceBase
+
+    if primary_meth is None:
+        return []
+    rows = MethodologyEvidenceBase.query.filter_by(is_active=True).all()
+    return [m for m in rows
+            if m.id != primary_meth.id
+            and primary_meth.code in (m.compatible_as_component_of or [])]
+
+
 # ── Etapa 4 ───────────────────────────────────────────────────────────────────
 
 def run_fit_t_level_a(selected_meth, decision_control_register: dict, agpi: float, aspi: float,

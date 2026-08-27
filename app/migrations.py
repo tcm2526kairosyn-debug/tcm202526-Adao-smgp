@@ -237,4 +237,16 @@ def run_migrations(db):
             "ADD COLUMN IF NOT EXISTS teb_exclusions JSON"
         ))
 
+        # Composite methodological envelope (alignment note §5.1): overlays,
+        # norms and complementary methods may join the envelope as justified
+        # components instead of competing as autonomous top-1 candidates.
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS compatible_as_component_of JSON"
+        ))
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS methodological_envelope JSON"
+        ))
+
         conn.commit()

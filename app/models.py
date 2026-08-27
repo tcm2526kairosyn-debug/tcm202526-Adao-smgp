@@ -100,6 +100,9 @@ class MethodologyEvidenceBase(db.Model):
     candidate_type = db.Column(db.String(40))   # framework | method | guide | norm | domain_process_model
     candidate_role = db.Column(db.String(40))   # primary_envelope | complementary | reference_overlay | normative_overlay
     eligible_as_primary_envelope = db.Column(db.Boolean, default=True)
+    # Primary-envelope codes this candidate may join as a non-competing
+    # component of a composite methodological_envelope (empty = never a component)
+    compatible_as_component_of = db.Column(db.JSON)
 
     # Stage 3 Level 2 fit criteria C1-C7 (benefit-oriented, normalized 0-1).
     # These are the ONLY criteria consumed by the MAVT matrix — no posture or
@@ -206,6 +209,10 @@ class ProjectDecision(db.Model):
     # Etapa 3
     selected_methodology = db.Column(db.String(100))
     selected_methodology_id = db.Column(db.Integer, db.ForeignKey('methodology_evidence_base.id'), nullable=True)
+    # Composite envelope: {primary: {id, code, name}, components: [{id, code, name, role, justification}]}
+    # Components never compete in the Level 2 MAVT — they join the envelope only
+    # with an explicit human justification (audit requirement).
+    methodological_envelope = db.Column(db.JSON)
     meb_filtered = db.Column(db.JSON)        # IDs que passaram Level 1
     meb_exclusions = db.Column(db.JSON)      # [{code, name, cause, detail}] — auditoria Level 1
     methodology_ranking = db.Column(db.JSON) # [{id, code, name, score, misfit}, ...]
