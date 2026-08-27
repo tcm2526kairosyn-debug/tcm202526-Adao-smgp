@@ -472,6 +472,47 @@
 </table>
 {% endif %}
 
+<!-- CAPABILITY MAP (LEVEL A) -->
+{% if decision.capability_map %}
+<h2>Etapa 4 — Capability Map (Level A)</h2>
+<p style="font-size:10px; color:#64748b; margin-bottom:6px;">
+  Cobertura das dimensões de capacidade CD1-CD8 pelo conjunto admissível I_A.
+  Artefacto de auditoria derivado das contribuições registadas na TEB — não entra no scoring MAVT de Level B.
+</p>
+<table class="no-break">
+  <thead>
+    <tr>
+      <th style="width:8%;">Dim.</th>
+      <th style="width:26%;">Capacidade</th>
+      <th style="width:24%;">Cobertura máx.</th>
+      <th>Coberta por (contribuição ≥ 0.5)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for cd in decision.capability_map %}
+    <tr>
+      <td style="font-weight:700;">{{ cd.code }}</td>
+      <td>{{ cd.label }}</td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ (cd.max_contribution * 100)|round }}%;
+            background: {% if cd.coverage == 'strong' %}#16a34a{% elif cd.coverage == 'partial' %}#d97706{% else %}#dc2626{% endif %};"></div></div>
+          <span style="font-family:monospace; font-size:10px;">{{ "%.2f"|format(cd.max_contribution) }}</span>
+        </div>
+      </td>
+      <td style="font-size:9px;">
+        {% if cd.covered_by %}
+          {% for t in cd.covered_by %}{{ t.code }} ({{ "%.2f"|format(t.contribution) }}){% if not loop.last %} · {% endif %}{% endfor %}
+        {% else %}
+          <span style="color:#dc2626; font-weight:600;">Lacuna — nenhuma ferramenta admissível ≥ 0.5</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 <!-- ANÁLISE DE SENSIBILIDADE MCDM -->
 {% if sensitivity %}
 <h2>Análise de Sensibilidade MCDM</h2>

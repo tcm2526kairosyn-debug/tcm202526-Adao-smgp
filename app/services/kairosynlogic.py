@@ -366,6 +366,49 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, agpi: floa
     return viable, exclusions
 
 
+_CD_LABELS = [
+    ('contribution_cd1', 'CD1', 'Evidence & Traceability'),
+    ('contribution_cd2', 'CD2', 'Verification & Review'),
+    ('contribution_cd3', 'CD3', 'Iteration & Flow'),
+    ('contribution_cd4', 'CD4', 'Discovery & Feedback'),
+    ('contribution_cd5', 'CD5', 'Risk/Safety/Security'),
+    ('contribution_cd6', 'CD6', 'Compliance & Audit'),
+    ('contribution_cd7', 'CD7', 'Lifecycle Integration'),
+    ('contribution_cd8', 'CD8', 'Dependency & Interface'),
+]
+
+
+def build_capability_map(viable_tools: list) -> list:
+    """
+    Level A output (Stage 4): coverage of the CD1-CD8 capability dimensions by
+    the admissible tailoring-element set I_A. Purely derived from the stored
+    CD contributions — audit/presentation artifact, never fed back into the
+    Level B MAVT scoring.
+
+    Returns a list (ordered CD1→CD8) of:
+      {key, code, label, max_contribution, coverage, covered_by: [{code, name, contribution}]}
+    coverage: 'strong' (max ≥ 0.7) | 'partial' (max ≥ 0.4) | 'gap' (max < 0.4)
+    covered_by lists tools with contribution ≥ 0.5, strongest first.
+    """
+    capability_map = []
+    for attr, code, label in _CD_LABELS:
+        contribs = sorted(
+            ({"code": t.code, "name": t.name, "contribution": round(getattr(t, attr) or 0.0, 2)}
+             for t in viable_tools),
+            key=lambda x: x["contribution"], reverse=True)
+        max_c = contribs[0]["contribution"] if contribs else 0.0
+        coverage = 'strong' if max_c >= 0.7 else ('partial' if max_c >= 0.4 else 'gap')
+        capability_map.append({
+            "key": attr,
+            "code": code,
+            "label": label,
+            "max_contribution": max_c,
+            "coverage": coverage,
+            "covered_by": [c for c in contribs if c["contribution"] >= 0.5],
+        })
+    return capability_map
+
+
 def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int = 3) -> dict:
     """
     Level B — compensatory prioritisation via MAVT over CD1-CD8 only.

@@ -18,6 +18,7 @@ from .services.kairosynlogic import (
     run_fit_m_level1, run_fit_m_level2,
     run_fit_t_level_a, run_fit_t_level_b,
     run_sensitivity_analysis, get_envelope_component_candidates,
+    build_capability_map,
 )
 
 main = Blueprint('main', __name__)
@@ -822,6 +823,7 @@ def etapa4(id):
         # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
         viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
         decision.teb_exclusions = teb_exclusions
+        decision.capability_map = build_capability_map(viable_tools)
         ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
         portfolio = []
         seen_codes = set()
@@ -843,6 +845,8 @@ def etapa4(id):
     # GET — run Fit_T and present options
     viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
     decision.teb_exclusions = teb_exclusions
+    capability_map = build_capability_map(viable_tools)
+    decision.capability_map = capability_map
 
     if not viable_tools:
         decision.reentry_cause = 'tool_infeasibility'
@@ -859,6 +863,7 @@ def etapa4(id):
                            ranked_by_category=ranked_by_category,
                            selected_meth=selected_meth,
                            teb_exclusions=teb_exclusions,
+                           capability_map=capability_map,
                            viable_count=len(viable_tools))
 
 
@@ -1068,6 +1073,7 @@ def export_decision(id):
         # Etapa 4
         "teb_filtered": decision.teb_filtered,
         "teb_exclusions": decision.teb_exclusions,
+        "capability_map": decision.capability_map,
         "tool_portfolio": decision.tool_portfolio,
         # Auditoria
         "transition_history": decision.transition_history,
@@ -1083,7 +1089,7 @@ def export_decision(id):
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
                        "meb_filtered", "meb_exclusions", "methodology_ranking",
                        "methodological_envelope", "sensitivity_analysis",
-                       "teb_filtered", "teb_exclusions", "tool_portfolio", "transition_history"]
+                       "teb_filtered", "teb_exclusions", "capability_map", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
             json.dumps(payload[f], ensure_ascii=False) if payload[f] is not None else ""

@@ -249,4 +249,10 @@ def run_migrations(db):
             "ADD COLUMN IF NOT EXISTS methodological_envelope JSON"
         ))
 
+        # Stage 4 Level A output: capability_map (cobertura CD1-CD8 por I_A)
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS capability_map JSON"
+        ))
+
         conn.commit()

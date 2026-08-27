@@ -221,6 +221,7 @@ class ProjectDecision(db.Model):
     # Etapa 4
     teb_filtered = db.Column(db.JSON)   # IDs que passaram Level A
     teb_exclusions = db.Column(db.JSON) # [{code, name, cause, detail}] — auditoria Level A
+    capability_map = db.Column(db.JSON) # cobertura CD1-CD8 pelo conjunto admissível I_A (Level A)
     tool_portfolio = db.Column(db.JSON) # [{id, code, name, score, category}, ...]
 
     # State machine
