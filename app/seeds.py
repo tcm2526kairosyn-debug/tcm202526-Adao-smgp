@@ -57,7 +57,8 @@ def _seed_meb():
         dict(
             code="SCRUM", name="Scrum", posture="Adaptativa", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=4, as_posture=1,
+            posture_adpo_min=3, posture_adpo_max=4, posture_aspo_min=1, posture_aspo_max=2,
+            compatible_approaches=['Adaptativa', 'Híbrida'],
             candidate_type="framework", candidate_role="primary_team_level",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=[],
@@ -70,7 +71,8 @@ def _seed_meb():
         dict(
             code="KANBAN", name="Kanban", posture="Adaptativa", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=3, as_posture=1,
+            posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=1, posture_aspo_max=3,
+            compatible_approaches=['Adaptativa', 'Híbrida'],
             candidate_type="flow_method", candidate_role="primary_or_complementary",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=["SCRUM", "SAFe", "DSDM", "PM2"],
@@ -83,7 +85,8 @@ def _seed_meb():
         dict(
             code="PMBOK6", name="PMBoK 6ª Edição", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
-            ag_posture=1, as_posture=4,
+            posture_adpo_min=1, posture_adpo_max=3, posture_aspo_min=2, posture_aspo_max=4,
+            compatible_approaches=['Preditiva', 'Híbrida'],
             candidate_type="guide_bok", candidate_role="reference_overlay",
             eligible_as_primary_envelope=False,
             compatible_as_component_of=["PRINCE2", "PM2", "DSDM", "SAFe"],
@@ -97,7 +100,11 @@ def _seed_meb():
         dict(
             code="PRINCE2", name="PRINCE2 Agile", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
-            ag_posture=1, as_posture=4,
+            posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=2, posture_aspo_max=4,
+            # Divergência deliberada da Tabela 5 (que lista só "Hybrid"): PRINCE2
+            # combina controlo formal predefinido com adaptação por etapas, pelo
+            # que também é admissível em contextos Preditivos — decisão do autor.
+            compatible_approaches=['Preditiva', 'Híbrida'],
             candidate_type="hybrid_methodology", candidate_role="primary_envelope",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=[],
@@ -110,7 +117,8 @@ def _seed_meb():
         dict(
             code="SAFe", name="SAFe 6.0", posture="Híbrida", tier=2,
             requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=3, as_posture=3,
+            posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=2, posture_aspo_max=4,
+            compatible_approaches=['Híbrida'],
             candidate_type="scaling_framework", candidate_role="primary_envelope",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=[],
@@ -123,7 +131,8 @@ def _seed_meb():
         dict(
             code="XP", name="Extreme Programming (XP)", posture="Adaptativa", tier=2,
             requires_fixed_scope=False, regulatory_compatible=False,
-            ag_posture=4, as_posture=2,
+            posture_adpo_min=3, posture_adpo_max=4, posture_aspo_min=1, posture_aspo_max=2,
+            compatible_approaches=['Adaptativa', 'Híbrida'],
             candidate_type="engineering_method", candidate_role="complementary_engineering",
             eligible_as_primary_envelope=False,
             compatible_as_component_of=["SCRUM", "KANBAN", "SAFe", "DSDM"],
@@ -137,7 +146,8 @@ def _seed_meb():
         dict(
             code="DSDM", name="DSDM Atern", posture="Híbrida", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=3, as_posture=3,
+            posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=2, posture_aspo_max=4,
+            compatible_approaches=['Adaptativa', 'Híbrida'],
             candidate_type="methodology", candidate_role="primary_envelope",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=[],
@@ -150,7 +160,8 @@ def _seed_meb():
         dict(
             code="CRISP_DM", name="CRISP-DM", posture="Híbrida", tier=1,
             requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=2, as_posture=3,
+            posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=1, posture_aspo_max=3,
+            compatible_approaches=['Adaptativa', 'Híbrida'],
             candidate_type="domain_process_model", candidate_role="primary_in_data_projects",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=["SCRUM", "KANBAN", "SAFe"],
@@ -163,7 +174,8 @@ def _seed_meb():
         dict(
             code="ISO21502", name="ISO 21502", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
-            ag_posture=1, as_posture=4,
+            posture_adpo_min=1, posture_adpo_max=3, posture_aspo_min=2, posture_aspo_max=4,
+            compatible_approaches=['Preditiva', 'Híbrida'],
             candidate_type="guidance_standard", candidate_role="normative_overlay",
             eligible_as_primary_envelope=False,
             compatible_as_component_of=["PRINCE2", "PM2", "DSDM", "SAFe"],
@@ -176,8 +188,9 @@ def _seed_meb():
         ),
         dict(
             code="PM2", name="PM2 (Comissão Europeia)", posture="Híbrida", tier=1,
-            requires_fixed_scope=False, regulatory_compatible=True,
-            ag_posture=3, as_posture=3,
+            requires_fixed_scope=True, regulatory_compatible=True,
+            posture_adpo_min=1, posture_adpo_max=3, posture_aspo_min=2, posture_aspo_max=4,
+            compatible_approaches=['Preditiva', 'Híbrida'],
             candidate_type="methodology", candidate_role="primary_envelope",
             eligible_as_primary_envelope=True,
             compatible_as_component_of=[],
@@ -203,8 +216,11 @@ def _seed_meb():
 
 
 def _seed_teb():
-    # CD1-CD8 seed values are illustrative estimates derived from documented
-    # product capabilities (not empirically validated — see thesis limitations).
+    # CD1-CD8 seed values follow the same discrete rubric as C1-C7 (alignment
+    # note Tabela 7): 0.00 ausente, 0.25 limitada/indireta, 0.50 moderada
+    # (requer tailoring), 0.75 forte e operacionalizável, 1.00 muito forte e
+    # estrutural. Illustrative estimates derived from documented product
+    # capabilities (not empirically validated — see thesis limitations).
     # No posture/context coordinate is used here; agility_support/assurance_support
     # are retained only as Level A audit metadata (see kairosynlogic.run_fit_t_level_a).
     tools = [
@@ -216,8 +232,8 @@ def _seed_teb():
             compatible_methodologies=["PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
             gdpr_compliant=True,
             agility_support=1, assurance_support=4,
-            contribution_cd1=0.85, contribution_cd2=0.65, contribution_cd3=0.45, contribution_cd4=0.30,
-            contribution_cd5=0.40, contribution_cd6=0.75, contribution_cd7=0.60, contribution_cd8=0.85,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.50, contribution_cd4=0.25,
+            contribution_cd5=0.50, contribution_cd6=0.75, contribution_cd7=0.50, contribution_cd8=0.75,
         ),
         dict(
             code="PROJECTLIBRE", name="ProjectLibre", category=["Planning"],
@@ -226,8 +242,8 @@ def _seed_teb():
             compatible_methodologies=["PMBOK6", "PRINCE2", "ISO21502", "PM2"],
             gdpr_compliant=True,
             agility_support=1, assurance_support=3,
-            contribution_cd1=0.65, contribution_cd2=0.50, contribution_cd3=0.35, contribution_cd4=0.25,
-            contribution_cd5=0.30, contribution_cd6=0.55, contribution_cd7=0.35, contribution_cd8=0.70,
+            contribution_cd1=0.75, contribution_cd2=0.50, contribution_cd3=0.25, contribution_cd4=0.25,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.25, contribution_cd8=0.75,
         ),
         # Tracking
         dict(
@@ -237,8 +253,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "XP", "DSDM"],
             gdpr_compliant=True,
             agility_support=4, assurance_support=3,
-            contribution_cd1=0.85, contribution_cd2=0.85, contribution_cd3=0.85, contribution_cd4=0.70,
-            contribution_cd5=0.55, contribution_cd6=0.70, contribution_cd7=0.90, contribution_cd8=0.75,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.75, contribution_cd4=0.75,
+            contribution_cd5=0.50, contribution_cd6=0.75, contribution_cd7=1.00, contribution_cd8=0.75,
         ),
         dict(
             code="TRELLO", name="Trello", category=["Tracking"],
@@ -247,8 +263,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "XP"],
             gdpr_compliant=True,
             agility_support=4, assurance_support=1,
-            contribution_cd1=0.40, contribution_cd2=0.45, contribution_cd3=0.90, contribution_cd4=0.60,
-            contribution_cd5=0.20, contribution_cd6=0.30, contribution_cd7=0.65, contribution_cd8=0.35,
+            contribution_cd1=0.50, contribution_cd2=0.50, contribution_cd3=1.00, contribution_cd4=0.50,
+            contribution_cd5=0.25, contribution_cd6=0.25, contribution_cd7=0.75, contribution_cd8=0.25,
         ),
         dict(
             code="ASANA", name="Asana", category=["Tracking"],
@@ -257,8 +273,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "DSDM", "SAFe"],
             gdpr_compliant=True,
             agility_support=3, assurance_support=2,
-            contribution_cd1=0.65, contribution_cd2=0.65, contribution_cd3=0.80, contribution_cd4=0.60,
-            contribution_cd5=0.35, contribution_cd6=0.55, contribution_cd7=0.75, contribution_cd8=0.55,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.75, contribution_cd4=0.50,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.75, contribution_cd8=0.50,
         ),
         dict(
             code="GITHUB_ISSUES", name="GitHub Issues", category=["Tracking"],
@@ -267,8 +283,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "XP"],
             gdpr_compliant=True,
             agility_support=4, assurance_support=2,
-            contribution_cd1=0.55, contribution_cd2=0.75, contribution_cd3=0.70, contribution_cd4=0.55,
-            contribution_cd5=0.45, contribution_cd6=0.50, contribution_cd7=0.85, contribution_cd8=0.65,
+            contribution_cd1=0.50, contribution_cd2=0.75, contribution_cd3=0.75, contribution_cd4=0.50,
+            contribution_cd5=0.50, contribution_cd6=0.50, contribution_cd7=0.75, contribution_cd8=0.75,
         ),
         dict(
             code="MONDAY", name="Monday.com", category=["Tracking"],
@@ -277,8 +293,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "PMBOK6", "DSDM"],
             gdpr_compliant=True,
             agility_support=3, assurance_support=3,
-            contribution_cd1=0.75, contribution_cd2=0.70, contribution_cd3=0.80, contribution_cd4=0.65,
-            contribution_cd5=0.35, contribution_cd6=0.60, contribution_cd7=0.80, contribution_cd8=0.60,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.75, contribution_cd4=0.75,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.75, contribution_cd8=0.50,
         ),
         dict(
             code="CLICKUP", name="ClickUp", category=["Tracking"],
@@ -287,8 +303,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "PMBOK6"],
             gdpr_compliant=True,
             agility_support=3, assurance_support=2,
-            contribution_cd1=0.70, contribution_cd2=0.65, contribution_cd3=0.80, contribution_cd4=0.60,
-            contribution_cd5=0.35, contribution_cd6=0.55, contribution_cd7=0.75, contribution_cd8=0.55,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.75, contribution_cd4=0.50,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.75, contribution_cd8=0.50,
         ),
         # Communication
         dict(
@@ -298,8 +314,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "SAFe", "DSDM", "PMBOK6", "PRINCE2", "CRISP_DM", "ISO21502", "PM2"],
             gdpr_compliant=True,
             agility_support=3, assurance_support=2,
-            contribution_cd1=0.30, contribution_cd2=0.35, contribution_cd3=0.40, contribution_cd4=0.75,
-            contribution_cd5=0.20, contribution_cd6=0.30, contribution_cd7=0.85, contribution_cd8=0.30,
+            contribution_cd1=0.25, contribution_cd2=0.25, contribution_cd3=0.50, contribution_cd4=0.75,
+            contribution_cd5=0.25, contribution_cd6=0.25, contribution_cd7=0.75, contribution_cd8=0.25,
         ),
         dict(
             code="TEAMS", name="Microsoft Teams", category=["Communication"],
@@ -308,8 +324,8 @@ def _seed_teb():
             compatible_methodologies=["PMBOK6", "PRINCE2", "SAFe", "DSDM", "SCRUM", "KANBAN", "ISO21502", "PM2"],
             gdpr_compliant=True,
             agility_support=2, assurance_support=3,
-            contribution_cd1=0.45, contribution_cd2=0.45, contribution_cd3=0.40, contribution_cd4=0.65,
-            contribution_cd5=0.30, contribution_cd6=0.50, contribution_cd7=0.80, contribution_cd8=0.35,
+            contribution_cd1=0.50, contribution_cd2=0.50, contribution_cd3=0.50, contribution_cd4=0.75,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.75, contribution_cd8=0.25,
         ),
         # Documentation
         dict(
@@ -319,8 +335,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "SAFe", "PMBOK6", "PRINCE2", "DSDM", "ISO21502", "PM2"],
             gdpr_compliant=True,
             agility_support=2, assurance_support=4,
-            contribution_cd1=0.80, contribution_cd2=0.70, contribution_cd3=0.50, contribution_cd4=0.55,
-            contribution_cd5=0.40, contribution_cd6=0.75, contribution_cd7=0.85, contribution_cd8=0.55,
+            contribution_cd1=0.75, contribution_cd2=0.75, contribution_cd3=0.50, contribution_cd4=0.50,
+            contribution_cd5=0.50, contribution_cd6=0.75, contribution_cd7=0.75, contribution_cd8=0.50,
         ),
         dict(
             code="NOTION", name="Notion", category=["Documentation"],
@@ -329,8 +345,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "CRISP_DM"],
             gdpr_compliant=True,
             agility_support=3, assurance_support=2,
-            contribution_cd1=0.50, contribution_cd2=0.45, contribution_cd3=0.60, contribution_cd4=0.55,
-            contribution_cd5=0.25, contribution_cd6=0.40, contribution_cd7=0.60, contribution_cd8=0.35,
+            contribution_cd1=0.50, contribution_cd2=0.50, contribution_cd3=0.50, contribution_cd4=0.50,
+            contribution_cd5=0.25, contribution_cd6=0.50, contribution_cd7=0.50, contribution_cd8=0.25,
         ),
         # Collaboration
         dict(
@@ -340,8 +356,8 @@ def _seed_teb():
             compatible_methodologies=["SCRUM", "KANBAN", "XP", "DSDM", "SAFe", "CRISP_DM"],
             gdpr_compliant=True,
             agility_support=4, assurance_support=1,
-            contribution_cd1=0.30, contribution_cd2=0.35, contribution_cd3=0.90, contribution_cd4=0.85,
-            contribution_cd5=0.15, contribution_cd6=0.25, contribution_cd7=0.60, contribution_cd8=0.30,
+            contribution_cd1=0.25, contribution_cd2=0.25, contribution_cd3=1.00, contribution_cd4=0.75,
+            contribution_cd5=0.25, contribution_cd6=0.25, contribution_cd7=0.50, contribution_cd8=0.25,
         ),
     ]
 

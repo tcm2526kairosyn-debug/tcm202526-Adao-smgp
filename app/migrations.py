@@ -255,4 +255,32 @@ def run_migrations(db):
             "ADD COLUMN IF NOT EXISTS capability_map JSON"
         ))
 
+        # MEB — posture as a region [min,max]x[min,max], not a point (alignment
+        # note Tabela 5). A degenerate region (min==max) reproduces the old
+        # point-based behaviour exactly.
+        for col in ('posture_adpo_min', 'posture_adpo_max', 'posture_aspo_min', 'posture_aspo_max'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base ADD COLUMN IF NOT EXISTS {col} INTEGER DEFAULT 2"
+            ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS compatible_approaches JSON"
+        ))
+        # Back-fill regions from the old point columns before dropping them
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='methodology_evidence_base' AND column_name='ag_posture'
+                ) THEN
+                    UPDATE methodology_evidence_base
+                    SET posture_adpo_min = ag_posture, posture_adpo_max = ag_posture,
+                        posture_aspo_min = as_posture, posture_aspo_max = as_posture;
+                    ALTER TABLE methodology_evidence_base DROP COLUMN ag_posture;
+                    ALTER TABLE methodology_evidence_base DROP COLUMN as_posture;
+                END IF;
+            END $$;
+        """))
+
         conn.commit()

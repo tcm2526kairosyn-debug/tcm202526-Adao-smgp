@@ -90,10 +90,16 @@ class MethodologyEvidenceBase(db.Model):
     requires_fixed_scope = db.Column(db.Boolean, default=False)
     regulatory_compatible = db.Column(db.Boolean, default=True)
 
-    # Posture coordinates in (AdPO, AsPO) space — used for Level 1 alignment
+    # Posture region in (AdPO, AsPO) space — used for Level 1 alignment
     # classification only (admissibility tier), never as a Level 2 MAVT column.
-    ag_posture = db.Column(db.Integer, default=2)  # {1,2,3,4}
-    as_posture = db.Column(db.Integer, default=2)  # {1,2,3,4}
+    # A degenerate region (min == max) behaves exactly like the old point model.
+    posture_adpo_min = db.Column(db.Integer, default=2)  # {1,2,3,4}
+    posture_adpo_max = db.Column(db.Integer, default=2)  # {1,2,3,4}
+    posture_aspo_min = db.Column(db.Integer, default=2)  # {1,2,3,4}
+    posture_aspo_max = db.Column(db.Integer, default=2)  # {1,2,3,4}
+    # Approaches (Adaptativa/Preditiva/Híbrida) this candidate is admissible
+    # under — Level 1 approach_compatible check (kairosynlogic._approach_compatible)
+    compatible_approaches = db.Column(db.JSON)
 
     # Candidate typology — prevents treating overlays/norms/complementary methods
     # as autonomous substitutes for a primary methodological envelope (Level 1).

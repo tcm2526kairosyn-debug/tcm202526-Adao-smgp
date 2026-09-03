@@ -340,12 +340,14 @@
         {% endif %}
       </td>
       <td>
+        {% for ap in (item.compatible_approaches or [item.posture]) %}
         <span class="badge
-          {% if item.posture == 'Adaptativa' %}badge-adaptativa
-          {% elif item.posture == 'Preditiva' %}badge-preditiva
-          {% else %}badge-hibrida{% endif %}">
-          {{ item.posture }}
+          {% if ap == 'Adaptativa' %}badge-adaptativa
+          {% elif ap == 'Preditiva' %}badge-preditiva
+          {% else %}badge-hibrida{% endif %}" style="margin:1px;">
+          {{ ap }}
         </span>
+        {% endfor %}
       </td>
       <td style="text-align:center;">T{{ item.tier }}</td>
       <td>

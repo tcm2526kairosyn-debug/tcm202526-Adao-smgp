@@ -274,12 +274,16 @@ flowchart TD
                             {% endif %}
                         </td>
                         <td class="py-3">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
-                                {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
-                                {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                {{ item.posture }}
-                            </span>
+                            <div class="flex flex-wrap gap-1">
+                                {% for ap in (item.compatible_approaches or [item.posture]) %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                    {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                    {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
+                                    {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                    {{ ap }}
+                                </span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td class="py-3 text-slate-400 text-xs">T{{ item.tier }}</td>
                         <td class="py-3">

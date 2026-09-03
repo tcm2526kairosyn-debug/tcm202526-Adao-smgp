@@ -203,12 +203,14 @@ flowchart TD
                             </button>
                         </div>
                         <div class="flex items-center gap-3 mt-2 flex-wrap">
+                            {% for ap in (item.compatible_approaches or [item.posture]) %}
                             <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                                {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                                {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
                                 {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                {{ item.posture }}
+                                {{ ap }}
                             </span>
+                            {% endfor %}
                             <span class="text-xs text-gray-400">T{{ item.tier }}</span>
                             <span class="text-xs font-mono text-gray-600">Score {{ "%.3f"|format(item.score) }}</span>
                             <span class="text-xs font-mono
@@ -254,12 +256,16 @@ flowchart TD
                                     {% endif %}
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                                        {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                        {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
-                                        {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                        {{ item.posture }}
-                                    </span>
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for ap in (item.compatible_approaches or [item.posture]) %}
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                            {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                            {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
+                                            {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                            {{ ap }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500 dark:text-gray-400">T{{ item.tier }}</td>
                                 <td class="px-4 py-3">

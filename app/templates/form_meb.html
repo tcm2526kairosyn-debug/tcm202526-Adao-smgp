@@ -87,18 +87,44 @@
                     <p class="text-xs text-gray-400 mt-1">Tamanho máximo de equipa permitido</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">AdPO postura ideal (1–4)</label>
-                    <input type="number" name="ag_posture" min="1" max="4" step="1"
-                           value="{{ meb.ag_posture if meb and meb.ag_posture else 2 }}"
-                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-xs text-gray-400 mt-1">Ponto de operação óptimo em AdPO</p>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Região AdPO (mín–máx, 1–4)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="posture_adpo_min" min="1" max="4" step="1"
+                               value="{{ meb.posture_adpo_min if meb and meb.posture_adpo_min else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <span class="text-gray-400 text-xs">–</span>
+                        <input type="number" name="posture_adpo_max" min="1" max="4" step="1"
+                               value="{{ meb.posture_adpo_max if meb and meb.posture_adpo_max else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AdPO (Tabela 5 — nota de alinhamento)</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">AsPO postura ideal (1–4)</label>
-                    <input type="number" name="as_posture" min="1" max="4" step="1"
-                           value="{{ meb.as_posture if meb and meb.as_posture else 2 }}"
-                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-xs text-gray-400 mt-1">Ponto de operação óptimo em AsPO</p>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Região AsPO (mín–máx, 1–4)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="posture_aspo_min" min="1" max="4" step="1"
+                               value="{{ meb.posture_aspo_min if meb and meb.posture_aspo_min else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <span class="text-gray-400 text-xs">–</span>
+                        <input type="number" name="posture_aspo_max" min="1" max="4" step="1"
+                               value="{{ meb.posture_aspo_max if meb and meb.posture_aspo_max else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AsPO</p>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Abordagens compatíveis</label>
+                    <div class="flex gap-4">
+                        {% for ap in ['Adaptativa', 'Preditiva', 'Híbrida'] %}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="compatible_approaches" value="{{ ap }}"
+                                   {% if meb and ap in (meb.compatible_approaches or []) %}checked{% endif %}
+                                   class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                            <span class="text-sm text-gray-600 dark:text-gray-300">{{ ap }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Level 1 approach_compatible — sem seleção, o candidato não é excluído por abordagem</p>
                 </div>
                 <div class="flex flex-col gap-3 justify-center">
                     <label class="flex items-center gap-2 cursor-pointer">

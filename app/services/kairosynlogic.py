@@ -48,8 +48,8 @@ def compute_indices(context_data: dict) -> tuple[float, float]:
     Rule: count how many dimensions score >= 3, map that count to {1,2,3,4}.
     AdPO and AsPO are ordinal organisers, not cardinal averages.
     """
-    agpi_dims = ['complexity', 'novelty', 'dynamism', 'team_autonomy']
-    aspi_dims = ['criticality', 'compliance', 'traceability', 'stakeholder_formality']
+    adpo_dims = ['complexity', 'novelty', 'dynamism', 'team_autonomy']
+    aspo_dims = ['criticality', 'compliance', 'traceability', 'stakeholder_formality']
 
     def _ordinal(dims: list[str]) -> float:
         h = sum(1 for d in dims if context_data.get(d, 1) >= 3)
@@ -62,22 +62,22 @@ def compute_indices(context_data: dict) -> tuple[float, float]:
         else:
             return 4.0
 
-    return _ordinal(agpi_dims), _ordinal(aspi_dims)
+    return _ordinal(adpo_dims), _ordinal(aspo_dims)
 
 
 # ── Etapa 2 ───────────────────────────────────────────────────────────────────
 
-def resolve_approach(agpi: float, aspi: float) -> str:
+def resolve_approach(adpo: float, aspo: float) -> str:
     """Apply KairoSyn transition rules to derive management approach."""
-    if agpi >= 2.0 and aspi <= 2.0:
+    if adpo >= 2.0 and aspo <= 2.0:
         return "Adaptativa"
-    elif aspi >= 3.0 and agpi <= 2.0:
+    elif aspo >= 3.0 and adpo <= 2.0:
         return "Preditiva"
     else:
         return "Híbrida"
 
 
-def build_decision_control_register(approach: str, context_data: dict, agpi: float, aspi: float) -> dict:
+def build_decision_control_register(approach: str, context_data: dict, adpo: float, aspo: float) -> dict:
     """
     Classify constraints as Hard, Threshold or Soft based on diagnostic scores.
     Scope 'M' = applies to methodology selection.
@@ -124,15 +124,24 @@ def build_decision_control_register(approach: str, context_data: dict, agpi: flo
 
 # ── Posture alignment (Level 1 / Level A classification — audit only) ────────
 
-def _posture_alignment_tier(agpi: float, aspi: float, ag_posture: int, as_posture: int) -> str:
+def _posture_alignment_tier(adpo: float, aspo: float,
+                            adpo_min: int, adpo_max: int, aspo_min: int, aspo_max: int) -> str:
     """
-    Chebyshev distance between project (AdPO, AsPO) and candidate posture,
-    reduced to a classification tier. Used for Level 1/A admissibility and
-    audit display — it must NOT be fed into the Level 2/B MAVT matrix, since
-    posture already shaped admissibility here (avoids double-counting the
-    same contextual signal).
+    Distance between project (AdPO, AsPO) and the candidate's posture REGION
+    (alignment note Tabela 5: postures are seeded as [min,max] ranges, not
+    single points), reduced to a classification tier. Used for Level 1/A
+    admissibility and audit display — it must NOT be fed into the Level 2/B
+    MAVT matrix, since posture already shaped admissibility here (avoids
+    double-counting the same contextual signal).
+
+    Per-axis distance is the clamped distance from a point to an interval
+    (0 when inside the region); the tier uses the Chebyshev (max) of the two
+    axis distances, exactly as before. A degenerate region (min == max)
+    reproduces the old point-based distance exactly.
     """
-    delta = max(abs(agpi - ag_posture), abs(aspi - as_posture))
+    dx = max(adpo_min - adpo, adpo - adpo_max, 0)
+    dy = max(aspo_min - aspo, aspo - aspo_max, 0)
+    delta = max(dx, dy)
     if delta == 0:
         return 'exact'
     elif delta == 1:
@@ -141,23 +150,24 @@ def _posture_alignment_tier(agpi: float, aspi: float, ag_posture: int, as_postur
         return 'distant'
 
 
-def _approach_compatible(m_posture: str, approach: str) -> bool:
+def _approach_compatible(compatible_approaches: list, approach: str) -> bool:
     """
     approach_compatible(m, approach) — Level 1 admissibility check.
-    A methodology whose nominal posture is 'Híbrida' bridges both regimes, and
-    an exact match is always compatible. A purely Adaptativa methodology is
-    incompatible with a Preditiva approach and vice-versa.
+    m.compatible_approaches (alignment note Tabela 5, e.g. ['Adaptativa','Híbrida'])
+    lists the approaches under which the candidate is admissible; membership is
+    a direct data-driven check — no implicit 'Híbrida always compatible' rule is
+    needed since every seeded candidate that supports Híbrida already lists it.
     """
-    if not m_posture or not approach:
+    if not approach:
         return True
-    if m_posture == approach or m_posture == 'Híbrida' or approach == 'Híbrida':
-        return True
-    return False
+    if not compatible_approaches:
+        return True  # no declared restriction — do not exclude on missing data
+    return approach in compatible_approaches
 
 
 # ── Etapa 3 — Stage 3: Dual-Level Fit ─────────────────────────────────────────
 
-def run_fit_m_level1(decision_control_register: dict, agpi: float, aspi: float,
+def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
                      approach: str = 'Híbrida') -> list:
     """
     Level 1 — non-compensatory screening. Determines which methodologies may be
@@ -224,17 +234,21 @@ def run_fit_m_level1(decision_control_register: dict, agpi: float, aspi: float,
             continue
 
         # (d) approach compatibility
-        if not _approach_compatible(m.posture, approach):
+        if not _approach_compatible(m.compatible_approaches, approach):
             _exclude(m, "approach_incompatible",
-                     f"Postura nominal '{m.posture}' incompatível com abordagem resolvida '{approach}'.")
+                     f"Abordagens compatíveis {m.compatible_approaches} não incluem '{approach}'.")
             continue
 
         # (e) posture alignment — 'distant' is incompatible, excluded here
-        tier = _posture_alignment_tier(agpi, aspi, m.ag_posture or 2, m.as_posture or 2)
+        adpo_min = m.posture_adpo_min if m.posture_adpo_min is not None else 2
+        adpo_max = m.posture_adpo_max if m.posture_adpo_max is not None else 2
+        aspo_min = m.posture_aspo_min if m.posture_aspo_min is not None else 2
+        aspo_max = m.posture_aspo_max if m.posture_aspo_max is not None else 2
+        tier = _posture_alignment_tier(adpo, aspo, adpo_min, adpo_max, aspo_min, aspo_max)
         if tier == 'distant':
             _exclude(m, "posture_distant",
-                     f"Distância de Chebyshev ≥ 2 entre (AdPO={agpi:.0f}, AsPO={aspi:.0f}) "
-                     f"e postura declarada ({m.ag_posture}, {m.as_posture}).")
+                     f"(AdPO={adpo:.0f}, AsPO={aspo:.0f}) fora da região de postura declarada "
+                     f"AdPO∈[{adpo_min},{adpo_max}] × AsPO∈[{aspo_min},{aspo_max}] (distância ≥ 2).")
             continue
 
         viable.append((m, tier))
@@ -268,10 +282,15 @@ def run_fit_m_level2(viable: list, decision_control_register: dict = None, engin
             "code": m.code,
             "name": m.name,
             "posture": m.posture,
+            "compatible_approaches": m.compatible_approaches or [],
             "tier": m.tier,
             "score": round(score, 4),
             "misfit": _MISFIT_BY_TIER.get(tier, 0.7),        # audit only — not part of the score
             "posture_alignment_tier": tier,
+            "posture_region": {                              # audit / decision-map only
+                "adpo_min": m.posture_adpo_min, "adpo_max": m.posture_adpo_max,
+                "aspo_min": m.posture_aspo_min, "aspo_max": m.posture_aspo_max,
+            },
             "candidate_type": m.candidate_type,
             "candidate_role": m.candidate_role,
             "description": m.description or "",
@@ -312,7 +331,7 @@ def get_envelope_component_candidates(primary_meth) -> list:
 
 # ── Etapa 4 ───────────────────────────────────────────────────────────────────
 
-def run_fit_t_level_a(selected_meth, decision_control_register: dict, agpi: float, aspi: float,
+def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: float, aspo: float,
                       budget_eur: float = None) -> tuple:
     """
     Level A — filter TEB by Hard constraints, methodology and posture
