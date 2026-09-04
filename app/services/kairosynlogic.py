@@ -174,7 +174,7 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
     Level 1 — non-compensatory screening. Determines which methodologies may be
     compared in Level 2. A high score on any criterion cannot compensate for
     failing admissibility here. Applies, in order:
-      (a) Binding constraints (hard)      — regulatory_compatible
+      (a) Binding constraints             — regulatory_compatible
       (b) Acceptance thresholds           — requires_fixed_scope: binary
           exclusion, enforced here rather than as a Level 2 score penalty
       (c) candidate_role compatibility    — excludes reference/normative
@@ -200,9 +200,9 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
         MethodologyEvidenceBase.is_active == True
     ).all()
 
-    hard_constraints = {c["constraint"]: c["value"]
-                        for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "M"}
-    threshold_constraints = {c["constraint"]: c["value"]
+    binding_constraints = {c["constraint"]: c["value"]
+                           for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "M"}
+    acceptance_thresholds = {c["constraint"]: c["value"]
                              for c in decision_control_register.get("acceptance_thresholds", []) if c["scope"] == "M"}
 
     viable = []
@@ -213,18 +213,18 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
 
     for m in candidates:
         # (a) Binding constraint: regulatory
-        if "regulatory_compatible" in hard_constraints:
-            if m.regulatory_compatible != hard_constraints["regulatory_compatible"]:
+        if "regulatory_compatible" in binding_constraints:
+            if m.regulatory_compatible != binding_constraints["regulatory_compatible"]:
                 _exclude(m, "binding_regulatory_incompatible",
                          "Binding constraint: regulatory_compatible exigido pelo decision-control register.")
                 continue
 
         # (b) Acceptance threshold: requires_fixed_scope — binary, not compensatory
-        if "requires_fixed_scope" in threshold_constraints:
-            required = threshold_constraints["requires_fixed_scope"]
+        if "requires_fixed_scope" in acceptance_thresholds:
+            required = acceptance_thresholds["requires_fixed_scope"]
             has_scope = m.requires_fixed_scope or False
             if required and not has_scope:
-                _exclude(m, "threshold_requires_fixed_scope",
+                _exclude(m, "acceptance_threshold_requires_fixed_scope",
                          "Acceptance threshold: âmbito fixo exigido, não suportado pela metodologia.")
                 continue
 
@@ -335,7 +335,7 @@ def get_envelope_component_candidates(primary_meth) -> list:
 def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: float, aspo: float,
                       budget_eur: float = None) -> tuple:
     """
-    Level A — filter TEB by Hard constraints, methodology and posture
+    Level A — filter TEB by Binding constraints, methodology and posture
     compatibility. selected_meth: MethodologyEvidenceBase object.
     Every exclusion is recorded with its cause (audit invariant).
 
@@ -346,8 +346,8 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: floa
     from ..models import ToolEvidenceBase
 
     tools = ToolEvidenceBase.query.filter_by(is_active=True).all()
-    hard_t = {c["constraint"]: c["value"]
-              for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "T"}
+    binding_constraints = {c["constraint"]: c["value"]
+                           for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "T"}
 
     viable = []
     exclusions = []
@@ -356,9 +356,9 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: floa
         exclusions.append({"code": t.code, "name": t.name, "cause": cause, "detail": detail})
 
     for t in tools:
-        # Hard constraint: GDPR
-        if "gdpr_compliant" in hard_t:
-            if t.gdpr_compliant != hard_t["gdpr_compliant"]:
+        # Binding constraint: GDPR
+        if "gdpr_compliant" in binding_constraints:
+            if t.gdpr_compliant != binding_constraints["gdpr_compliant"]:
                 _exclude(t, "binding_gdpr_incompatible",
                          "Binding constraint: gdpr_compliant exigido pelo decision-control register.")
                 continue
