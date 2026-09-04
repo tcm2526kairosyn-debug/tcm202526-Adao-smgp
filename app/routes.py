@@ -589,15 +589,11 @@ def diagnostico():
             for dim in context_data
         }
 
-        # Stage 1 = context diagnosis only. The organisers AdPO/AsPO and the
-        # suggested approach are Stage 2 responsibilities — computed on entry
-        # to etapa2, not here.
+        # Stage 1 = context diagnosis only. The organisers AdPO/AsPO, the
+        # suggested approach and the MCDM engine choice are Stage 2
+        # responsibilities — computed/confirmed on entry to etapa2, not here.
         projeto_id_raw = request.form.get('projeto_id')
         projeto_id = int(projeto_id_raw) if projeto_id_raw else None
-
-        engine_choice = request.form.get('mcdm_engine', 'MAVT')
-        if engine_choice not in ('MAVT', 'AHP'):
-            engine_choice = 'MAVT'
 
         new_decision = ProjectDecision(
             project_name=request.form.get('project_name', 'Sem nome').strip() or 'Sem nome',
@@ -606,7 +602,6 @@ def diagnostico():
             context_data=context_data,
             evidence_notes={k: v for k, v in evidence_notes.items() if v},
             questionnaire_version='v2',
-            mcdm_engine=engine_choice,
             current_stage='stage_2_approach',
             transition_history=[{
                 "from": "stage_1_diagnosis",
@@ -657,6 +652,9 @@ def etapa2(id):
         decision.context_data = context
         decision.suggested_approach = confirmed_approach
         decision.decision_control_register = decision_control_register
+
+        engine_choice = request.form.get('mcdm_engine', decision.mcdm_engine or 'MAVT')
+        decision.mcdm_engine = engine_choice if engine_choice in ('MAVT', 'AHP') else 'MAVT'
 
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
