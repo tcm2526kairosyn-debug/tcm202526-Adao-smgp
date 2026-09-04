@@ -722,7 +722,7 @@ def etapa3(id):
         flash("Selecione uma metodologia antes de continuar.", "warning")
 
     # GET — run Fit_M
-    decision_control_register = decision.decision_control_register or {"hard": [], "threshold": [], "soft": []}
+    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
 
@@ -796,7 +796,7 @@ def etapa4(id):
         flash("Selecione uma metodologia na Etapa 3 antes de continuar.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    decision_control_register = decision.decision_control_register or {"hard": [], "threshold": [], "soft": []}
+    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
     projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None

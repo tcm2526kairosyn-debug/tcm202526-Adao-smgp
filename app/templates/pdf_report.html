@@ -278,34 +278,34 @@
 </div>
 {% endif %}
 
-<!-- GOVERNANCE REGISTER -->
+<!-- DECISION-CONTROL REGISTER -->
 {% if decision.decision_control_register %}
 {% set gov = decision.decision_control_register %}
-{% if gov.hard or gov.threshold or gov.soft %}
-<h2>Etapa 2 — Governance Register</h2>
+{% if gov.binding_constraints or gov.acceptance_thresholds or gov.advisory_guidelines %}
+<h2>Etapa 2 — Decision-Control Register</h2>
 <div class="no-break">
-  {% if gov.hard %}
+  {% if gov.binding_constraints %}
   <div class="gov-section gov-hard">
-    <div class="gov-label">Hard Constraints</div>
-    {% for c in gov.hard %}
+    <div class="gov-label">Binding Constraints</div>
+    {% for c in gov.binding_constraints %}
     <div class="gov-item">{{ c.constraint }} = <strong>{{ c.value }}</strong> [scope: {{ c.scope }}]</div>
     <div class="gov-reason">{{ c.reason }}</div>
     {% endfor %}
   </div>
   {% endif %}
-  {% if gov.threshold %}
+  {% if gov.acceptance_thresholds %}
   <div class="gov-section gov-threshold">
-    <div class="gov-label">Threshold Constraints</div>
-    {% for c in gov.threshold %}
+    <div class="gov-label">Acceptance Thresholds</div>
+    {% for c in gov.acceptance_thresholds %}
     <div class="gov-item">{{ c.constraint }} = <strong>{{ c.value }}</strong> [scope: {{ c.scope }}]</div>
     <div class="gov-reason">{{ c.reason }}</div>
     {% endfor %}
   </div>
   {% endif %}
-  {% if gov.soft %}
+  {% if gov.advisory_guidelines %}
   <div class="gov-section gov-soft">
-    <div class="gov-label">Soft Constraints</div>
-    {% for c in gov.soft %}
+    <div class="gov-label">Advisory Guidelines</div>
+    {% for c in gov.advisory_guidelines %}
     <div class="gov-item">{{ c.constraint }} [scope: {{ c.scope }}]</div>
     <div class="gov-reason">{{ c.reason }}</div>
     {% endfor %}

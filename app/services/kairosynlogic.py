@@ -79,25 +79,26 @@ def resolve_approach(adpo: float, aspo: float) -> str:
 
 def build_decision_control_register(approach: str, context_data: dict, adpo: float, aspo: float) -> dict:
     """
-    Classify constraints as Hard, Threshold or Soft based on diagnostic scores.
+    Classify constraints as Binding constraints, Acceptance thresholds or
+    Advisory guidelines based on diagnostic scores (alignment note taxonomy).
     Scope 'M' = applies to methodology selection.
     Scope 'T' = applies to tool selection.
     """
-    register = {"hard": [], "threshold": [], "soft": []}
+    register = {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
 
     compliance = context_data.get('compliance', 1)
     criticality = context_data.get('criticality', 1)
     team_autonomy = context_data.get('team_autonomy', 1)
 
     if compliance >= 3:
-        register["hard"].append({
+        register["binding_constraints"].append({
             "constraint": "regulatory_compatible",
             "value": True,
             "scope": "M",
             "reason": f"Compliance score {compliance}/4 exige conformidade regulatória."
         })
     if compliance >= 4:
-        register["hard"].append({
+        register["binding_constraints"].append({
             "constraint": "gdpr_compliant",
             "value": True,
             "scope": "T",
@@ -105,7 +106,7 @@ def build_decision_control_register(approach: str, context_data: dict, adpo: flo
         })
 
     if criticality >= 3:
-        register["threshold"].append({
+        register["acceptance_thresholds"].append({
             "constraint": "requires_fixed_scope",
             "value": (approach == "Preditiva"),
             "scope": "M",
@@ -113,7 +114,7 @@ def build_decision_control_register(approach: str, context_data: dict, adpo: flo
         })
 
     if team_autonomy >= 3:
-        register["soft"].append({
+        register["advisory_guidelines"].append({
             "constraint": "prefers_low_process_overhead",
             "scope": "M",
             "reason": f"Autonomia de equipa {team_autonomy}/4 favorece metodologias ágeis leves."
@@ -200,9 +201,9 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
     ).all()
 
     hard_constraints = {c["constraint"]: c["value"]
-                        for c in decision_control_register.get("hard", []) if c["scope"] == "M"}
+                        for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "M"}
     threshold_constraints = {c["constraint"]: c["value"]
-                             for c in decision_control_register.get("threshold", []) if c["scope"] == "M"}
+                             for c in decision_control_register.get("acceptance_thresholds", []) if c["scope"] == "M"}
 
     viable = []
     exclusions = []
@@ -346,7 +347,7 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: floa
 
     tools = ToolEvidenceBase.query.filter_by(is_active=True).all()
     hard_t = {c["constraint"]: c["value"]
-              for c in decision_control_register.get("hard", []) if c["scope"] == "T"}
+              for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "T"}
 
     viable = []
     exclusions = []

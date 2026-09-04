@@ -283,4 +283,19 @@ def run_migrations(db):
             END $$;
         """))
 
+        # ProjectDecision — rename decision_control_register's internal keys to
+        # match the alignment note taxonomy (Binding constraints / Acceptance
+        # thresholds / Advisory guidelines), replacing the legacy hard/threshold/
+        # soft names. Idempotent: only rewrites rows still keyed by 'hard'.
+        conn.execute(text("""
+            UPDATE project_decision
+            SET decision_control_register = jsonb_build_object(
+                'binding_constraints', COALESCE(decision_control_register::jsonb->'hard', '[]'::jsonb),
+                'acceptance_thresholds', COALESCE(decision_control_register::jsonb->'threshold', '[]'::jsonb),
+                'advisory_guidelines', COALESCE(decision_control_register::jsonb->'soft', '[]'::jsonb)
+            )::json
+            WHERE decision_control_register IS NOT NULL
+              AND decision_control_register::jsonb ? 'hard'
+        """))
+
         conn.commit()

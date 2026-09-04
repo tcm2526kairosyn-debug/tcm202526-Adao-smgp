@@ -217,14 +217,14 @@ flowchart TD
     </div>
     {% endif %}
 
-    <!-- ── Governance Register ──────────────────────────────────────────── -->
+    <!-- ── Decision-Control Register ──────────────────────────────────────── -->
     {% if decision.decision_control_register %}
     {% set gov = decision.decision_control_register %}
-    {% if gov.hard or gov.threshold or gov.soft %}
+    {% if gov.binding_constraints or gov.acceptance_thresholds or gov.advisory_guidelines %}
     <div class="bg-white rounded-2xl shadow border border-slate-100 p-6">
-        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Governance Register</h2>
+        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Decision-Control Register</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {% for level, cor, label in [('hard','red','Hard'), ('threshold','yellow','Threshold'), ('soft','green','Soft')] %}
+            {% for level, cor, label in [('binding_constraints','red','Binding constraints'), ('acceptance_thresholds','yellow','Acceptance thresholds'), ('advisory_guidelines','green','Advisory guidelines')] %}
             {% if gov[level] %}
             <div class="bg-{{ cor }}-50 border border-{{ cor }}-100 rounded-xl p-4">
                 <p class="text-[10px] font-black text-{{ cor }}-600 uppercase tracking-wider mb-3">{{ label }}</p>
