@@ -71,9 +71,10 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Diagrama Sankey -->
+            <!-- Diagrama Sankey — funil de admissibilidade Level 1 por causa de exclusão -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4">Fluxo de Decisão — Sankey</h2>
+                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Triagem Level 1 — por causa de exclusão</h2>
+                <p class="text-[10px] text-slate-400 mb-4">Cinzento = MEB total · Âmbar = excluído (causa) · Verde = sobreviveu ao Level 1</p>
                 <div id="sankey-chart" class="w-full" style="height:160px;"></div>
                 <div id="sankey-data" data-sankey="{{ sankey_data }}" class="hidden"></div>
             </div>
@@ -129,7 +130,7 @@ flowchart TD
                     </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div class="bg-white rounded-xl p-3 border border-slate-200">
                         <p class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Score MCDM</p>
                         <p class="text-2xl font-black text-slate-800 mt-0.5">{{ "%.3f"|format(top.score) }}</p>
@@ -142,13 +143,6 @@ flowchart TD
                         <p class="text-[9px] font-black uppercase text-{{ misfit_color }}-400 tracking-widest">Misfit Δk</p>
                         <p class="text-2xl font-black text-{{ misfit_color }}-600 mt-0.5">{{ "%.2f"|format(top.misfit) }}</p>
                         <p class="text-[9px] text-{{ misfit_color }}-500 mt-1">Ajuste {{ misfit_label }}</p>
-                    </div>
-                    <div class="bg-white rounded-xl p-3 border border-{% if posture_match %}green{% else %}amber{% endif %}-100">
-                        <p class="text-[9px] font-black uppercase text-{% if posture_match %}green{% else %}amber{% endif %}-400 tracking-widest">Postura</p>
-                        <p class="text-sm font-black text-{% if posture_match %}green{% else %}amber{% endif %}-700 mt-0.5">{{ top.posture }}</p>
-                        <p class="text-[9px] text-{% if posture_match %}green{% else %}amber{% endif %}-500 mt-1">
-                            {% if posture_match %}Alinhada com a abordagem{% else %}Diverge da abordagem sugerida{% endif %}
-                        </p>
                     </div>
                     {% if ranking|length > 1 %}
                     {% set alt = ranking[1] %}
@@ -231,7 +225,7 @@ flowchart TD
                             <tr>
                                 <th class="px-4 py-3 text-left">Rank</th>
                                 <th class="px-4 py-3 text-left">Metodologia</th>
-                                <th class="px-4 py-3 text-left">Postura</th>
+                                <th class="px-4 py-3 text-left">Abordagem</th>
                                 <th class="px-4 py-3 text-left">Tier</th>
                                 <th class="px-4 py-3 text-left">Value Score</th>
                                 <th class="px-4 py-3 text-left">Misfit Δk</th>
@@ -305,30 +299,32 @@ flowchart TD
                     <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         Envelope Metodológico — primário: <span id="env-primary-name" class="text-slate-800 dark:text-white"></span>
                     </h2>
-                    <p class="text-xs text-gray-400 mt-1 mb-4">
+                    <p id="env-intro" class="text-xs text-gray-400 mt-1 mb-4">
                         Opcionalmente, adicione guias/normas/métodos complementares como componentes do envelope.
                         Cada componente exige justificação — os componentes não entram no ranking MAVT.
+                    </p>
+                    <p id="env-empty" class="hidden text-xs text-gray-400 italic mb-2">
+                        Nenhum candidato da MEB se declara compatível como componente deste primário
+                        (<code>compatible_as_component_of</code>). Podes avançar sem envelope composto.
                     </p>
                     <div id="env-components" class="space-y-3"></div>
                     <div class="flex gap-2 justify-end mt-5">
                         <button type="button" onclick="cancelEnvelope()"
                                 class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
-                            Cancelar
-                        </button>
-                        <button type="submit"
-                                class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-6 py-2 rounded-xl transition">
-                            Confirmar envelope →
+                            Cancelar seleção
                         </button>
                     </div>
                 </div>
 
                 <div class="flex justify-between items-center flex-wrap gap-2 mt-4">
-                    <div class="flex gap-2">
-                        <button type="button" onclick="document.querySelector('[name=action]').value='REVISE_APPROACH';this.form.submit();"
-                                class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
-                            ← Rever Abordagem
-                        </button>
-                    </div>
+                    <button type="button" onclick="document.querySelector('[name=action]').value='REVISE_APPROACH';this.form.submit();"
+                            class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
+                        ← Rever Abordagem
+                    </button>
+                    <button type="submit" id="btn-avancar" disabled
+                            class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-6 py-2 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800">
+                        Confirmar e Avançar →
+                    </button>
                 </div>
             </form>
 
@@ -336,15 +332,15 @@ flowchart TD
             <script>
             function selectPrimary(btn) {
                 const mid = btn.dataset.mid, mname = btn.dataset.mname;
-                const form = btn.closest('form');
                 document.getElementById('env-selected-id').value = mid;
                 const options = JSON.parse(document.getElementById('envelope-options').dataset.options || '{}');
                 const comps = options[mid] || [];
-                if (!comps.length) { form.submit(); return; }
 
                 document.getElementById('env-primary-name').textContent = mname;
                 const container = document.getElementById('env-components');
                 container.innerHTML = '';
+                document.getElementById('env-intro').classList.toggle('hidden', comps.length === 0);
+                document.getElementById('env-empty').classList.toggle('hidden', comps.length > 0);
                 comps.forEach(c => {
                     const row = document.createElement('div');
                     row.className = 'border border-gray-200 dark:border-gray-600 rounded-lg p-3';
@@ -361,9 +357,9 @@ flowchart TD
                         'class="hidden mt-2 w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>';
                     container.appendChild(row);
                 });
-                const panel = document.getElementById('envelope-panel');
-                panel.classList.remove('hidden');
-                panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+                document.getElementById('envelope-panel').classList.remove('hidden');
+                document.getElementById('btn-avancar').disabled = false;
+                document.getElementById('envelope-panel').scrollIntoView({behavior: 'smooth', block: 'center'});
             }
             function toggleJustification(cb, cid) {
                 const ta = document.querySelector('[name=component_justification_' + cid + ']');
@@ -374,6 +370,7 @@ flowchart TD
             function cancelEnvelope() {
                 document.getElementById('envelope-panel').classList.add('hidden');
                 document.getElementById('env-selected-id').value = '';
+                document.getElementById('btn-avancar').disabled = true;
             }
             </script>
 
@@ -467,7 +464,14 @@ flowchart TD
         links: data.links.map(d => Object.assign({}, d))
     });
 
-    const colors = ['#475569', '#f59e0b', '#10b981', '#3b82f6'];
+    // Cor por papel, não por índice cíclico: cinzento = MEB total (fonte),
+    // âmbar = excluído por alguma causa, verde = sobreviveu ao Level 1.
+    const n = graph.nodes.length;
+    function roleColor(i) {
+        if (i === 0) return '#475569';
+        if (i === n - 1) return '#16a34a';
+        return '#d97706';
+    }
 
     svg.append('g').selectAll('rect')
         .data(graph.nodes)
@@ -476,14 +480,14 @@ flowchart TD
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(1, d.y1 - d.y0))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', (d, i) => colors[i % colors.length])
+        .attr('fill', (d, i) => roleColor(i))
         .attr('rx', 3);
 
     svg.append('g').attr('fill', 'none').selectAll('path')
         .data(graph.links)
         .join('path')
         .attr('d', d3.sankeyLinkHorizontal())
-        .attr('stroke', (d, i) => colors[i % colors.length])
+        .attr('stroke', d => roleColor(d.target.index))
         .attr('stroke-width', d => Math.max(1, d.width))
         .attr('stroke-opacity', 0.35);
 

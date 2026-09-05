@@ -257,7 +257,7 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
     return viable, exclusions
 
 
-def run_fit_m_level2(viable: list, decision_control_register: dict = None, engine_name: str = 'MAVT') -> list:
+def run_fit_m_level2(viable: list, engine_name: str = 'MAVT') -> list:
     """
     Level 2 — compensatory prioritisation via MAVT over C1-C7 only.
     viable: list of (MethodologyEvidenceBase, alignment_tier) from Level 1.

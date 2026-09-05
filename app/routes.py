@@ -738,7 +738,7 @@ def etapa3(id):
         return redirect(url_for('main.etapa2', id=id))
 
     engine = decision.mcdm_engine or 'MAVT'
-    ranking = run_fit_m_level2(viable, decision_control_register, engine)
+    ranking = run_fit_m_level2(viable, engine)
 
     decision.meb_filtered = [item["id"] for item in ranking]
     decision.meb_exclusions = meb_exclusions
@@ -747,20 +747,25 @@ def etapa3(id):
 
     meb_total = MethodologyEvidenceBase.query.count()
 
-    # Sankey data
-    sankey_data = {
-        "nodes": [
-            {"name": f"MEB Total ({meb_total})"},
-            {"name": f"Pós-Triagem L1 ({len(viable)})"},
-            {"name": f"Ranking MCDM ({len(ranking)})"},
-            {"name": "Selecionada"}
-        ],
-        "links": [
-            {"source": 0, "target": 1, "value": max(len(viable), 1)},
-            {"source": 1, "target": 2, "value": max(len(ranking), 1)},
-            {"source": 2, "target": 3, "value": 1}
-        ]
-    }
+    # Sankey data — funil de admissibilidade Level 1, ramificado por causa de
+    # exclusão (auditoria), com os sobreviventes a fluir para o ranking MCDM.
+    # Substitui um Sankey anterior sem funil real (Level 2 não filtra nada, só
+    # ordena quem já passou o Level 1 — a antiga ligação intermédia tinha
+    # sempre o mesmo valor dos dois lados).
+    cause_counts = {}
+    for e in meb_exclusions:
+        cause_counts[e["cause"]] = cause_counts.get(e["cause"], 0) + 1
+
+    sankey_nodes = [{"name": f"MEB Total ({meb_total})"}]
+    sankey_links = []
+    for cause, count in cause_counts.items():
+        sankey_nodes.append({"name": f"{cause.replace('_', ' ').capitalize()} ({count})"})
+        sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": count})
+
+    sankey_nodes.append({"name": f"Ranking MCDM ({len(ranking)})"})
+    sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": max(len(viable), 1)})
+
+    sankey_data = {"nodes": sankey_nodes, "links": sankey_links}
 
     # Opções de envelope composto: para cada candidato ranqueado, os componentes
     # (overlays/normas/métodos complementares) que declaram compatibilidade com ele
