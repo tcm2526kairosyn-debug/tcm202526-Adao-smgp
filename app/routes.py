@@ -802,10 +802,13 @@ def etapa4(id):
         return redirect(url_for('main.etapa3', id=id))
 
     decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
-    agpi = decision.agpi_score or 2.0
-    aspi = decision.aspi_score or 2.0
-    projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
-    budget = (projeto.orcamento * 0.01) if (projeto and projeto.orcamento) else None
+
+    # Envelope metodológico completo (primário + componentes justificados) —
+    # a admissibilidade de ferramentas em Level A considera o envelope inteiro,
+    # não só o primário (ver kairosynlogic.run_fit_t_level_a).
+    envelope_codes = [selected_meth.code] + [
+        c["code"] for c in (decision.methodological_envelope or {}).get("components", [])
+    ]
 
     if request.method == "POST":
         action = request.form.get('action', 'CONFIRM_TOOLS')
@@ -824,7 +827,7 @@ def etapa4(id):
             return redirect(url_for('main.etapa3', id=id))
 
         # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
-        viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+        viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
         decision.teb_exclusions = teb_exclusions
         decision.capability_map = build_capability_map(viable_tools)
         ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
@@ -846,7 +849,7 @@ def etapa4(id):
         return redirect(url_for('main.workflow', id=id))
 
     # GET — run Fit_T and present options
-    viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, agpi, aspi, budget)
+    viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
     decision.teb_exclusions = teb_exclusions
     capability_map = build_capability_map(viable_tools)
     decision.capability_map = capability_map

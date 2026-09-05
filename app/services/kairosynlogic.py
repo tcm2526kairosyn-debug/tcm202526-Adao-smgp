@@ -332,11 +332,17 @@ def get_envelope_component_candidates(primary_meth) -> list:
 
 # ── Etapa 4 ───────────────────────────────────────────────────────────────────
 
-def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: float, aspo: float,
-                      budget_eur: float = None) -> tuple:
+def run_fit_t_level_a(selected_meth, decision_control_register: dict,
+                      envelope_codes: list = None) -> tuple:
     """
     Level A — filter TEB by Binding constraints, methodology and posture
-    compatibility. selected_meth: MethodologyEvidenceBase object.
+    compatibility. selected_meth: MethodologyEvidenceBase object (the primary).
+    envelope_codes: optional list of codes for the full methodological_envelope
+    (primary + confirmed components, §5.1) — a tool is methodology-admissible
+    if it declares compatibility with ANY element of the envelope, not only the
+    primary, since a component (e.g. a compliance overlay) is deliberately
+    added to unlock capabilities the primary alone doesn't cover. Defaults to
+    just the primary's code when no envelope is passed.
     Every exclusion is recorded with its cause (audit invariant).
 
     Returns (viable, exclusions):
@@ -344,6 +350,8 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: floa
       exclusions — list of {code, name, cause, detail} dicts
     """
     from ..models import ToolEvidenceBase
+
+    envelope_codes = envelope_codes or [selected_meth.code]
 
     tools = ToolEvidenceBase.query.filter_by(is_active=True).all()
     binding_constraints = {c["constraint"]: c["value"]
@@ -363,22 +371,16 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict, adpo: floa
                          "Binding constraint: gdpr_compliant exigido pelo decision-control register.")
                 continue
 
-        # Methodology compatibility
-        if selected_meth.code not in (t.compatible_methodologies or []):
+        # Methodology compatibility — checked against the whole envelope
+        if not (set(t.compatible_methodologies or []) & set(envelope_codes)):
             _exclude(t, "methodology_incompatible",
-                     f"Não declara compatibilidade com a metodologia selecionada ({selected_meth.code}).")
+                     f"Não declara compatibilidade com o envelope metodológico ({', '.join(envelope_codes)}).")
             continue
 
         # Posture compatibility
         if selected_meth.posture not in (t.compatible_postures or []):
             _exclude(t, "posture_incompatible",
                      f"Não declara compatibilidade com a postura '{selected_meth.posture}'.")
-            continue
-
-        # Budget constraint (optional)
-        if budget_eur is not None and t.cost_monthly_eur > budget_eur:
-            _exclude(t, "budget_exceeded",
-                     f"Custo mensal {t.cost_monthly_eur:.0f}€ excede o orçamento de {budget_eur:.0f}€.")
             continue
 
         viable.append(t)
