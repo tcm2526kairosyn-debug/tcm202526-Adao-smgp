@@ -237,7 +237,7 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 
 ---
 
-> **Nota de versão (2026-07-22):** os 3 cenários abaixo foram recalculados após a separação Level 1 (screening não-compensatório) / Level 2 (MAVT sobre C1-C7), que corrigiu a circularidade identificada na nota técnica de alinhamento do orientador. Os resultados já não usam `score_assurance`/`score_agility`/`posture_alignment` como coluna MAVT nem `_context_weights()` — ver secção seguinte para a arquitetura atual.
+> **Nota de versão (2026-09-03):** a postura de cada metodologia passou de um ponto único `(ag_posture, as_posture)` para uma **região** `[posture_adpo_min,posture_adpo_max] × [posture_aspo_min,posture_aspo_max]`, conforme a Tabela 5 da nota técnica de alinhamento do orientador, e a compatibilidade de abordagem passou de uma string única para uma lista `compatible_approaches`. A distância de Chebyshev do Level 1 generaliza-se para distância a uma região (0 se o ponto do projeto está dentro). Os 3 cenários abaixo foram recalculados com esta arquitetura — ver secção seguinte para os detalhes.
 
 #### Cenário A — Projeto Ágil (Startup Digital)
 
@@ -255,10 +255,10 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 **Resultado:**
 - AdPO = **4** (4 dimensões ≥ 3) · AsPO = **1** (0 dimensões ≥ 3)
 - Abordagem: **Adaptativa**
-- Level 1 viável: **Scrum** (tier exact), **Kanban** (tier adjacent) — XP excluído (`eligible_as_primary_envelope=False`, método de engenharia complementar)
-- Top metodologia: **Kanban** (score MAVT 0,5525) — Scrum muito próximo (0,5450)
-- Sensibilidade: **54,4% de robustez — instável** (< 60%); o runner-up (Scrum) vence em ~46% das simulações Monte Carlo. Caso-limite a discutir na tese: dois candidatos próximos em C1-C7, sem margem de preferência robusta.
-- Portfólio (top-1 por categoria): Jira (Tracking), Confluence (Documentation), Teams (Communication), Miro (Collaboration)
+- Level 1 viável: **DSDM Atern** (tier adjacent), **Kanban** (tier exact), **Scrum** (tier exact), **CRISP-DM** (tier exact) — XP excluído (`eligible_as_primary_envelope=False`, método de engenharia complementar). Com a postura em região (Tabela 5), DSDM e CRISP-DM passam a ter cobertura suficiente em AdPO/AsPO para entrar no Level 1.
+- Top metodologia: **DSDM Atern** (score MAVT 0,6425) — Kanban 2º (0,5525), Scrum 3º (0,5450), CRISP-DM 4º (0,4850)
+- Sensibilidade: **83,0% de robustez — estável**; o runner-up (Kanban) vence em 54,4% das simulações onde DSDM não é top-1
+- Portfólio (top-1 por categoria): Jira (Tracking), Confluence (Documentation), Microsoft Project (Planning), Teams (Communication), Miro (Collaboration)
 
 ---
 
@@ -279,12 +279,14 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 - AdPO = **1** (0 dimensões ≥ 3) · AsPO = **4** (4 dimensões ≥ 3)
 - Abordagem: **Preditiva**
 - Decision-control register: Hard — `regulatory_compatible=True`, `gdpr_compliant=True`; Threshold — `requires_fixed_scope=True`
-- Level 1 viável: **só PRINCE2 Agile** (tier exact) — PMBoK 6ª Ed. e ISO 21502 excluídos (`candidate_role` = reference/normative overlay, não elegíveis como envelope metodológico primário)
-- Top metodologia: **PRINCE2 Agile** — decisão trivial, M_L1 tem tamanho 1 (nada para o MAVT comparar)
-- Sensibilidade: não aplicável (`run_sensitivity_analysis` requer ≥ 2 alternativas)
+- Level 1 viável: **PRINCE2 Agile** (tier adjacent) e **PM²** (tier exact) — PMBoK 6ª Ed. e ISO 21502 excluídos (`candidate_role` = reference/normative overlay, não elegíveis como envelope metodológico primário)
+- Top metodologia: **PRINCE2 Agile** (score 0,7325) — PM² muito próximo em score (0,7025), mas dominado em quase todos os critérios C1-C7
+- Sensibilidade: **100% de robustez — estável**; PRINCE2 Agile vence em todas as 500 simulações Monte Carlo
 - Portfólio (top-1 por categoria): Confluence (Documentation), Microsoft Project (Planning), Teams (Communication)
 
-Este é o caso mais ilustrativo da correção estrutural: antes da separação Level 1/Level 2, o topo do ranking era ambíguo ("PRINCE2 **ou** PMBoK") porque um guia normativo (PMBoK) competia como se fosse uma metodologia operacional autónoma. O filtro `candidate_role`/`eligible_as_primary_envelope` resolve isto no screening, sem precisar do MAVT.
+Este é o caso mais ilustrativo da correção estrutural: o topo do ranking já não fica ambíguo ("PRINCE2 **ou** PMBoK") porque um guia normativo (PMBoK) competia como se fosse uma metodologia operacional autónoma — o filtro `candidate_role`/`eligible_as_primary_envelope` resolve isto no screening, sem precisar do MAVT. O Level 2 fica, ainda assim, com uma comparação real (PRINCE2 vs. PM²) em vez de uma decisão trivial de candidato único.
+
+**Nota de calibração:** a Tabela 5 do orientador lista a abordagem de PRINCE2 Agile como "Hybrid" apenas; os seeds deste protótipo usam deliberadamente `compatible_approaches=['Preditiva','Híbrida']` (decisão do autor — PRINCE2 combina controlo formal predefinido com adaptação por etapas). O seed de PM² foi também revisto para `requires_fixed_scope=True` (era `False`), refletindo que o PM² da Comissão Europeia é uma metodologia suficientemente estruturada para suportar âmbito fixo. Com esta calibração, mesmo sob a leitura literal da Tabela 5 (PRINCE2 excluído por abordagem), o cenário continuaria a ter solução — PM² sozinho —, o que reforça a cobertura da MEB para perfis puramente preditivos e de alta criticidade.
 
 ---
 
@@ -304,9 +306,9 @@ Este é o caso mais ilustrativo da correção estrutural: antes da separação L
 **Resultado:**
 - AdPO = **4** (3 dims ≥ 3) · AsPO = **4** (3 dims ≥ 3)
 - Abordagem: **Híbrida**
-- Level 1 viável: **SAFe 6.0, PM2, DSDM Atern** (todos tier adjacent) — Scrum, Kanban e CRISP-DM excluídos por postura distante (`posture_compatible` = 'distant', fora do Level 1)
-- Top metodologia: **SAFe 6.0** (score 0,85), destacado — PM2 2º (0,7025), DSDM 3º (0,6425)
-- Sensibilidade: **96% de robustez — estável**; o runner-up (PM2) só vence em 72% das simulações onde SAFe não é top-1
+- Level 1 viável: **SAFe 6.0** (tier exact), **PRINCE2 Agile** (tier exact), **PM2** (tier adjacent), **DSDM Atern** (tier exact), **Kanban** (tier adjacent), **CRISP-DM** (tier adjacent) — nenhum candidato excluído por postura neste cenário; com a região da Tabela 5, PRINCE2, Kanban e CRISP-DM passam a ter cobertura suficiente em (AdPO=4, AsPO=4)
+- Top metodologia: **SAFe 6.0** (score 0,85), destacado — PRINCE2 Agile 2º (0,7325), PM2 3º (0,7025), DSDM 4º (0,6425), Kanban 5º (0,5525), CRISP-DM 6º (0,4850)
+- Sensibilidade: **92,6% de robustez — estável**; o runner-up (PRINCE2 Agile) só vence numa minoria das simulações onde SAFe não é top-1
 - Portfólio (top-1 por categoria): Jira (Tracking), Confluence (Documentation), Teams (Communication), Miro (Collaboration)
 
 ---
@@ -328,8 +330,8 @@ Este é o caso mais ilustrativo da correção estrutural: antes da separação L
 - AdPO = **2** (1 dim ≥ 3) · AsPO = **3** (2 dims ≥ 3)
 - Abordagem: **Preditiva** (AsPO ≥ 3 ∧ AdPO ≤ 2)
 - Decision-control register: Hard — `regulatory_compatible=True`; Threshold — `requires_fixed_scope=True`
-- Level 1 viável: **só PRINCE2 Agile** (tier adjacent) — PMBoK 6ª Ed. excluído como `reference_overlay`
-- Top metodologia: **PRINCE2 Agile** (score 0,7325) — decisão trivial, M_L1 tem tamanho 1
+- Level 1 viável: **PRINCE2 Agile** (tier exact — a região AdPO∈[2,4]×AsPO∈[2,4] cobre (2,3) exatamente) e **PM²** (tier exact — AdPO∈[1,3]×AsPO∈[2,4] também cobre (2,3)) — PMBoK 6ª Ed. excluído como `reference_overlay`
+- Top metodologia: **PRINCE2 Agile** (score 0,7325) — PM² 2º (0,7025); sensibilidade 100% de robustez, estável (mesmo padrão do Cenário B)
 - Portfólio (top-1 por categoria): Confluence (Documentation), Microsoft Project (Planning), Teams (Communication)
 
 ---
@@ -410,18 +412,20 @@ Exemplo de estrutura JSON produzida para um projeto com `compliance=4`, `critica
 
 O campo `scope` determina a que camada se aplica a restrição: `"M"` é avaliado em `run_fit_m_level1()`, `"T"` é avaliado em `run_fit_t_level_a()`.
 
-#### `_posture_alignment_tier(agpi, aspi, ag_posture, as_posture)` — Classificação de Postura
+#### `_posture_alignment_tier(agpi, aspi, adpo_min, adpo_max, aspo_min, aspo_max)` — Classificação de Postura
 
-Classifica o alinhamento entre o contexto do projeto e a postura declarada de cada metodologia usando a **distância de Chebyshev**, reduzida a uma tier categórica (não a um score MAVT):
+Classifica o alinhamento entre o contexto do projeto e a **região** de postura declarada de cada metodologia (Tabela 5 da nota técnica de alinhamento: `[posture_adpo_min, posture_adpo_max] × [posture_aspo_min, posture_aspo_max]`, não um ponto único), reduzida a uma tier categórica (não a um score MAVT). A distância por eixo é a distância **clamped** de um ponto a um intervalo (zero se o ponto está lá dentro):
 
 ```
-delta = max(|AdPO - ag_posture|, |AsPO - as_posture|)
-delta = 0  →  'exact'     (alinhamento perfeito)
+dx = max(adpo_min - AdPO, AdPO - adpo_max, 0)
+dy = max(aspo_min - AsPO, AsPO - aspo_max, 0)
+delta = max(dx, dy)          # Chebyshev sobre as duas distâncias de eixo
+delta = 0  →  'exact'     (ponto do projeto dentro da região)
 delta = 1  →  'adjacent'  (desvio aceitável)
 delta ≥ 2  →  'distant'   (desalinhamento — incompatível)
 ```
 
-A distância de Chebyshev é preferida à Euclidiana porque penaliza o **pior desvio individual**. A tier é usada apenas em **Level 1** (admissibilidade — ver abaixo) e como metadado de auditoria (`misfit`); nunca reentra como coluna do MAVT em Level 2, para não contabilizar o mesmo sinal contextual duas vezes.
+Uma região degenerada (`min == max`) reproduz exatamente a distância a um ponto — a fórmula anterior era um caso particular desta. A tier é usada apenas em **Level 1** (admissibilidade — ver abaixo) e como metadado de auditoria (`misfit`); nunca reentra como coluna do MAVT em Level 2, para não contabilizar o mesmo sinal contextual duas vezes.
 
 #### `run_fit_m_level1(...)` — Triagem Level 1, não-compensatória (Etapa 3)
 
@@ -430,7 +434,7 @@ Determina **quem pode ser comparado** em Level 2. Uma pontuação elevada noutro
 1. **Binding constraints (hard)** — `regulatory_compatible`
 2. **Acceptance thresholds** — `requires_fixed_scope`: exclusão binária, não penalização
 3. **`candidate_role` / `eligible_as_primary_envelope`** — exclui guias, normas e métodos complementares (PMBoK, ISO 21502, XP) de competir como envelope metodológico primário autónomo
-4. **`approach_compatible`** — exclui metodologias cuja postura nominal contradiz diretamente a abordagem resolvida (ex.: postura Adaptativa vs. abordagem Preditiva); postura Híbrida é sempre compatível
+4. **`approach_compatible`** — verifica se a abordagem resolvida está na lista `compatible_approaches` do candidato (ex.: `['Adaptativa','Híbrida']`); não há bridging implícito — cada candidato declara explicitamente as abordagens sob as quais é admissível
 5. **`posture_compatible`** — tier `'distant'` é excluído aqui; `'exact'`/`'adjacent'` passam e ficam só para auditoria
 
 #### `run_fit_m_level2(...)` — Ranking MCDM Level 2, compensatória (Etapa 3)
@@ -441,7 +445,7 @@ O resultado inclui, por metodologia: `score`, `posture_alignment_tier` (exact/ad
 
 #### `run_fit_t_level_a/b(...)` — Fit_T (Etapa 4)
 
-`level_a` filtra a TEB por: compatibilidade com a metodologia selecionada, postura, restrições GDPR e budget. `level_b` aplica MCDM com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e devolve o top-N ranqueado **por categoria** (não greedy) — o utilizador escolhe a ferramenta final em cada categoria na Etapa 4.
+`level_a` filtra a TEB por: compatibilidade com o envelope metodológico (primário + componentes justificados), postura e restrições GDPR. `level_b` aplica MCDM com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e devolve o top-N ranqueado **por categoria** (não greedy) — o utilizador escolhe a ferramenta final em cada categoria na Etapa 4.
 
 ---
 
@@ -522,22 +526,24 @@ Esta abordagem preserva o histórico de alterações na *Evidence Base* — requ
 
 #### O que é semeado
 
-**MEB — 10 metodologias** com coordenadas de postura `(ag_posture, as_posture)` no espaço AdPO×AsPO, tipologia de candidato (Level 1) e scores C1-C7 normalizados 0–1:
+**MEB — 10 metodologias** com **região** de postura `[posture_adpo_min,posture_adpo_max] × [posture_aspo_min,posture_aspo_max]` no espaço AdPO×AsPO (Tabela 5 da nota técnica de alinhamento), lista `compatible_approaches`, tipologia de candidato (Level 1) e scores C1-C7 normalizados 0–1:
 
-| Código | Postura | ag_posture | as_posture | candidate_role | Envelope primário? |
+| Código | Região AdPO | Região AsPO | Abordagens | candidate_role | Envelope primário? |
 |---|---|---|---|---|---|
-| SCRUM | Adaptativa | 4 | 1 | primary_team_level | Sim |
-| KANBAN | Adaptativa | 3 | 1 | primary_or_complementary | Sim |
-| PMBOK6 | Preditiva | 1 | 4 | reference_overlay | **Não** |
-| PRINCE2 | Preditiva | 1 | 4 | primary_envelope | Sim |
-| SAFe | Híbrida | 3 | 3 | primary_envelope | Sim |
-| XP | Adaptativa | 4 | 2 | complementary_engineering | **Não** |
-| DSDM | Híbrida | 3 | 3 | primary_envelope | Sim |
-| CRISP_DM | Híbrida | 2 | 3 | primary_in_data_projects | Sim |
-| ISO21502 | Preditiva | 1 | 4 | normative_overlay | **Não** |
-| PM2 | Híbrida | 1 | 4 | primary_envelope | Sim |
+| SCRUM | 3–4 | 1–2 | Adaptativa, Híbrida | primary_team_level | Sim |
+| KANBAN | 2–4 | 1–3 | Adaptativa, Híbrida | primary_or_complementary | Sim |
+| PMBOK6 | 1–3 | 2–4 | Preditiva, Híbrida | reference_overlay | **Não** |
+| PRINCE2 | 2–4 | 2–4 | Preditiva, Híbrida¹ | primary_envelope | Sim |
+| SAFe | 2–4 | 2–4 | Híbrida | primary_envelope | Sim |
+| XP | 3–4 | 1–2 | Adaptativa, Híbrida | complementary_engineering | **Não** |
+| DSDM | 2–4 | 2–4 | Adaptativa, Híbrida | primary_envelope | Sim |
+| CRISP_DM | 2–4 | 1–3 | Adaptativa, Híbrida | primary_in_data_projects | Sim |
+| ISO21502 | 1–3 | 2–4 | Preditiva, Híbrida | normative_overlay | **Não** |
+| PM2 | 1–3 | 2–4 | Preditiva, Híbrida | primary_envelope | Sim |
 
-Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de referência, normas ou métodos de engenharia complementares — o Level 1 exclui-os de competir como envelope metodológico primário autónomo, mas mantêm-se na MEB para uso futuro como componentes de um `methodological_envelope` composto.
+¹ A Tabela 5 do orientador lista PRINCE2 Agile apenas como "Hybrid"; os seeds usam `['Preditiva','Híbrida']` por decisão do autor (ver Cenário B/D). O seed de PM² também diverge da Tabela 5 em `requires_fixed_scope` (aqui `True`, refletindo uma metodologia estruturada), garantindo que os Cenários B/D têm sempre pelo menos um candidato viável (PM²) mesmo sob a leitura literal da tabela para PRINCE2.
+
+Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de referência, normas ou métodos de engenharia complementares — o Level 1 exclui-os de competir como envelope metodológico primário autónomo, mas podem integrar um `methodological_envelope` composto como componentes justificados (ver `compatible_as_component_of` e a Etapa 3).
 
 **TEB — 13 ferramentas** distribuídas por 5 categorias, cada uma com coordenadas de contexto `(agility_support, assurance_support)` e scores de critérios CD1-CD8:
 
