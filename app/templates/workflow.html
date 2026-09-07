@@ -24,13 +24,6 @@
             </div>
         </div>
         <div class="flex gap-2 flex-wrap">
-            {% if decision.current_stage not in ('stage_complete',) %}
-            <form action="{{ url_for('main.update_state', id=decision.id, action='REVISE_CONTEXT') }}" method="POST">
-                <button class="px-4 py-2 bg-slate-50 text-slate-500 rounded-xl font-semibold hover:bg-amber-50 hover:text-amber-600 transition border border-slate-200 text-sm">
-                    ↺ Rever Contexto
-                </button>
-            </form>
-            {% endif %}
             {% if decision.current_stage == 'stage_2_approach' %}
             <a href="{{ url_for('main.etapa2', id=decision.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-700 transition text-sm shadow shadow-slate-300">
                 Continuar → Etapa 2
@@ -50,6 +43,22 @@
                     ↺ Rever diagnóstico
                 </a>
                 {% endif %}
+                <form method="POST" action="{{ url_for('main.reassess_decision', id=decision.id) }}"
+                      onsubmit="return confirm('Criar uma nova execução a partir da Etapa 2? Esta decisão mantém-se como registo concluído e rastreável.')">
+                    <input type="hidden" name="target" value="stage_2_approach">
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                        ↺ Reavaliar abordagem (E2)
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('main.reassess_decision', id=decision.id) }}"
+                      onsubmit="return confirm('Criar uma nova execução a partir da Etapa 3? Esta decisão mantém-se como registo concluído e rastreável.')">
+                    <input type="hidden" name="target" value="stage_3_fit_m">
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold hover:bg-amber-100 transition text-sm">
+                        ↺ Reavaliar metodologia (E3)
+                    </button>
+                </form>
                 {% if projeto %}
                 <a href="{{ url_for('main.projeto_diagnosticos', projeto_uuid=projeto.projeto_uuid) }}"
                    class="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-semibold hover:bg-slate-200 transition text-sm">
@@ -90,8 +99,8 @@ flowchart TD
     s4 -.->|"Thresholds / Governance"| s2
     s4 -.->|"Tool mismatch"| s3
     s3 -.->|"Governance infeasible"| s2
-    s3 -.->|"Evidência inconsistente"| s1
-    s2 -.->|"Confiança insuficiente"| s1
+    sc -.->|"Reassessment (nova execução)"| s2
+    sc -.->|"Reassessment (nova execução)"| s3
     {% if decision.current_stage == 'stage_1_diagnosis' %}style s1 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage == 'stage_2_approach' %}style s2 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
     {% if decision.current_stage in ('stage_3_fit_m','stage_3_evaluation') %}style s3 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px{% endif %}
@@ -100,16 +109,16 @@ flowchart TD
             </div>
         </div>
 
-        <!-- Índices AgPI / AsPI -->
+        <!-- Índices AdPO / AsPO -->
         <div class="lg:col-span-5 space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-50 rounded-2xl p-5 text-center shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AgPI</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AdPO</p>
                     <p class="text-4xl font-black text-slate-800">{{ "%.2f"|format(decision.agpi_score or 0) }}</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Pressão de Agilidade</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Pressão de Adaptação</p>
                 </div>
                 <div class="bg-red-50 rounded-2xl p-5 text-center shadow-sm">
-                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">AsPI</p>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">AsPO</p>
                     <p class="text-4xl font-black text-red-700">{{ "%.2f"|format(decision.aspi_score or 0) }}</p>
                     <p class="text-[10px] text-red-400 mt-1">Pressão de Assurance</p>
                 </div>
@@ -122,6 +131,23 @@ flowchart TD
                 <p class="text-2xl font-black text-{{ approach_color }}-700">{{ decision.suggested_approach or '—' }}</p>
                 {% if decision.selected_methodology %}
                 <p class="text-xs text-{{ approach_color }}-600 mt-1">Metodologia: <strong>{{ decision.selected_methodology }}</strong></p>
+                {% set env = decision.methodological_envelope %}
+                {% if env and env.components %}
+                <div class="mt-2 pt-2 border-t border-{{ approach_color }}-100">
+                    <p class="text-[10px] font-bold text-{{ approach_color }}-500 uppercase tracking-wider mb-1">Envelope composto</p>
+                    {% for c in env.components %}
+                    <div class="relative inline-block group/envc mr-1 mb-1">
+                        <span class="px-2 py-0.5 bg-white/70 text-{{ approach_color }}-700 border border-{{ approach_color }}-200 rounded-full text-[10px] font-semibold cursor-default">
+                            + {{ c.name }}
+                        </span>
+                        <div class="pointer-events-none absolute bottom-full left-0 mb-1.5 z-50 hidden group-hover/envc:block
+                                    w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 shadow-xl leading-relaxed">
+                            <span class="font-bold uppercase text-[9px] text-slate-300">{{ c.role | replace('_',' ') }}</span><br>{{ c.justification }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% endif %}
                 {% if decision.mcdm_engine %}
                 <p class="text-[10px] text-{{ approach_color }}-400 mt-0.5">Motor MCDM: {{ decision.mcdm_engine }}</p>
@@ -131,15 +157,19 @@ flowchart TD
             <!-- Decision Map -->
             {% if decision.agpi_score and decision.aspi_score %}
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Mapa de Decisão — AgPI × AsPI</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Mapa de Decisão — AdPO × AsPO</p>
                 <canvas id="decision-map" height="180"></canvas>
             </div>
             {% endif %}
 
-            <!-- Re-entry cause -->
+            <!-- Re-entry / reassessment pendente (limpo quando o estado seguinte é confirmado) -->
             {% if decision.reentry_cause %}
+            {% set is_reassess = decision.reentry_cause in ('organiser_drift_or_decision_control_reconfiguration', 'evidence_update_or_configuration_infeasibility') %}
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                <p class="text-xs font-bold text-amber-700">⚠ Re-entry: {{ decision.reentry_cause | replace('_', ' ') | title }}</p>
+                <p class="text-xs font-bold text-amber-700">⚠ {{ 'Reassessment' if is_reassess else 'Re-entry' }}: {{ decision.reentry_cause | replace('_', ' ') | title }}</p>
+                {% if is_reassess %}
+                <p class="text-[10px] text-amber-600 mt-1">Nova execução gerada a partir de uma decisão concluída — ver linhagem na transition history.</p>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -187,14 +217,14 @@ flowchart TD
     </div>
     {% endif %}
 
-    <!-- ── Governance Register ──────────────────────────────────────────── -->
-    {% if decision.governance_register %}
-    {% set gov = decision.governance_register %}
-    {% if gov.hard or gov.threshold or gov.soft %}
+    <!-- ── Decision-Control Register ──────────────────────────────────────── -->
+    {% if decision.decision_control_register %}
+    {% set gov = decision.decision_control_register %}
+    {% if gov.binding_constraints or gov.acceptance_thresholds or gov.advisory_guidelines %}
     <div class="bg-white rounded-2xl shadow border border-slate-100 p-6">
-        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Governance Register</h2>
+        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Decision-Control Register</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {% for level, cor, label in [('hard','red','Hard'), ('threshold','yellow','Threshold'), ('soft','green','Soft')] %}
+            {% for level, cor, label in [('binding_constraints','red','Binding constraints'), ('acceptance_thresholds','yellow','Acceptance thresholds'), ('advisory_guidelines','green','Advisory guidelines')] %}
             {% if gov[level] %}
             <div class="bg-{{ cor }}-50 border border-{{ cor }}-100 rounded-xl p-4">
                 <p class="text-[10px] font-black text-{{ cor }}-600 uppercase tracking-wider mb-3">{{ label }}</p>
@@ -227,7 +257,7 @@ flowchart TD
                     <tr class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
                         <th class="pb-3 text-left font-semibold">Rank</th>
                         <th class="pb-3 text-left font-semibold">Metodologia</th>
-                        <th class="pb-3 text-left font-semibold">Postura</th>
+                        <th class="pb-3 text-left font-semibold">Abordagem</th>
                         <th class="pb-3 text-left font-semibold">Tier</th>
                         <th class="pb-3 text-left font-semibold">Value Score</th>
                         <th class="pb-3 text-left font-semibold">Misfit Δk</th>
@@ -244,12 +274,16 @@ flowchart TD
                             {% endif %}
                         </td>
                         <td class="py-3">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
-                                {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
-                                {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                {{ item.posture }}
-                            </span>
+                            <div class="flex flex-wrap gap-1">
+                                {% for ap in (item.compatible_approaches or [item.posture]) %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                    {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                    {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
+                                    {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                    {{ ap }}
+                                </span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td class="py-3 text-slate-400 text-xs">T{{ item.tier }}</td>
                         <td class="py-3">
@@ -436,10 +470,10 @@ window._wfData = {
             data: { datasets: [{ label: d.projectName, data: [{ x: d.agpi, y: d.aspi }], backgroundColor: 'rgba(51,65,85,0.9)', pointRadius: 9, pointHoverRadius: 11 }] },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label} — AgPI: ${c.parsed.x.toFixed(2)}, AsPI: ${c.parsed.y.toFixed(2)}` } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label} — AdPO: ${c.parsed.x.toFixed(2)}, AsPO: ${c.parsed.y.toFixed(2)}` } } },
                 scales: {
-                    x: { min: 1, max: 4, title: { display: true, text: 'AgPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                    y: { min: 1, max: 4, title: { display: true, text: 'AsPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    x: { min: 1, max: 4, title: { display: true, text: 'AdPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    y: { min: 1, max: 4, title: { display: true, text: 'AsPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
                 }
             },
             plugins: [zonePlugin]
@@ -487,10 +521,12 @@ window._wfData = {
             new Chart(radarEl, {
                 type: 'radar',
                 data: {
-                    labels: ['Assurance', 'Agility', 'Scalability', 'Hybridisation', 'Postura'],
+                    labels: ['C1 Resp.', 'C2 Align.', 'C3 Trace.', 'C4 Compl.', 'C5 Pace', 'C6 Integr.', 'C7 Distrib.'],
                     datasets: top3.map((m, i) => ({
                         label: m.name,
-                        data: [m.criteria.assurance ?? 0.5, m.criteria.agility ?? 0.5, m.criteria.scalability ?? 0.5, m.criteria.hybridisation ?? 0.5, m.criteria.posture_alignment ?? 0.5],
+                        data: [m.criteria.c1_responsiveness ?? 0.5, m.criteria.c2_alignment ?? 0.5, m.criteria.c3_traceability ?? 0.5,
+                               m.criteria.c4_compliance ?? 0.5, m.criteria.c5_pace_criticality ?? 0.5,
+                               m.criteria.c6_integration_risk ?? 0.5, m.criteria.c7_distributed_support ?? 0.5],
                         borderColor: COLORS[i].border, backgroundColor: COLORS[i].bg,
                         borderWidth: 2, pointBackgroundColor: COLORS[i].border, pointRadius: 3,
                     }))

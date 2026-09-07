@@ -237,6 +237,8 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 
 ---
 
+> **Nota de versão (2026-09-03):** a postura de cada metodologia passou de um ponto único `(ag_posture, as_posture)` para uma **região** `[posture_adpo_min,posture_adpo_max] × [posture_aspo_min,posture_aspo_max]`, conforme a Tabela 5 da nota técnica de alinhamento do orientador, e a compatibilidade de abordagem passou de uma string única para uma lista `compatible_approaches`. A distância de Chebyshev do Level 1 generaliza-se para distância a uma região (0 se o ponto do projeto está dentro). Os 3 cenários abaixo foram recalculados com esta arquitetura — ver secção seguinte para os detalhes.
+
 #### Cenário A — Projeto Ágil (Startup Digital)
 
 | Dimensão | Valor | Grupo |
@@ -250,11 +252,13 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 | Rastreabilidade | 1 | AsPI |
 | Formalidade Stakeholders | 2 | AsPI |
 
-**Resultado esperado:**
-- AgPI = **4** (4 dimensões ≥ 3) · AsPI = **1** (0 dimensões ≥ 3)
+**Resultado:**
+- AdPO = **4** (4 dimensões ≥ 3) · AsPO = **1** (0 dimensões ≥ 3)
 - Abordagem: **Adaptativa**
-- Top metodologia: **Scrum** (T1, posture_alignment = 1.0, score_agility = 0.90)
-- Portfólio: Jira (Tracking), Trello (Planning), Slack (Communication)
+- Level 1 viável: **DSDM Atern** (tier adjacent), **Kanban** (tier exact), **Scrum** (tier exact), **CRISP-DM** (tier exact) — XP excluído (`eligible_as_primary_envelope=False`, método de engenharia complementar). Com a postura em região (Tabela 5), DSDM e CRISP-DM passam a ter cobertura suficiente em AdPO/AsPO para entrar no Level 1.
+- Top metodologia: **DSDM Atern** (score MAVT 0,6425) — Kanban 2º (0,5525), Scrum 3º (0,5450), CRISP-DM 4º (0,4850)
+- Sensibilidade: **83,0% de robustez — estável**; o runner-up (Kanban) vence em 54,4% das simulações onde DSDM não é top-1
+- Portfólio (top-1 por categoria): Jira (Tracking), Confluence (Documentation), Microsoft Project (Planning), Teams (Communication), Miro (Collaboration)
 
 ---
 
@@ -271,11 +275,18 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 | Rastreabilidade | 4 | AsPI |
 | Formalidade Stakeholders | 3 | AsPI |
 
-**Resultado esperado:**
-- AgPI = **1** (0 dimensões ≥ 3) · AsPI = **4** (4 dimensões ≥ 3)
+**Resultado:**
+- AdPO = **1** (0 dimensões ≥ 3) · AsPO = **4** (4 dimensões ≥ 3)
 - Abordagem: **Preditiva**
-- Top metodologia: **PRINCE2 Agile** ou **PMBoK 6ª Edição** (score_assurance ≥ 0.90)
-- Governance Register: Hard — `regulatory_compatible = True`, `gdpr_compliant = True`
+- Decision-control register: Hard — `regulatory_compatible=True`, `gdpr_compliant=True`; Threshold — `requires_fixed_scope=True`
+- Level 1 viável: **PRINCE2 Agile** (tier adjacent) e **PM²** (tier exact) — PMBoK 6ª Ed. e ISO 21502 excluídos (`candidate_role` = reference/normative overlay, não elegíveis como envelope metodológico primário)
+- Top metodologia: **PRINCE2 Agile** (score 0,7325) — PM² muito próximo em score (0,7025), mas dominado em quase todos os critérios C1-C7
+- Sensibilidade: **100% de robustez — estável**; PRINCE2 Agile vence em todas as 500 simulações Monte Carlo
+- Portfólio (top-1 por categoria): Confluence (Documentation), Microsoft Project (Planning), Teams (Communication)
+
+Este é o caso mais ilustrativo da correção estrutural: o topo do ranking já não fica ambíguo ("PRINCE2 **ou** PMBoK") porque um guia normativo (PMBoK) competia como se fosse uma metodologia operacional autónoma — o filtro `candidate_role`/`eligible_as_primary_envelope` resolve isto no screening, sem precisar do MAVT. O Level 2 fica, ainda assim, com uma comparação real (PRINCE2 vs. PM²) em vez de uma decisão trivial de candidato único.
+
+**Nota de calibração:** a Tabela 5 do orientador lista a abordagem de PRINCE2 Agile como "Hybrid" apenas; os seeds deste protótipo usam deliberadamente `compatible_approaches=['Preditiva','Híbrida']` (decisão do autor — PRINCE2 combina controlo formal predefinido com adaptação por etapas). O seed de PM² foi também revisto para `requires_fixed_scope=True` (era `False`), refletindo que o PM² da Comissão Europeia é uma metodologia suficientemente estruturada para suportar âmbito fixo. Com esta calibração, mesmo sob a leitura literal da Tabela 5 (PRINCE2 excluído por abordagem), o cenário continuaria a ter solução — PM² sozinho —, o que reforça a cobertura da MEB para perfis puramente preditivos e de alta criticidade.
 
 ---
 
@@ -292,11 +303,13 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 | Rastreabilidade | 3 | AsPI |
 | Formalidade Stakeholders | 1 | AsPI |
 
-**Resultado esperado:**
-- AgPI = **4** (3 dims ≥ 3) · AsPI = **4** (3 dims ≥ 3)
+**Resultado:**
+- AdPO = **4** (3 dims ≥ 3) · AsPO = **4** (3 dims ≥ 3)
 - Abordagem: **Híbrida**
-- Top metodologia: **DSDM Atern** ou **SAFe 6.0** (posture_alignment = 1.0 para ag=3, as=3)
-- Portfólio centrado em ferramentas de escalabilidade e governança
+- Level 1 viável: **SAFe 6.0** (tier exact), **PRINCE2 Agile** (tier exact), **PM2** (tier adjacent), **DSDM Atern** (tier exact), **Kanban** (tier adjacent), **CRISP-DM** (tier adjacent) — nenhum candidato excluído por postura neste cenário; com a região da Tabela 5, PRINCE2, Kanban e CRISP-DM passam a ter cobertura suficiente em (AdPO=4, AsPO=4)
+- Top metodologia: **SAFe 6.0** (score 0,85), destacado — PRINCE2 Agile 2º (0,7325), PM2 3º (0,7025), DSDM 4º (0,6425), Kanban 5º (0,5525), CRISP-DM 6º (0,4850)
+- Sensibilidade: **92,6% de robustez — estável**; o runner-up (PRINCE2 Agile) só vence numa minoria das simulações onde SAFe não é top-1
+- Portfólio (top-1 por categoria): Jira (Tracking), Confluence (Documentation), Teams (Communication), Miro (Collaboration)
 
 ---
 
@@ -313,10 +326,13 @@ Os sliders do diagnóstico aceitam valores de **1 a 4** para cada uma das 8 dime
 | Rastreabilidade | 2 | AsPI |
 | Formalidade Stakeholders | 2 | AsPI |
 
-**Resultado esperado:**
-- AgPI = **2** (1 dim ≥ 3) · AsPI = **3** (2 dims ≥ 3)
-- Abordagem: **Preditiva** (AsPI ≥ 3 ∧ AgPI ≤ 2)
-- Top metodologia: **PMBoK 6ª Edição** (score_assurance elevado, posture_alignment = 0.7)
+**Resultado:**
+- AdPO = **2** (1 dim ≥ 3) · AsPO = **3** (2 dims ≥ 3)
+- Abordagem: **Preditiva** (AsPO ≥ 3 ∧ AdPO ≤ 2)
+- Decision-control register: Hard — `regulatory_compatible=True`; Threshold — `requires_fixed_scope=True`
+- Level 1 viável: **PRINCE2 Agile** (tier exact — a região AdPO∈[2,4]×AsPO∈[2,4] cobre (2,3) exatamente) e **PM²** (tier exact — AdPO∈[1,3]×AsPO∈[2,4] também cobre (2,3)) — PMBoK 6ª Ed. excluído como `reference_overlay`
+- Top metodologia: **PRINCE2 Agile** (score 0,7325) — PM² 2º (0,7025); sensibilidade 100% de robustez, estável (mesmo padrão do Cenário B)
+- Portfólio (top-1 por categoria): Confluence (Documentation), Microsoft Project (Planning), Teams (Communication)
 
 ---
 
@@ -350,7 +366,7 @@ else                         →  "Híbrida"      # pressões equilibradas
 
 O limiar `agpi >= 2` (não 3) reflete que mesmo uma pressão ágil moderada é suficiente para preferir adaptabilidade quando a pressão de assurance é baixa.
 
-#### `build_governance_register(...)` — Etapa 2
+#### `build_decision_control_register(...)` — Etapa 2
 
 Classifica as restrições do projeto em três níveis de exigência, derivadas automaticamente dos scores de diagnóstico:
 
@@ -396,51 +412,44 @@ Exemplo de estrutura JSON produzida para um projeto com `compliance=4`, `critica
 
 O campo `scope` determina a que camada se aplica a restrição: `"M"` é avaliado em `run_fit_m_level1()`, `"T"` é avaliado em `run_fit_t_level_a()`.
 
-#### `_posture_align_score(agpi, aspi, ag_posture, as_posture)` — Alinhamento de Postura
+#### `_posture_alignment_tier(agpi, aspi, adpo_min, adpo_max, aspo_min, aspo_max)` — Classificação de Postura
 
-Calcula o alinhamento entre o contexto do projeto e a postura declarada de cada metodologia usando a **distância de Chebyshev**:
+Classifica o alinhamento entre o contexto do projeto e a **região** de postura declarada de cada metodologia (Tabela 5 da nota técnica de alinhamento: `[posture_adpo_min, posture_adpo_max] × [posture_aspo_min, posture_aspo_max]`, não um ponto único), reduzida a uma tier categórica (não a um score MAVT). A distância por eixo é a distância **clamped** de um ponto a um intervalo (zero se o ponto está lá dentro):
 
 ```
-delta = max(|AgPI - ag_posture|, |AsPI - as_posture|)
-delta = 0  →  score = 1.0   (alinhamento perfeito)
-delta = 1  →  score = 0.7   (desvio aceitável)
-delta ≥ 2  →  score = 0.3   (desalinhamento significativo)
+dx = max(adpo_min - AdPO, AdPO - adpo_max, 0)
+dy = max(aspo_min - AsPO, AsPO - aspo_max, 0)
+delta = max(dx, dy)          # Chebyshev sobre as duas distâncias de eixo
+delta = 0  →  'exact'     (ponto do projeto dentro da região)
+delta = 1  →  'adjacent'  (desvio aceitável)
+delta ≥ 2  →  'distant'   (desalinhamento — incompatível)
 ```
 
-A distância de Chebyshev é preferida à Euclidiana porque penaliza o **pior desvio individual**, refletindo que um único critério extremamente desalinhado é mais problemático do que dois desvios moderados.
+Uma região degenerada (`min == max`) reproduz exatamente a distância a um ponto — a fórmula anterior era um caso particular desta. A tier é usada apenas em **Level 1** (admissibilidade — ver abaixo) e como metadado de auditoria (`misfit`); nunca reentra como coluna do MAVT em Level 2, para não contabilizar o mesmo sinal contextual duas vezes.
 
-#### `run_fit_m_level1(...)` — Triagem L1 (Etapa 3)
+#### `run_fit_m_level1(...)` — Triagem Level 1, não-compensatória (Etapa 3)
 
-Filtra a MEB pelas restrições Hard (âmbito M). Crucialmente, **não há filtro por postura familiar** — todas as metodologias passam a L1 independentemente da sua postura (Adaptativa, Preditiva, Híbrida). O desalinhamento de postura é capturado como penalização no `posture_alignment` score de L2, garantindo que PMBOK6 e PRINCE2 aparecem sempre no ranking, mesmo em contextos ágeis.
+Determina **quem pode ser comparado** em Level 2. Uma pontuação elevada noutro critério não compensa a falha de nenhuma destas condições:
 
-#### `_context_weights(base, agpi, aspi)` — Pesos Dinâmicos
+1. **Binding constraints (hard)** — `regulatory_compatible`
+2. **Acceptance thresholds** — `requires_fixed_scope`: exclusão binária, não penalização
+3. **`candidate_role` / `eligible_as_primary_envelope`** — exclui guias, normas e métodos complementares (PMBoK, ISO 21502, XP) de competir como envelope metodológico primário autónomo
+4. **`approach_compatible`** — verifica se a abordagem resolvida está na lista `compatible_approaches` do candidato (ex.: `['Adaptativa','Híbrida']`); não há bridging implícito — cada candidato declara explicitamente as abordagens sob as quais é admissível
+5. **`posture_compatible`** — tier `'distant'` é excluído aqui; `'exact'`/`'adjacent'` passam e ficam só para auditoria
 
-Ajusta os pesos MCDM em função do contexto do projeto. O critério `assurance` recebe mais peso quando AsPI é elevado; `agility` recebe mais peso quando AgPI é elevado; `hybridisation` é maximizado quando os índices são equilibrados.
+#### `run_fit_m_level2(...)` — Ranking MCDM Level 2, compensatória (Etapa 3)
 
-```python
-ALPHA = 0.8   # intensidade da modulação
-multipliers = [1 + 0.8*s,        # assurance  ← AsPI
-               1 + 0.8*a,        # agility    ← AgPI
-               1 + 0.8*(a+s)/2,  # scalability (neutro)
-               1 + 0.8*h,        # hybridisation ← complemento
-               1.0]              # posture_alignment (fixo)
-```
+Constrói a matriz de avaliação `X_M` apenas com os **7 critérios C1-C7** (`score_c1_responsiveness` … `score_c7_distributed_support`), aplica o motor MCDM com pesos explícitos de `MCDMWeights('MEB')`. **Sem** reponderação automática por AdPO/AsPO, **sem** bónus de tier, **sem** penalização compensatória de thresholds — estes eram os canais que causavam a circularidade identificada na nota técnica de alinhamento (o mesmo sinal contextual a entrar várias vezes no ranking).
 
-Os multiplicadores são normalizados para que os pesos ajustados somem sempre 1.
-
-#### `run_fit_m_level2(...)` — Ranking MCDM L2 (Etapa 3)
-
-Constrói a matriz de avaliação `X_M` com 5 colunas: `[assurance, agility, scalability, hybridisation, posture_alignment]`, aplica o motor MCDM e adiciona um **bónus de Tier** (`T1 +0.02`, `T2 +0.0`) para favorecer frameworks com menor overhead de processo quando os scores MCDM são próximos.
-
-O resultado inclui, por metodologia: `score`, `misfit Δk` (= 1 - posture_alignment), postura, tier e perfil de critérios individuais (para visualização em radar).
+O resultado inclui, por metodologia: `score`, `posture_alignment_tier` (exact/adjacent/distant, auditoria), `misfit` (derivado da tier, auditoria — não parte do score), `candidate_type`, `candidate_role` e o dicionário `criteria` com os 7 valores C1-C7 (para visualização em radar).
 
 #### `run_fit_t_level_a/b(...)` — Fit_T (Etapa 4)
 
-`level_a` filtra a TEB por: compatibilidade com a metodologia selecionada, postura, restrições GDPR e budget. `level_b` aplica MCDM com 4 critérios `[traceability, integration, flow_support, context_alignment]` e seleciona greedy a melhor ferramenta por categoria para construir o portfólio final.
+`level_a` filtra a TEB por: compatibilidade com o envelope metodológico (primário + componentes justificados), postura e restrições GDPR. `level_b` aplica MCDM com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e devolve o top-N ranqueado **por categoria** (não greedy) — o utilizador escolhe a ferramenta final em cada categoria na Etapa 4.
 
 ---
 
-#### `run_sensitivity_analysis(ranking, agpi, aspi, n_mc=500)` — Análise de Sensibilidade MCDM
+#### `run_sensitivity_analysis(ranking, n_mc=500)` — Análise de Sensibilidade MCDM
 
 Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variações nos pesos dos critérios. Devolve `None` se o ranking tiver menos de 2 alternativas ou se as pontuações por critério não estiverem disponíveis.
 
@@ -462,12 +471,12 @@ Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variaç�
 
 ```python
 {
-  'label': 'Assurance',     # nome legível
-  'key': 'assurance',       # chave interna
-  'current': 0.213,         # peso atual (context-adjusted)
-  'min': 0.0,               # limite inferior de estabilidade
-  'max': 0.47,              # limite superior de estabilidade
-  'range': 0.47,            # amplitude (quanto pode variar sem mudar top-1)
+  'label': 'C3 Evidence Traceability',  # nome legível
+  'key': 'c3_traceability',             # chave interna
+  'current': 0.18,                      # peso atual (explícito, não context-adjusted)
+  'min': 0.0,                           # limite inferior de estabilidade
+  'max': 0.47,                          # limite superior de estabilidade
+  'range': 0.47,                        # amplitude (quanto pode variar sem mudar top-1)
 }
 ```
 
@@ -487,16 +496,13 @@ class MCDMEngine:
 
 #### Método MAVT (Multi-Attribute Value Theory)
 
-Normalização min-max por coluna seguida de produto escalar ponderado:
+Soma ponderada direta, sem normalização min-max:
 
 ```
-X_norm_kj = (x_kj - min_j) / (max_j - min_j)
-V_k = Σ (w_j × X_norm_kj)
+V_k = Σ (w_j × x_kj)
 ```
 
-A normalização min-max garante que todas as alternativas são avaliadas relativamente entre si — uma metodologia com score 0.8 num critério onde o máximo disponível é 0.9 é tratada diferentemente de uma com 0.8 onde o máximo é 0.8.
-
-**Caso especial:** quando existe apenas uma alternativa viável (após L1), o MAVT usa a soma ponderada diretamente sem normalizar, evitando divisão por zero e garantindo que a alternativa é pontuada de forma absoluta.
+Os critérios C1-C7/CD1-CD8 já são funções de valor fixas em [0,1] (rubrica com âncoras 0/0.25/0.5/0.75/1.0 — ver `seeds.py`), por isso não se recalcula min-max sobre o conjunto de sobreviventes do Level 1/A. Fazê-lo faria o score de cada alternativa depender de **quais outras alternativas sobreviveram ao screening** — um artefacto que a codificação em função de valor é precisamente pensada para evitar (nota técnica de alinhamento, secção 3.3).
 
 #### Método AHP
 
@@ -520,20 +526,26 @@ Esta abordagem preserva o histórico de alterações na *Evidence Base* — requ
 
 #### O que é semeado
 
-**MEB — 8 metodologias** com coordenadas de postura `(ag_posture, as_posture)` no espaço AgPI×AsPI e scores de critérios MCDM normalizados 0–1:
+**MEB — 10 metodologias** com **região** de postura `[posture_adpo_min,posture_adpo_max] × [posture_aspo_min,posture_aspo_max]` no espaço AdPO×AsPO (Tabela 5 da nota técnica de alinhamento), lista `compatible_approaches`, tipologia de candidato (Level 1) e scores C1-C7 normalizados 0–1:
 
-| Código | Postura | ag_posture | as_posture | Tier |
-|---|---|---|---|---|
-| SCRUM | Adaptativa | 4 | 1 | 1 |
-| KANBAN | Adaptativa | 3 | 1 | 1 |
-| PMBOK6 | Preditiva | 1 | 4 | 1 |
-| PRINCE2 | Preditiva | 1 | 4 | 1 |
-| SAFe | Híbrida | 3 | 3 | 2 |
-| XP | Adaptativa | 4 | 2 | 2 |
-| DSDM | Híbrida | 3 | 3 | 1 |
-| CRISP-DM | Híbrida | 2 | 3 | 2 |
+| Código | Região AdPO | Região AsPO | Abordagens | candidate_role | Envelope primário? |
+|---|---|---|---|---|---|
+| SCRUM | 3–4 | 1–2 | Adaptativa, Híbrida | primary_team_level | Sim |
+| KANBAN | 2–4 | 1–3 | Adaptativa, Híbrida | primary_or_complementary | Sim |
+| PMBOK6 | 1–3 | 2–4 | Preditiva, Híbrida | reference_overlay | **Não** |
+| PRINCE2 | 2–4 | 2–4 | Preditiva, Híbrida¹ | primary_envelope | Sim |
+| SAFe | 2–4 | 2–4 | Híbrida | primary_envelope | Sim |
+| XP | 3–4 | 1–2 | Adaptativa, Híbrida | complementary_engineering | **Não** |
+| DSDM | 2–4 | 2–4 | Adaptativa, Híbrida | primary_envelope | Sim |
+| CRISP_DM | 2–4 | 1–3 | Adaptativa, Híbrida | primary_in_data_projects | Sim |
+| ISO21502 | 1–3 | 2–4 | Preditiva, Híbrida | normative_overlay | **Não** |
+| PM2 | 1–3 | 2–4 | Preditiva, Híbrida | primary_envelope | Sim |
 
-**TEB — 13 ferramentas** distribuídas por 5 categorias, cada uma com coordenadas de contexto `(agility_support, assurance_support)` e scores de critérios MCDM:
+¹ A Tabela 5 do orientador lista PRINCE2 Agile apenas como "Hybrid"; os seeds usam `['Preditiva','Híbrida']` por decisão do autor (ver Cenário B/D). O seed de PM² também diverge da Tabela 5 em `requires_fixed_scope` (aqui `True`, refletindo uma metodologia estruturada), garantindo que os Cenários B/D têm sempre pelo menos um candidato viável (PM²) mesmo sob a leitura literal da tabela para PRINCE2.
+
+Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de referência, normas ou métodos de engenharia complementares — o Level 1 exclui-os de competir como envelope metodológico primário autónomo, mas podem integrar um `methodological_envelope` composto como componentes justificados (ver `compatible_as_component_of` e a Etapa 3).
+
+**TEB — 13 ferramentas** distribuídas por 5 categorias, cada uma com coordenadas de contexto `(agility_support, assurance_support)` e scores de critérios CD1-CD8:
 
 | Categoria | Código | Nome | Cost tier |
 |---|---|---|---|
@@ -551,9 +563,9 @@ Esta abordagem preserva o histórico de alterações na *Evidence Base* — requ
 | Documentation | NOTION | Notion | free |
 | Collaboration | MIRO | Miro | free |
 
-A seleção é **greedy por categoria**: após o ranking MCDM (Level B), o sistema escolhe a ferramenta com maior score dentro de cada categoria — garantindo um portfólio equilibrado com cobertura de todas as capacidades, não apenas as ferramentas globalmente melhores.
+A seleção **não é greedy**: após o ranking MCDM (Level B), o sistema devolve o top-N (por omissão 3) ranqueado de cada categoria e o utilizador escolhe a ferramenta final por categoria na Etapa 4.
 
-**MCDMWeights** — pesos base para MEB `[0.25, 0.25, 0.10, 0.10, 0.30]` e TEB `[0.30, 0.25, 0.25, 0.20]`, editáveis em runtime pelo administrador sem redeployment.
+**MCDMWeights** — pesos base para MEB `[0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12]` (C1-C7) e TEB `[0.15, 0.12, 0.13, 0.10, 0.10, 0.15, 0.15, 0.10]` (CD1-CD8), explícitos, não reponderados por AdPO/AsPO, editáveis em runtime pelo administrador sem redeployment.
 
 O `run_seeds()` é chamado automaticamente no arranque da aplicação, tornando o sistema imediatamente funcional após `docker compose up`.
 
@@ -571,21 +583,21 @@ Um `UPDATE` simples sobrescreve o registo — se um arguente questionar "que pes
 
 Cada tabela tem os campos de controlo: `is_active`, `active_date`, `inactive_date`, `updated_by`.
 
-Ao editar um registo (ex: alterar score_agility do Scrum):
+Ao editar um registo (ex: alterar score_c1_responsiveness do Scrum):
 
 ```
 ANTES da edição:
-┌────────────────────────────────────────────────────────────┐
-│ id=3 | code="SCRUM" | score_agility=0.85 | is_active=TRUE  │
-└────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│ id=3 | code="SCRUM" | score_c1_responsiveness=0.85 | is_active=TRUE│
+└───────────────────────────────────────────────────────────────────┘
 
 DEPOIS da edição:
 ┌────────────────────────────────────────────────────────────────────┐
-│ id=3 | code="SCRUM" | score_agility=0.85 | is_active=FALSE         │
+│ id=3 | code="SCRUM" | score_c1_responsiveness=0.85 | is_active=FALSE│
 │                                          | inactive_date=2026-05-17 │
 └────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────┐
-│ id=9 | code="SCRUM" | score_agility=0.90 | is_active=TRUE          │
+│ id=9 | code="SCRUM" | score_c1_responsiveness=0.90 | is_active=TRUE │
 │                                          | active_date=2026-05-17   │
 └────────────────────────────────────────────────────────────────────┘
 ```

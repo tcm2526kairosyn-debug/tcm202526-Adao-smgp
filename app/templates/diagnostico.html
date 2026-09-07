@@ -34,12 +34,12 @@ flowchart TD
     s4 -.-> s2
     s4 -.-> s3
     s3 -.-> s2
-    s3 -.-> s1
-    s2 -.-> s1
+    sc -.-> s2
+    sc -.-> s3
     style s1 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px
                 </div>
                 <p class="text-[10px] text-slate-400 text-center mt-3">
-                    Setas a tracejado = re-entry possível
+                    Setas a tracejado = re-entry / reassessment (de Concluído inicia nova execução)
                 </p>
             </div>
         </div>
@@ -97,13 +97,13 @@ flowchart TD
             {% if prev_decision %}
             <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm text-slate-600">
                 <span class="text-lg leading-none mt-0.5">↺</span>
-                <span>A rever diagnóstico anterior <strong>(#{{ prev_decision.id }})</strong> — AgPI {{ "%.2f"|format(prev_decision.agpi_score) }} · AsPI {{ "%.2f"|format(prev_decision.aspi_score) }} · {{ prev_decision.suggested_approach }}. Ajuste os valores conforme necessário.</span>
+                <span>A rever diagnóstico anterior <strong>(#{{ prev_decision.id }})</strong> — AdPO {{ "%.2f"|format(prev_decision.agpi_score) }} · AsPO {{ "%.2f"|format(prev_decision.aspi_score) }} · {{ prev_decision.suggested_approach }}. Ajuste os valores conforme necessário.</span>
             </div>
             {% endif %}
 
-            <!-- Dimensões AgPI -->
+            <!-- Dimensões AdPO -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Agilidade (AgPI)</h2>
+                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Adaptação (AdPO)</h2>
                 <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de uma abordagem adaptativa/ágil.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -170,9 +170,9 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Dimensões AsPI -->
+            <!-- Dimensões AsPO -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-red-500">
-                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPI)</h2>
+                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPO)</h2>
                 <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de controlo, conformidade e rastreabilidade.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -239,37 +239,9 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Motor MCDM -->
-            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-slate-400">
-                <h2 class="text-base font-semibold mb-1 text-gray-700 dark:text-gray-200">Motor MCDM</h2>
-                <p class="text-xs text-gray-400 mb-3">Algoritmo de ranking utilizado nas Etapas 3 e 4</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    {% set prev_engine = prev_decision.mcdm_engine if prev_decision else 'MAVT' %}
-                    <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if prev_engine == 'MAVT' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-mavt">
-                        <input type="radio" name="mcdm_engine" value="MAVT" {% if prev_engine == 'MAVT' %}checked{% endif %}
-                               class="mt-0.5 accent-slate-700" onchange="selectMethod('MAVT')">
-                        <div>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-white">MAVT</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Multi-Attribute Value Theory — soma ponderada com normalização min-max</p>
-                        </div>
-                    </label>
-                    <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if prev_engine == 'AHP' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-ahp">
-                        <input type="radio" name="mcdm_engine" value="AHP" {% if prev_engine == 'AHP' %}checked{% endif %}
-                               class="mt-0.5 accent-slate-700" onchange="selectMethod('AHP')">
-                        <div>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-                                AHP
-                                <span class="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-1.5 py-0.5 rounded">stub</span>
-                            </p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Analytic Hierarchy Process — recorre a MAVT enquanto a matriz par-a-par não estiver implementada</p>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
             <div class="flex justify-end pb-6">
                 <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg">
-                    Calcular Perfil KairoSyn →
+                    Guardar Diagnóstico →
                 </button>
             </div>
         </form>
@@ -285,16 +257,4 @@ flowchart TD
 <style>
     .mermaid .edgePath path { stroke-width: 2px !important; }
 </style>
-<script>
-function selectMethod(val) {
-    const mavt = document.getElementById('label-mavt');
-    const ahp  = document.getElementById('label-ahp');
-    mavt.classList.toggle('border-slate-700', val === 'MAVT');
-    mavt.classList.toggle('bg-slate-100',     val === 'MAVT');
-    mavt.classList.toggle('border-gray-200',  val !== 'MAVT');
-    ahp.classList.toggle('border-slate-700',  val === 'AHP');
-    ahp.classList.toggle('bg-slate-100',      val === 'AHP');
-    ahp.classList.toggle('border-gray-200',   val !== 'AHP');
-}
-</script>
 {% endblock %}

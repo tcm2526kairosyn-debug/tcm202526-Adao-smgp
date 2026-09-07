@@ -14,10 +14,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .extensions import db
 from .models import User, PendingRegistration, ReactivationRequest, Projeto, ProjectDecision, MethodologyEvidenceBase, ToolEvidenceBase, MCDMWeights
 from .services.kairosynlogic import (
-    compute_indices, resolve_approach, build_governance_register,
+    compute_indices, resolve_approach, build_decision_control_register,
     run_fit_m_level1, run_fit_m_level2,
     run_fit_t_level_a, run_fit_t_level_b,
-    run_sensitivity_analysis,
+    run_sensitivity_analysis, get_envelope_component_candidates,
+    build_capability_map,
 )
 
 main = Blueprint('main', __name__)
@@ -37,15 +38,13 @@ def admin_required(f):
 TRANSITIONS = {
     ('stage_1_diagnosis',  'SUBMIT_DIAGNOSIS'):    'stage_2_approach',
     ('stage_2_approach',   'CONFIRM_APPROACH'):    'stage_3_fit_m',
-    ('stage_2_approach',   'REVISE_CONTEXT'):      'stage_1_diagnosis',
     ('stage_3_fit_m',      'CONFIRM_METHODOLOGY'): 'stage_4_fit_t',
     ('stage_3_fit_m',      'REENTRY_GOVERNANCE'):  'stage_2_approach',
     ('stage_3_fit_m',      'REVISE_APPROACH'):     'stage_2_approach',
     ('stage_4_fit_t',      'CONFIRM_TOOLS'):       'stage_complete',
     ('stage_4_fit_t',      'REENTRY_METHODOLOGY'): 'stage_3_fit_m',
     ('stage_4_fit_t',      'REVISE_METHODOLOGY'):  'stage_3_fit_m',
-    ('stage_4_fit_t',      'REENTRY_APPROACH'):    'stage_2_approach',  # S4→S2: governance change
-    ('stage_3_fit_m',      'REENTRY_DIAGNOSIS'):   'stage_1_diagnosis', # S3→S1: evidence update
+    ('stage_4_fit_t',      'REENTRY_APPROACH'):    'stage_2_approach',
     # legacy actions kept for backwards compat
     ('stage_1_diagnosis',  'NEXT'):                'stage_2_approach',
     ('stage_2_approach',   'NEXT'):                'stage_3_fit_m',
@@ -62,15 +61,21 @@ STAGE_REDIRECT = {
 }
 
 
-def _log_transition(decision, previous, new_state, action):
+def _log_transition(decision, previous, new_state, action, cause=None):
     history = list(decision.transition_history or [])
-    history.append({
+    entry = {
         "from": previous,
         "to": new_state,
         "action": action,
         "timestamp": datetime.utcnow().isoformat(),
         "user": current_user.username
-    })
+    }
+    if cause:
+        # A causa fica preservada permanentemente no audit log; a coluna
+        # decision.reentry_cause é apenas o estado "pendente" (limpa quando a
+        # etapa de destino volta a ser confirmada).
+        entry["reentry_cause"] = cause
+    history.append(entry)
     decision.transition_history = history
     decision.current_stage = new_state
 
@@ -584,27 +589,19 @@ def diagnostico():
             for dim in context_data
         }
 
-        agpi, aspi = compute_indices(context_data)
-        approach = resolve_approach(agpi, aspi)
-
+        # Stage 1 = context diagnosis only. The organisers AdPO/AsPO, the
+        # suggested approach and the MCDM engine choice are Stage 2
+        # responsibilities — computed/confirmed on entry to etapa2, not here.
         projeto_id_raw = request.form.get('projeto_id')
         projeto_id = int(projeto_id_raw) if projeto_id_raw else None
-
-        engine_choice = request.form.get('mcdm_engine', 'MAVT')
-        if engine_choice not in ('MAVT', 'AHP'):
-            engine_choice = 'MAVT'
 
         new_decision = ProjectDecision(
             project_name=request.form.get('project_name', 'Sem nome').strip() or 'Sem nome',
             user_id=current_user.id,
             projeto_id=projeto_id,
-            agpi_score=agpi,
-            aspi_score=aspi,
-            suggested_approach=approach,
             context_data=context_data,
             evidence_notes={k: v for k, v in evidence_notes.items() if v},
             questionnaire_version='v2',
-            mcdm_engine=engine_choice,
             current_stage='stage_2_approach',
             transition_history=[{
                 "from": "stage_1_diagnosis",
@@ -635,27 +632,34 @@ def diagnostico():
 def etapa2(id):
     decision = ProjectDecision.query.get_or_404(id)
 
+    # Stage 2 responsibility: compute the organisers AdPO/AsPO and resolve the
+    # suggested approach on first entry (Stage 1 produces only the contextual
+    # diagnosis). Computed once — a later revisit must not clobber an approach
+    # the user has meanwhile confirmed/overridden.
+    if decision.agpi_score is None or decision.aspi_score is None:
+        agpi, aspi = compute_indices(decision.context_data or {})
+        decision.agpi_score = agpi
+        decision.aspi_score = aspi
+        decision.suggested_approach = resolve_approach(agpi, aspi)
+        db.session.commit()
+
     if request.method == "POST":
         confirmed_approach = request.form.get('confirmed_approach', decision.suggested_approach)
         context = decision.context_data or {}
-        gov_register = build_governance_register(confirmed_approach, context, decision.agpi_score, decision.aspi_score)
+        decision_control_register = build_decision_control_register(confirmed_approach, context, decision.agpi_score, decision.aspi_score)
 
         context['confirmed_approach'] = confirmed_approach
         decision.context_data = context
         decision.suggested_approach = confirmed_approach
-        decision.governance_register = gov_register
+        decision.decision_control_register = decision_control_register
+
+        engine_choice = request.form.get('mcdm_engine', decision.mcdm_engine or 'MAVT')
+        decision.mcdm_engine = engine_choice if engine_choice in ('MAVT', 'AHP') else 'MAVT'
 
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
 
-        if action == 'REVISE_CONTEXT':
-            _log_transition(decision, previous, 'stage_1_diagnosis', action)
-            db.session.commit()
-            params = {'from_decision_id': id}
-            if decision.projeto_id:
-                params['projeto_id'] = decision.projeto_id
-            return redirect(url_for('main.diagnostico', **params))
-
+        decision.reentry_cause = None  # re-entry/reassessment tratado — causa preservada na history
         _log_transition(decision, previous, 'stage_3_fit_m', 'CONFIRM_APPROACH')
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
@@ -675,18 +679,9 @@ def etapa3(id):
         action = request.form.get('action', 'CONFIRM_METHODOLOGY')
         previous = decision.current_stage
 
-        if action == 'REENTRY_DIAGNOSIS':
-            decision.reentry_cause = 'evidence_inconsistency'
-            _log_transition(decision, previous, 'stage_1_diagnosis', action)
-            db.session.commit()
-            params = {'from_decision_id': id}
-            if decision.projeto_id:
-                params['projeto_id'] = decision.projeto_id
-            return redirect(url_for('main.diagnostico', **params))
-
         if action in ('REENTRY_GOVERNANCE', 'REVISE_APPROACH'):
             decision.reentry_cause = 'governance_infeasibility'
-            _log_transition(decision, previous, 'stage_2_approach', action)
+            _log_transition(decision, previous, 'stage_2_approach', action, cause='governance_infeasibility')
             db.session.commit()
             return redirect(url_for('main.etapa2', id=id))
 
@@ -694,6 +689,32 @@ def etapa3(id):
             meth = MethodologyEvidenceBase.query.get(int(selected_id))
             decision.selected_methodology_id = meth.id
             decision.selected_methodology = meth.name
+
+            # Composite envelope: optional non-competing components (overlays,
+            # norms, complementary methods) — accepted only with an explicit
+            # justification and only if declared compatible with the primary.
+            components = []
+            dropped = 0
+            for cid in request.form.getlist('component_ids'):
+                comp = MethodologyEvidenceBase.query.get(int(cid))
+                if not comp or meth.code not in (comp.compatible_as_component_of or []):
+                    continue
+                justification = (request.form.get(f'component_justification_{cid}') or '').strip()
+                if not justification:
+                    dropped += 1
+                    continue
+                components.append({
+                    "id": comp.id, "code": comp.code, "name": comp.name,
+                    "role": comp.candidate_role, "justification": justification,
+                })
+            decision.methodological_envelope = {
+                "primary": {"id": meth.id, "code": meth.code, "name": meth.name},
+                "components": components,
+            }
+            if dropped:
+                flash(f"{dropped} componente(s) do envelope ignorado(s) por falta de justificação.", "warning")
+
+            decision.reentry_cause = None
             _log_transition(decision, previous, 'stage_4_fit_t', 'CONFIRM_METHODOLOGY')
             db.session.commit()
             return redirect(url_for('main.etapa4', id=id))
@@ -701,46 +722,66 @@ def etapa3(id):
         flash("Selecione uma metodologia antes de continuar.", "warning")
 
     # GET — run Fit_M
-    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
+    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
 
     approach = decision.suggested_approach or 'Híbrida'
-    viable = run_fit_m_level1(gov_register, agpi, aspi, approach=approach)
+    viable, meb_exclusions = run_fit_m_level1(decision_control_register, agpi, aspi, approach=approach)
 
     if not viable:
         decision.reentry_cause = 'governance_infeasibility'
-        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE')
+        decision.meb_exclusions = meb_exclusions
+        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE', cause='governance_infeasibility')
         db.session.commit()
         flash("Nenhuma metodologia viável encontrada. Reveja a abordagem.", "warning")
         return redirect(url_for('main.etapa2', id=id))
 
     engine = decision.mcdm_engine or 'MAVT'
-    ranking = run_fit_m_level2(viable, gov_register, engine, agpi=agpi, aspi=aspi)
+    ranking = run_fit_m_level2(viable, engine)
 
     decision.meb_filtered = [item["id"] for item in ranking]
+    decision.meb_exclusions = meb_exclusions
     decision.methodology_ranking = ranking
     db.session.commit()
 
     meb_total = MethodologyEvidenceBase.query.count()
 
-    # Sankey data
-    sankey_data = {
-        "nodes": [
-            {"name": f"MEB Total ({meb_total})"},
-            {"name": f"Pós-Triagem L1 ({len(viable)})"},
-            {"name": f"Ranking MCDM ({len(ranking)})"},
-            {"name": "Selecionada"}
-        ],
-        "links": [
-            {"source": 0, "target": 1, "value": max(len(viable), 1)},
-            {"source": 1, "target": 2, "value": max(len(ranking), 1)},
-            {"source": 2, "target": 3, "value": 1}
+    # Sankey data — funil de admissibilidade Level 1, ramificado por causa de
+    # exclusão (auditoria), com os sobreviventes a fluir para o ranking MCDM.
+    # Substitui um Sankey anterior sem funil real (Level 2 não filtra nada, só
+    # ordena quem já passou o Level 1 — a antiga ligação intermédia tinha
+    # sempre o mesmo valor dos dois lados).
+    cause_counts = {}
+    for e in meb_exclusions:
+        cause_counts[e["cause"]] = cause_counts.get(e["cause"], 0) + 1
+
+    sankey_nodes = [{"name": f"MEB Total ({meb_total})"}]
+    sankey_links = []
+    for cause, count in cause_counts.items():
+        sankey_nodes.append({"name": f"{cause.replace('_', ' ').capitalize()} ({count})"})
+        sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": count})
+
+    sankey_nodes.append({"name": f"Ranking MCDM ({len(ranking)})"})
+    sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": max(len(viable), 1)})
+
+    sankey_data = {"nodes": sankey_nodes, "links": sankey_links}
+
+    # Opções de envelope composto: para cada candidato ranqueado, os componentes
+    # (overlays/normas/métodos complementares) que declaram compatibilidade com ele
+    by_id = {m.id: m for m, _ in viable}
+    envelope_options = {
+        str(item["id"]): [
+            {"id": c.id, "code": c.code, "name": c.name, "role": c.candidate_role}
+            for c in get_envelope_component_candidates(by_id.get(item["id"]))
         ]
+        for item in ranking
     }
 
     return render_template("etapa3.html", decision=decision, ranking=ranking,
                            meb_total=meb_total, viable_count=len(viable),
+                           meb_exclusions=meb_exclusions,
+                           envelope_options=envelope_options,
                            sankey_data=json.dumps(sankey_data))
 
 
@@ -760,11 +801,14 @@ def etapa4(id):
         flash("Selecione uma metodologia na Etapa 3 antes de continuar.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    gov_register = decision.governance_register or {"hard": [], "threshold": [], "soft": []}
-    agpi = decision.agpi_score or 2.0
-    aspi = decision.aspi_score or 2.0
-    projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
-    budget = (projeto.orcamento * 0.01) if (projeto and projeto.orcamento) else None
+    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
+
+    # Envelope metodológico completo (primário + componentes justificados) —
+    # a admissibilidade de ferramentas em Level A considera o envelope inteiro,
+    # não só o primário (ver kairosynlogic.run_fit_t_level_a).
+    envelope_codes = [selected_meth.code] + [
+        c["code"] for c in (decision.methodological_envelope or {}).get("components", [])
+    ]
 
     if request.method == "POST":
         action = request.form.get('action', 'CONFIRM_TOOLS')
@@ -772,20 +816,21 @@ def etapa4(id):
 
         if action == 'REENTRY_APPROACH':
             decision.reentry_cause = 'governance_threshold'
-            _log_transition(decision, previous, 'stage_2_approach', action)
+            _log_transition(decision, previous, 'stage_2_approach', action, cause='governance_threshold')
             db.session.commit()
             return redirect(url_for('main.etapa2', id=id))
 
         if action in ('REENTRY_METHODOLOGY', 'REVISE_METHODOLOGY'):
             decision.reentry_cause = 'tool_infeasibility'
-            _log_transition(decision, previous, 'stage_3_fit_m', action)
+            _log_transition(decision, previous, 'stage_3_fit_m', action, cause='tool_infeasibility')
             db.session.commit()
             return redirect(url_for('main.etapa3', id=id))
 
         # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
-        viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
-        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
-                                               agpi=agpi, aspi=aspi)
+        viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
+        decision.teb_exclusions = teb_exclusions
+        decision.capability_map = build_capability_map(viable_tools)
+        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
         portfolio = []
         seen_codes = set()
         for cat, tools in ranked_by_category.items():
@@ -797,30 +842,131 @@ def etapa4(id):
 
         decision.tool_portfolio = portfolio
         decision.teb_filtered = [t.id for t in viable_tools]
+        decision.reentry_cause = None
         _log_transition(decision, previous, 'stage_complete', 'CONFIRM_TOOLS')
         db.session.commit()
         flash("Diagnóstico KairoSyn concluído com sucesso!", "success")
         return redirect(url_for('main.workflow', id=id))
 
     # GET — run Fit_T and present options
-    viable_tools = run_fit_t_level_a(selected_meth, gov_register, agpi, aspi, budget)
+    viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
+    decision.teb_exclusions = teb_exclusions
+    capability_map = build_capability_map(viable_tools)
+    decision.capability_map = capability_map
 
     if not viable_tools:
         decision.reentry_cause = 'tool_infeasibility'
-        _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY')
+        _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY', cause='tool_infeasibility')
         db.session.commit()
         flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT',
-                                           agpi=agpi, aspi=aspi)
+    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
     decision.teb_filtered = [t.id for t in viable_tools]
     db.session.commit()
 
     return render_template("etapa4.html", decision=decision,
                            ranked_by_category=ranked_by_category,
                            selected_meth=selected_meth,
+                           teb_exclusions=teb_exclusions,
+                           capability_map=capability_map,
                            viable_count=len(viable_tools))
+
+
+# ── Reassessment pós-conclusão (nova execução clonada) ───────────────────────
+
+_REASSESS_TARGETS = {
+    'stage_2_approach': {
+        'action': 'REASSESSMENT_APPROACH',
+        'cause': 'organiser_drift_or_decision_control_reconfiguration',
+        'redirect': 'main.etapa2',
+    },
+    'stage_3_fit_m': {
+        'action': 'REASSESSMENT_METHODOLOGY',
+        'cause': 'evidence_update_or_configuration_infeasibility',
+        'redirect': 'main.etapa3',
+    },
+}
+
+
+@main.route("/decision/<int:id>/reassess", methods=["POST"])
+@login_required
+def reassess_decision(id):
+    """
+    REASSESSMENT a partir de Concluído: origina uma NOVA execução versionada
+    que entra diretamente no Stage adequado (Etapa 2 ou Etapa 3), preservando
+    a decisão concluída como registo imutável. O estado Completed não torna a
+    decisão irreversível — mas a reavaliação nunca reabre o registo original:
+    a linhagem fica gravada na transition_history de ambas as decisões
+    (source_decision_id / spawned_decision_id).
+    """
+    origin = ProjectDecision.query.get_or_404(id)
+    target = request.form.get('target')
+
+    if origin.current_stage != 'stage_complete':
+        flash("Reassessment só está disponível para decisões concluídas.", "warning")
+        return redirect(url_for('main.workflow', id=id))
+    if target not in _REASSESS_TARGETS:
+        flash("Destino de reassessment inválido.", "warning")
+        return redirect(url_for('main.workflow', id=id))
+
+    spec = _REASSESS_TARGETS[target]
+    justification = request.form.get('justification', '').strip()
+    now = datetime.utcnow().isoformat()
+
+    new_decision = ProjectDecision(
+        project_name=origin.project_name,
+        user_id=current_user.id,
+        projeto_id=origin.projeto_id,
+        questionnaire_version=origin.questionnaire_version,
+        mcdm_engine=origin.mcdm_engine,
+        # Outputs de Stage 1 transitam — o diagnóstico contextual mantém-se
+        context_data=dict(origin.context_data or {}),
+        evidence_notes=dict(origin.evidence_notes or {}),
+        current_stage=target,
+        reentry_cause=spec['cause'],
+        transition_history=[{
+            "from": "stage_complete",
+            "to": target,
+            "action": spec['action'],
+            "timestamp": now,
+            "user": current_user.username,
+            "reentry_cause": spec['cause'],
+            "source_decision_id": origin.id,
+            "justification": justification or None,
+        }],
+    )
+
+    # Entrada direta na Etapa 3 exige os outputs de Stage 2 já resolvidos;
+    # entrada na Etapa 2 deixa os organisers a None para serem recalculados
+    # (responsabilidade de Stage 2).
+    if target == 'stage_3_fit_m':
+        new_decision.agpi_score = origin.agpi_score
+        new_decision.aspi_score = origin.aspi_score
+        new_decision.suggested_approach = origin.suggested_approach
+        new_decision.decision_control_register = dict(origin.decision_control_register or {})
+
+    db.session.add(new_decision)
+    db.session.flush()  # obtém o id da nova decisão para a linhagem
+
+    # Anotar a linhagem na decisão de origem (audit log; o current_stage
+    # permanece 'stage_complete' — o registo concluído não é reaberto)
+    origin_history = list(origin.transition_history or [])
+    origin_history.append({
+        "from": "stage_complete",
+        "to": target,
+        "action": spec['action'],
+        "timestamp": now,
+        "user": current_user.username,
+        "reentry_cause": spec['cause'],
+        "spawned_decision_id": new_decision.id,
+        "justification": justification or None,
+    })
+    origin.transition_history = origin_history
+
+    db.session.commit()
+    flash(f"Nova execução #{new_decision.id} criada a partir da decisão concluída #{origin.id}.", "success")
+    return redirect(url_for(spec['redirect'], id=new_decision.id))
 
 
 # ── Workflow / Estado atual ───────────────────────────────────────────────────
@@ -836,8 +982,6 @@ def workflow(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass  # degradação graciosa — não bloqueia o workflow
@@ -904,8 +1048,6 @@ def export_decision(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass
@@ -918,22 +1060,26 @@ def export_decision(id):
         "questionnaire_version": decision.questionnaire_version,
         "current_stage": decision.current_stage,
         "reentry_cause": decision.reentry_cause,
-        # Etapa 1
-        "agpi_score": decision.agpi_score,
-        "aspi_score": decision.aspi_score,
+        # Stage 1
+        "adpo_score": decision.agpi_score,
+        "aspo_score": decision.aspi_score,
         "context_data": decision.context_data,
         "evidence_notes": decision.evidence_notes,
-        # Etapa 2
+        # Stage 2
         "suggested_approach": decision.suggested_approach,
-        "governance_register": decision.governance_register,
+        "decision_control_register": decision.decision_control_register,
         # Etapa 3
         "meb_filtered": decision.meb_filtered,
+        "meb_exclusions": decision.meb_exclusions,
         "methodology_ranking": decision.methodology_ranking,
         "selected_methodology": decision.selected_methodology,
+        "methodological_envelope": decision.methodological_envelope,
         "mcdm_engine": decision.mcdm_engine,
         "sensitivity_analysis": sensitivity,
         # Etapa 4
         "teb_filtered": decision.teb_filtered,
+        "teb_exclusions": decision.teb_exclusions,
+        "capability_map": decision.capability_map,
         "tool_portfolio": decision.tool_portfolio,
         # Auditoria
         "transition_history": decision.transition_history,
@@ -944,11 +1090,12 @@ def export_decision(id):
         writer = csv.writer(output)
         flat_fields = ["id", "projeto_id", "project_name", "created_at", "questionnaire_version",
                        "current_stage", "reentry_cause",
-                       "agpi_score", "aspi_score",
+                       "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
-        json_fields = ["context_data", "evidence_notes", "governance_register",
-                       "meb_filtered", "methodology_ranking", "sensitivity_analysis",
-                       "teb_filtered", "tool_portfolio", "transition_history"]
+        json_fields = ["context_data", "evidence_notes", "decision_control_register",
+                       "meb_filtered", "meb_exclusions", "methodology_ranking",
+                       "methodological_envelope", "sensitivity_analysis",
+                       "teb_filtered", "teb_exclusions", "capability_map", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
             json.dumps(payload[f], ensure_ascii=False) if payload[f] is not None else ""
@@ -978,8 +1125,6 @@ def export_decision_pdf(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
-                decision.agpi_score,
-                decision.aspi_score,
             )
         except Exception:
             pass
@@ -1116,6 +1261,12 @@ def restaurar_pesos(id):
     return redirect(url_for('main.historico_pesos', context=target.context))
 
 
+def _meb_primary_codes():
+    return [m.code for m in MethodologyEvidenceBase.query.filter_by(
+        is_active=True, eligible_as_primary_envelope=True
+    ).order_by(MethodologyEvidenceBase.code).all()]
+
+
 @main.route('/admin/meb/novo', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -1124,10 +1275,10 @@ def meb_novo():
         code = request.form.get('code', '').strip().upper()
         if not code:
             flash('O código é obrigatório.')
-            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
         if MethodologyEvidenceBase.query.filter_by(code=code, is_active=True).first():
             flash(f'Já existe uma metodologia ativa com o código "{code}".')
-            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+            return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
 
         meb = MethodologyEvidenceBase(
             code=code,
@@ -1138,12 +1289,22 @@ def meb_novo():
             max_team_size=_parse_int(request.form.get('max_team_size')),
             requires_fixed_scope='requires_fixed_scope' in request.form,
             regulatory_compatible='regulatory_compatible' in request.form,
-            ag_posture=int(request.form.get('ag_posture', 2)),
-            as_posture=int(request.form.get('as_posture', 2)),
-            score_assurance=float(request.form.get('score_assurance', 0.5)),
-            score_agility=float(request.form.get('score_agility', 0.5)),
-            score_scalability=float(request.form.get('score_scalability', 0.5)),
-            score_hybridisation=float(request.form.get('score_hybridisation', 0.5)),
+            posture_adpo_min=int(request.form.get('posture_adpo_min', 2)),
+            posture_adpo_max=int(request.form.get('posture_adpo_max', 2)),
+            posture_aspo_min=int(request.form.get('posture_aspo_min', 2)),
+            posture_aspo_max=int(request.form.get('posture_aspo_max', 2)),
+            compatible_approaches=request.form.getlist('compatible_approaches'),
+            candidate_type=request.form.get('candidate_type', '').strip() or None,
+            candidate_role=request.form.get('candidate_role', '').strip() or None,
+            eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            compatible_as_component_of=request.form.getlist('compatible_as_component_of'),
+            score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
+            score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
+            score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
+            score_c4_compliance=float(request.form.get('score_c4_compliance', 0.5)),
+            score_c5_pace_criticality=float(request.form.get('score_c5_pace_criticality', 0.5)),
+            score_c6_integration_risk=float(request.form.get('score_c6_integration_risk', 0.5)),
+            score_c7_distributed_support=float(request.form.get('score_c7_distributed_support', 0.5)),
             is_active=True,
             active_date=datetime.utcnow(),
             updated_by=current_user.username,
@@ -1153,7 +1314,7 @@ def meb_novo():
         flash(f'Metodologia "{meb.name}" criada.')
         return redirect(url_for('main.gerir_mcdm'))
 
-    return render_template('form_meb.html', meb=None, titulo='Nova Metodologia')
+    return render_template('form_meb.html', meb=None, titulo='Nova Metodologia', primary_codes=_meb_primary_codes())
 
 
 @main.route('/admin/meb/<int:id>/editar', methods=['GET', 'POST'])
@@ -1175,12 +1336,22 @@ def meb_editar(id):
             max_team_size=_parse_int(request.form.get('max_team_size')),
             requires_fixed_scope='requires_fixed_scope' in request.form,
             regulatory_compatible='regulatory_compatible' in request.form,
-            ag_posture=int(request.form.get('ag_posture', 2)),
-            as_posture=int(request.form.get('as_posture', 2)),
-            score_assurance=float(request.form.get('score_assurance', 0.5)),
-            score_agility=float(request.form.get('score_agility', 0.5)),
-            score_scalability=float(request.form.get('score_scalability', 0.5)),
-            score_hybridisation=float(request.form.get('score_hybridisation', 0.5)),
+            posture_adpo_min=int(request.form.get('posture_adpo_min', 2)),
+            posture_adpo_max=int(request.form.get('posture_adpo_max', 2)),
+            posture_aspo_min=int(request.form.get('posture_aspo_min', 2)),
+            posture_aspo_max=int(request.form.get('posture_aspo_max', 2)),
+            compatible_approaches=request.form.getlist('compatible_approaches'),
+            candidate_type=request.form.get('candidate_type', '').strip() or None,
+            candidate_role=request.form.get('candidate_role', '').strip() or None,
+            eligible_as_primary_envelope='eligible_as_primary_envelope' in request.form,
+            compatible_as_component_of=request.form.getlist('compatible_as_component_of'),
+            score_c1_responsiveness=float(request.form.get('score_c1_responsiveness', 0.5)),
+            score_c2_alignment=float(request.form.get('score_c2_alignment', 0.5)),
+            score_c3_traceability=float(request.form.get('score_c3_traceability', 0.5)),
+            score_c4_compliance=float(request.form.get('score_c4_compliance', 0.5)),
+            score_c5_pace_criticality=float(request.form.get('score_c5_pace_criticality', 0.5)),
+            score_c6_integration_risk=float(request.form.get('score_c6_integration_risk', 0.5)),
+            score_c7_distributed_support=float(request.form.get('score_c7_distributed_support', 0.5)),
             is_active=True,
             active_date=now,
             updated_by=current_user.username,
@@ -1190,7 +1361,7 @@ def meb_editar(id):
         flash(f'Metodologia "{new_meb.name}" atualizada (versão anterior arquivada).')
         return redirect(url_for('main.gerir_mcdm'))
 
-    return render_template('form_meb.html', meb=meb, titulo='Editar Metodologia')
+    return render_template('form_meb.html', meb=meb, titulo='Editar Metodologia', primary_codes=_meb_primary_codes())
 
 
 @main.route('/admin/meb/<string:code>/historico')
@@ -1254,9 +1425,14 @@ def teb_novo():
             gdpr_compliant='gdpr_compliant' in request.form,
             agility_support=int(request.form.get('agility_support', 2)),
             assurance_support=int(request.form.get('assurance_support', 2)),
-            score_traceability=float(request.form.get('score_traceability', 0.5)),
-            score_integration=float(request.form.get('score_integration', 0.5)),
-            score_flow_support=float(request.form.get('score_flow_support', 0.5)),
+            contribution_cd1=float(request.form.get('contribution_cd1', 0.5)),
+            contribution_cd2=float(request.form.get('contribution_cd2', 0.5)),
+            contribution_cd3=float(request.form.get('contribution_cd3', 0.5)),
+            contribution_cd4=float(request.form.get('contribution_cd4', 0.5)),
+            contribution_cd5=float(request.form.get('contribution_cd5', 0.5)),
+            contribution_cd6=float(request.form.get('contribution_cd6', 0.5)),
+            contribution_cd7=float(request.form.get('contribution_cd7', 0.5)),
+            contribution_cd8=float(request.form.get('contribution_cd8', 0.5)),
             is_active=True,
             active_date=datetime.utcnow(),
             updated_by=current_user.username,
@@ -1291,9 +1467,14 @@ def teb_editar(id):
             gdpr_compliant='gdpr_compliant' in request.form,
             agility_support=int(request.form.get('agility_support', 2)),
             assurance_support=int(request.form.get('assurance_support', 2)),
-            score_traceability=float(request.form.get('score_traceability', 0.5)),
-            score_integration=float(request.form.get('score_integration', 0.5)),
-            score_flow_support=float(request.form.get('score_flow_support', 0.5)),
+            contribution_cd1=float(request.form.get('contribution_cd1', 0.5)),
+            contribution_cd2=float(request.form.get('contribution_cd2', 0.5)),
+            contribution_cd3=float(request.form.get('contribution_cd3', 0.5)),
+            contribution_cd4=float(request.form.get('contribution_cd4', 0.5)),
+            contribution_cd5=float(request.form.get('contribution_cd5', 0.5)),
+            contribution_cd6=float(request.form.get('contribution_cd6', 0.5)),
+            contribution_cd7=float(request.form.get('contribution_cd7', 0.5)),
+            contribution_cd8=float(request.form.get('contribution_cd8', 0.5)),
             is_active=True,
             active_date=now,
             updated_by=current_user.username,

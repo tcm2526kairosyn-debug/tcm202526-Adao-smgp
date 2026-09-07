@@ -109,16 +109,24 @@
                 <div class="space-y-1.5 mb-4">
                     {% if tipo == 'MEB' %}
                     {% set scores = [
-                        ('Assurance', v.score_assurance),
-                        ('Agilidade', v.score_agility),
-                        ('Escalabilidade', v.score_scalability),
-                        ('Hibridização', v.score_hybridisation)
+                        ('C1 Responsiveness', v.score_c1_responsiveness),
+                        ('C2 Alignment', v.score_c2_alignment),
+                        ('C3 Traceability', v.score_c3_traceability),
+                        ('C4 Compliance', v.score_c4_compliance),
+                        ('C5 Pace/Criticality', v.score_c5_pace_criticality),
+                        ('C6 Integration Risk', v.score_c6_integration_risk),
+                        ('C7 Distributed Supp.', v.score_c7_distributed_support)
                     ] %}
                     {% else %}
                     {% set scores = [
-                        ('Rastreabilidade', v.score_traceability),
-                        ('Integração', v.score_integration),
-                        ('Fluxo', v.score_flow_support)
+                        ('CD1 Traceability', v.contribution_cd1),
+                        ('CD2 Verification', v.contribution_cd2),
+                        ('CD3 Flow Control', v.contribution_cd3),
+                        ('CD4 Discovery', v.contribution_cd4),
+                        ('CD5 Risk/Safety', v.contribution_cd5),
+                        ('CD6 Compliance', v.contribution_cd6),
+                        ('CD7 Integration', v.contribution_cd7),
+                        ('CD8 Dependency', v.contribution_cd8)
                     ] %}
                     {% endif %}
                     {% for label, val in scores %}
@@ -156,11 +164,14 @@
 
 <!-- Dados para o gráfico -->
 {% if tipo == 'MEB' %}
-{% set score_labels = ['Assurance','Agilidade','Escalabilidade','Hibridização'] %}
-{% set score_keys = ['score_assurance','score_agility','score_scalability','score_hybridisation'] %}
+{% set score_labels = ['C1','C2','C3','C4','C5','C6','C7'] %}
+{% set score_keys = ['score_c1_responsiveness','score_c2_alignment','score_c3_traceability',
+                     'score_c4_compliance','score_c5_pace_criticality',
+                     'score_c6_integration_risk','score_c7_distributed_support'] %}
 {% else %}
-{% set score_labels = ['Rastreabilidade','Integração','Fluxo'] %}
-{% set score_keys = ['score_traceability','score_integration','score_flow_support'] %}
+{% set score_labels = ['CD1','CD2','CD3','CD4','CD5','CD6','CD7','CD8'] %}
+{% set score_keys = ['contribution_cd1','contribution_cd2','contribution_cd3','contribution_cd4',
+                     'contribution_cd5','contribution_cd6','contribution_cd7','contribution_cd8'] %}
 {% endif %}
 
 <div id="chart-data"

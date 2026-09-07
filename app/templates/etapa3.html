@@ -38,8 +38,6 @@ flowchart TD
     s4 -.-> s2
     s4 -.-> s3
     s3 -.-> s2
-    s3 -.-> s1
-    s2 -.-> s1
     style s3 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px
     style s1 fill:#22c55e,color:#fff,stroke:#22c55e,stroke-width:2px
     style s2 fill:#22c55e,color:#fff,stroke:#22c55e,stroke-width:2px
@@ -73,17 +71,41 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Diagrama Sankey -->
+            <!-- Diagrama Sankey — funil de admissibilidade Level 1 por causa de exclusão -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-4">Fluxo de Decisão — Sankey</h2>
+                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Triagem Level 1 — por causa de exclusão</h2>
+                <p class="text-[10px] text-slate-400 mb-4">Cinzento = MEB total · Âmbar = excluído (causa) · Verde = sobreviveu ao Level 1</p>
                 <div id="sankey-chart" class="w-full" style="height:160px;"></div>
                 <div id="sankey-data" data-sankey="{{ sankey_data }}" class="hidden"></div>
             </div>
 
+            <!-- Auditoria Level 1 — causas de exclusão -->
+            {% if meb_exclusions %}
+            <details class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+                <summary class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none">
+                    Auditoria da Triagem L1 — {{ meb_exclusions|length }} exclusõe{{ 's' if meb_exclusions|length != 1 else '' }} registada{{ 's' if meb_exclusions|length != 1 else '' }}
+                </summary>
+                <div class="mt-4 space-y-2">
+                    {% for ex in meb_exclusions %}
+                    <div class="flex items-start gap-3 text-sm border-l-2 border-red-200 pl-3 py-1">
+                        <span class="font-mono font-bold text-gray-700 dark:text-gray-200 shrink-0">{{ ex.code }}</span>
+                        <div>
+                            <span class="inline-block px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-bold uppercase tracking-wide">{{ ex.cause | replace('_', ' ') }}</span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ ex.detail }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-[10px] text-gray-400 mt-3 italic">
+                    Exclusões não-compensatórias: nenhuma pontuação C1-C7 pode recuperar um candidato excluído no Level 1.
+                </p>
+            </details>
+            {% endif %}
+
             <!-- Recomendação KairoSyn -->
             {% if ranking %}
             {% set top = ranking[0] %}
-            {% set posture_match = (top.posture == decision.suggested_approach) %}
+            {% set posture_match = decision.suggested_approach in (top.compatible_approaches or [top.posture]) %}
             {% set misfit_label = 'Excelente' if top.misfit < 0.5 else ('Bom' if top.misfit < 1.0 else ('Moderado' if top.misfit < 1.5 else 'Elevado')) %}
             {% set misfit_color = 'green' if top.misfit < 0.5 else ('green' if top.misfit < 1.0 else ('yellow' if top.misfit < 1.5 else 'red')) %}
             <div class="bg-gradient-to-br from-slate-50 to-zinc-100 border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -95,18 +117,20 @@ flowchart TD
                         <p class="text-sm text-slate-600 mt-1 max-w-xl">{{ top.description }}</p>
                         {% endif %}
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                        {% for ap in (top.compatible_approaches or [top.posture]) %}
                         <span class="px-3 py-1 rounded-full text-xs font-bold
-                            {% if top.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                            {% elif top.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                            {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                            {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
                             {% else %}bg-purple-100 text-purple-700{% endif %}">
-                            {{ top.posture }}
+                            {{ ap }}
                         </span>
+                        {% endfor %}
                         <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">T{{ top.tier }}</span>
                     </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div class="bg-white rounded-xl p-3 border border-slate-200">
                         <p class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Score MCDM</p>
                         <p class="text-2xl font-black text-slate-800 mt-0.5">{{ "%.3f"|format(top.score) }}</p>
@@ -119,13 +143,6 @@ flowchart TD
                         <p class="text-[9px] font-black uppercase text-{{ misfit_color }}-400 tracking-widest">Misfit Δk</p>
                         <p class="text-2xl font-black text-{{ misfit_color }}-600 mt-0.5">{{ "%.2f"|format(top.misfit) }}</p>
                         <p class="text-[9px] text-{{ misfit_color }}-500 mt-1">Ajuste {{ misfit_label }}</p>
-                    </div>
-                    <div class="bg-white rounded-xl p-3 border border-{% if posture_match %}green{% else %}amber{% endif %}-100">
-                        <p class="text-[9px] font-black uppercase text-{% if posture_match %}green{% else %}amber{% endif %}-400 tracking-widest">Postura</p>
-                        <p class="text-sm font-black text-{% if posture_match %}green{% else %}amber{% endif %}-700 mt-0.5">{{ top.posture }}</p>
-                        <p class="text-[9px] text-{% if posture_match %}green{% else %}amber{% endif %}-500 mt-1">
-                            {% if posture_match %}Alinhada com a abordagem{% else %}Diverge da abordagem sugerida{% endif %}
-                        </p>
                     </div>
                     {% if ranking|length > 1 %}
                     {% set alt = ranking[1] %}
@@ -175,18 +192,21 @@ flowchart TD
                                     <p class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ item.description }}</p>
                                 </div>
                             </div>
-                            <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                            <button type="button" data-mid="{{ item.id }}" data-mname="{{ item.name }}"
+                                    onclick="selectPrimary(this)"
                                     class="shrink-0 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
                                 Selecionar
                             </button>
                         </div>
                         <div class="flex items-center gap-3 mt-2 flex-wrap">
+                            {% for ap in (item.compatible_approaches or [item.posture]) %}
                             <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                                {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
+                                {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
                                 {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                {{ item.posture }}
+                                {{ ap }}
                             </span>
+                            {% endfor %}
                             <span class="text-xs text-gray-400">T{{ item.tier }}</span>
                             <span class="text-xs font-mono text-gray-600">Score {{ "%.3f"|format(item.score) }}</span>
                             <span class="text-xs font-mono
@@ -205,7 +225,7 @@ flowchart TD
                             <tr>
                                 <th class="px-4 py-3 text-left">Rank</th>
                                 <th class="px-4 py-3 text-left">Metodologia</th>
-                                <th class="px-4 py-3 text-left">Postura</th>
+                                <th class="px-4 py-3 text-left">Abordagem</th>
                                 <th class="px-4 py-3 text-left">Tier</th>
                                 <th class="px-4 py-3 text-left">Value Score</th>
                                 <th class="px-4 py-3 text-left">Misfit Δk</th>
@@ -232,12 +252,16 @@ flowchart TD
                                     {% endif %}
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                                        {% if item.posture == 'Adaptativa' %}bg-green-100 text-green-700
-                                        {% elif item.posture == 'Preditiva' %}bg-blue-100 text-blue-700
-                                        {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                        {{ item.posture }}
-                                    </span>
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for ap in (item.compatible_approaches or [item.posture]) %}
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                            {% if ap == 'Adaptativa' %}bg-green-100 text-green-700
+                                            {% elif ap == 'Preditiva' %}bg-blue-100 text-blue-700
+                                            {% else %}bg-purple-100 text-purple-700{% endif %}">
+                                            {{ ap }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500 dark:text-gray-400">T{{ item.tier }}</td>
                                 <td class="px-4 py-3">
@@ -253,7 +277,8 @@ flowchart TD
                                     {{ "%.2f"|format(item.misfit) }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <button type="submit" name="selected_methodology_id" value="{{ item.id }}"
+                                    <button type="button" data-mid="{{ item.id }}" data-mname="{{ item.name }}"
+                                            onclick="selectPrimary(this)"
                                             class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition">
                                         Selecionar
                                     </button>
@@ -265,21 +290,89 @@ flowchart TD
                 </div>
 
                 <input type="hidden" name="action" value="CONFIRM_METHODOLOGY">
+                <input type="hidden" name="selected_methodology_id" id="env-selected-id" value="">
 
-                <div class="flex justify-between items-center flex-wrap gap-2 mt-4">
-                    <div class="flex gap-2">
-                        <button type="button" onclick="document.querySelector('[name=action]').value='REENTRY_DIAGNOSIS';this.form.submit();"
-                                class="px-4 py-2 rounded-xl border border-orange-200 text-orange-600 hover:bg-orange-50 text-sm transition"
-                                title="Evidência inconsistente — rever diagnóstico de raiz">
-                            ← Rever Diagnóstico
-                        </button>
-                        <button type="button" onclick="document.querySelector('[name=action]').value='REVISE_APPROACH';this.form.submit();"
+                <!-- Envelope metodológico composto (§5.1 da nota de alinhamento):
+                     componentes NÃO competem no MAVT — juntam-se ao envelope
+                     apenas com justificação explícita -->
+                <div id="envelope-panel" class="hidden mt-4 bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-slate-600">
+                    <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Envelope Metodológico — primário: <span id="env-primary-name" class="text-slate-800 dark:text-white"></span>
+                    </h2>
+                    <p id="env-intro" class="text-xs text-gray-400 mt-1 mb-4">
+                        Opcionalmente, adicione guias/normas/métodos complementares como componentes do envelope.
+                        Cada componente exige justificação — os componentes não entram no ranking MAVT.
+                    </p>
+                    <p id="env-empty" class="hidden text-xs text-gray-400 italic mb-2">
+                        Nenhum candidato da MEB se declara compatível como componente deste primário
+                        (<code>compatible_as_component_of</code>). Podes avançar sem envelope composto.
+                    </p>
+                    <div id="env-components" class="space-y-3"></div>
+                    <div class="flex gap-2 justify-end mt-5">
+                        <button type="button" onclick="cancelEnvelope()"
                                 class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
-                            ← Rever Abordagem
+                            Cancelar seleção
                         </button>
                     </div>
                 </div>
+
+                <div class="flex justify-between items-center flex-wrap gap-2 mt-4">
+                    <button type="button" onclick="document.querySelector('[name=action]').value='REVISE_APPROACH';this.form.submit();"
+                            class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
+                        ← Rever Abordagem
+                    </button>
+                    <button type="submit" id="btn-avancar" disabled
+                            class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-6 py-2 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800">
+                        Confirmar e Avançar →
+                    </button>
+                </div>
             </form>
+
+            <div id="envelope-options" data-options='{{ envelope_options | tojson }}' class="hidden"></div>
+            <script>
+            function selectPrimary(btn) {
+                const mid = btn.dataset.mid, mname = btn.dataset.mname;
+                document.getElementById('env-selected-id').value = mid;
+                const options = JSON.parse(document.getElementById('envelope-options').dataset.options || '{}');
+                const comps = options[mid] || [];
+
+                document.getElementById('env-primary-name').textContent = mname;
+                const container = document.getElementById('env-components');
+                container.innerHTML = '';
+                document.getElementById('env-intro').classList.toggle('hidden', comps.length === 0);
+                document.getElementById('env-empty').classList.toggle('hidden', comps.length > 0);
+                comps.forEach(c => {
+                    const row = document.createElement('div');
+                    row.className = 'border border-gray-200 dark:border-gray-600 rounded-lg p-3';
+                    row.innerHTML =
+                        '<label class="flex items-center gap-2 cursor-pointer">' +
+                        '<input type="checkbox" name="component_ids" value="' + c.id + '" ' +
+                        'class="w-4 h-4 text-slate-700 rounded border-gray-300" ' +
+                        'onchange="toggleJustification(this, ' + c.id + ')">' +
+                        '<span class="text-sm font-semibold text-gray-700 dark:text-gray-200">' + c.name + '</span>' +
+                        '<span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded uppercase font-bold">' + (c.role || '') + '</span>' +
+                        '</label>' +
+                        '<textarea name="component_justification_' + c.id + '" rows="2" disabled ' +
+                        'placeholder="Justificação obrigatória — porque deve este componente integrar o envelope?" ' +
+                        'class="hidden mt-2 w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>';
+                    container.appendChild(row);
+                });
+                document.getElementById('envelope-panel').classList.remove('hidden');
+                document.getElementById('btn-avancar').disabled = false;
+                document.getElementById('envelope-panel').scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+            function toggleJustification(cb, cid) {
+                const ta = document.querySelector('[name=component_justification_' + cid + ']');
+                ta.disabled = !cb.checked;
+                ta.required = cb.checked;
+                ta.classList.toggle('hidden', !cb.checked);
+            }
+            function cancelEnvelope() {
+                document.getElementById('envelope-panel').classList.add('hidden');
+                document.getElementById('env-selected-id').value = '';
+                document.getElementById('btn-avancar').disabled = true;
+            }
+            </script>
 
         </div><!-- end content col -->
     </div><!-- end grid -->
@@ -300,18 +393,20 @@ flowchart TD
         { border: 'rgba(22,163,74,0.85)', bg: 'rgba(22,163,74,0.08)' },
         { border: 'rgba(37,99,235,0.85)', bg: 'rgba(37,99,235,0.08)' },
     ];
-    const axisLabels = ['Assurance', 'Agility', 'Scalability', 'Hybridisation', 'Postura'];
+    const axisLabels = ['C1 Resp.', 'C2 Align.', 'C3 Trace.', 'C4 Compl.', 'C5 Pace', 'C6 Integr.', 'C7 Distrib.'];
 
     const datasets = ranking.map((m, i) => {
         const c = m.criteria || {};
         return {
             label: m.name,
             data: [
-                c.assurance ?? 0.5,
-                c.agility ?? 0.5,
-                c.scalability ?? 0.5,
-                c.hybridisation ?? 0.5,
-                c.posture_alignment ?? 0.5,
+                c.c1_responsiveness ?? 0.5,
+                c.c2_alignment ?? 0.5,
+                c.c3_traceability ?? 0.5,
+                c.c4_compliance ?? 0.5,
+                c.c5_pace_criticality ?? 0.5,
+                c.c6_integration_risk ?? 0.5,
+                c.c7_distributed_support ?? 0.5,
             ],
             borderColor: COLORS[i].border,
             backgroundColor: COLORS[i].bg,
@@ -369,7 +464,14 @@ flowchart TD
         links: data.links.map(d => Object.assign({}, d))
     });
 
-    const colors = ['#475569', '#f59e0b', '#10b981', '#3b82f6'];
+    // Cor por papel, não por índice cíclico: cinzento = MEB total (fonte),
+    // âmbar = excluído por alguma causa, verde = sobreviveu ao Level 1.
+    const n = graph.nodes.length;
+    function roleColor(i) {
+        if (i === 0) return '#475569';
+        if (i === n - 1) return '#16a34a';
+        return '#d97706';
+    }
 
     svg.append('g').selectAll('rect')
         .data(graph.nodes)
@@ -378,14 +480,14 @@ flowchart TD
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(1, d.y1 - d.y0))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', (d, i) => colors[i % colors.length])
+        .attr('fill', (d, i) => roleColor(i))
         .attr('rx', 3);
 
     svg.append('g').attr('fill', 'none').selectAll('path')
         .data(graph.links)
         .join('path')
         .attr('d', d3.sankeyLinkHorizontal())
-        .attr('stroke', (d, i) => colors[i % colors.length])
+        .attr('stroke', d => roleColor(d.target.index))
         .attr('stroke-width', d => Math.max(1, d.width))
         .attr('stroke-opacity', 0.35);
 

@@ -169,4 +169,133 @@ def run_migrations(db):
             END
         """))
 
+        # MEB — candidate typology (Level 1 admissibility, avoids overlay/norm
+        # candidates competing as autonomous methodological envelopes)
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS candidate_type VARCHAR(40)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS candidate_role VARCHAR(40)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS eligible_as_primary_envelope BOOLEAN DEFAULT TRUE"
+        ))
+
+        # MEB — Stage 3 Level 2 fit criteria C1-C7 (replace Assurance/Agility/
+        # Scalability/Hybridisation, which duplicated the AdPO/AsPO signal)
+        for col in ('score_c1_responsiveness', 'score_c2_alignment', 'score_c3_traceability',
+                    'score_c4_compliance', 'score_c5_pace_criticality',
+                    'score_c6_integration_risk', 'score_c7_distributed_support'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base ADD COLUMN IF NOT EXISTS {col} FLOAT DEFAULT 0.5"
+            ))
+
+        # MEB — drop criteria superseded by C1-C7 (caused MAVT circularity with AdPO/AsPO)
+        for col in ('score_assurance', 'score_agility', 'score_scalability', 'score_hybridisation'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
+        # TEB — Stage 4 Level B implementation capability dimensions CD1-CD8
+        # (replace traceability/integration/flow_support, expanded to full backbone)
+        for col in ('contribution_cd1', 'contribution_cd2', 'contribution_cd3', 'contribution_cd4',
+                    'contribution_cd5', 'contribution_cd6', 'contribution_cd7', 'contribution_cd8'):
+            conn.execute(text(
+                f"ALTER TABLE tool_evidence_base ADD COLUMN IF NOT EXISTS {col} FLOAT DEFAULT 0.5"
+            ))
+
+        # TEB — drop criteria superseded by CD1-CD8 (caused MAVT circularity with context_alignment)
+        for col in ('score_traceability', 'score_integration', 'score_flow_support'):
+            conn.execute(text(
+                f"ALTER TABLE tool_evidence_base DROP COLUMN IF EXISTS {col}"
+            ))
+
+        # ProjectDecision — align naming with the alignment note's canonical term
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='project_decision' AND column_name='governance_register'
+                ) THEN
+                    ALTER TABLE project_decision RENAME COLUMN governance_register TO decision_control_register;
+                END IF;
+            END $$;
+        """))
+
+        # ProjectDecision — Level 1 / Level A exclusion causes (audit invariant:
+        # every screening exclusion is preserved with its cause)
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS meb_exclusions JSON"
+        ))
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS teb_exclusions JSON"
+        ))
+
+        # Composite methodological envelope (alignment note §5.1): overlays,
+        # norms and complementary methods may join the envelope as justified
+        # components instead of competing as autonomous top-1 candidates.
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS compatible_as_component_of JSON"
+        ))
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS methodological_envelope JSON"
+        ))
+
+        # Stage 4 Level A output: capability_map (cobertura CD1-CD8 por I_A)
+        conn.execute(text(
+            "ALTER TABLE project_decision "
+            "ADD COLUMN IF NOT EXISTS capability_map JSON"
+        ))
+
+        # MEB — posture as a region [min,max]x[min,max], not a point (alignment
+        # note Tabela 5). A degenerate region (min==max) reproduces the old
+        # point-based behaviour exactly.
+        for col in ('posture_adpo_min', 'posture_adpo_max', 'posture_aspo_min', 'posture_aspo_max'):
+            conn.execute(text(
+                f"ALTER TABLE methodology_evidence_base ADD COLUMN IF NOT EXISTS {col} INTEGER DEFAULT 2"
+            ))
+        conn.execute(text(
+            "ALTER TABLE methodology_evidence_base "
+            "ADD COLUMN IF NOT EXISTS compatible_approaches JSON"
+        ))
+        # Back-fill regions from the old point columns before dropping them
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='methodology_evidence_base' AND column_name='ag_posture'
+                ) THEN
+                    UPDATE methodology_evidence_base
+                    SET posture_adpo_min = ag_posture, posture_adpo_max = ag_posture,
+                        posture_aspo_min = as_posture, posture_aspo_max = as_posture;
+                    ALTER TABLE methodology_evidence_base DROP COLUMN ag_posture;
+                    ALTER TABLE methodology_evidence_base DROP COLUMN as_posture;
+                END IF;
+            END $$;
+        """))
+
+        # ProjectDecision — rename decision_control_register's internal keys to
+        # match the alignment note taxonomy (Binding constraints / Acceptance
+        # thresholds / Advisory guidelines), replacing the legacy hard/threshold/
+        # soft names. Idempotent: only rewrites rows still keyed by 'hard'.
+        conn.execute(text("""
+            UPDATE project_decision
+            SET decision_control_register = jsonb_build_object(
+                'binding_constraints', COALESCE(decision_control_register::jsonb->'hard', '[]'::jsonb),
+                'acceptance_thresholds', COALESCE(decision_control_register::jsonb->'threshold', '[]'::jsonb),
+                'advisory_guidelines', COALESCE(decision_control_register::jsonb->'soft', '[]'::jsonb)
+            )::json
+            WHERE decision_control_register IS NOT NULL
+              AND decision_control_register::jsonb ? 'hard'
+        """))
+
         conn.commit()

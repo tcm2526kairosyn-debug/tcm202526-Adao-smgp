@@ -79,7 +79,7 @@
             <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Restrições (Filtro Level 1)</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Dimensão mínima equipa (AgPI mín.)</label>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Dimensão mínima equipa (AdPO mín.)</label>
                     <input type="number" name="max_team_size" min="1" step="1"
                            value="{{ meb.max_team_size if meb and meb.max_team_size else '' }}"
                            placeholder="Deixar vazio = sem limite"
@@ -87,45 +87,138 @@
                     <p class="text-xs text-gray-400 mt-1">Tamanho máximo de equipa permitido</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">AgPI postura ideal (1–4)</label>
-                    <input type="number" name="ag_posture" min="1" max="4" step="1"
-                           value="{{ meb.ag_posture if meb and meb.ag_posture else 2 }}"
-                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-xs text-gray-400 mt-1">Ponto de operação óptimo em AgPI</p>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Região AdPO (mín–máx, 1–4)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="posture_adpo_min" min="1" max="4" step="1"
+                               value="{{ meb.posture_adpo_min if meb and meb.posture_adpo_min else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <span class="text-gray-400 text-xs">–</span>
+                        <input type="number" name="posture_adpo_max" min="1" max="4" step="1"
+                               value="{{ meb.posture_adpo_max if meb and meb.posture_adpo_max else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AdPO (Tabela 5 — nota de alinhamento)</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">AsPI postura ideal (1–4)</label>
-                    <input type="number" name="as_posture" min="1" max="4" step="1"
-                           value="{{ meb.as_posture if meb and meb.as_posture else 2 }}"
-                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-xs text-gray-400 mt-1">Ponto de operação óptimo em AsPI</p>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Região AsPO (mín–máx, 1–4)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="posture_aspo_min" min="1" max="4" step="1"
+                               value="{{ meb.posture_aspo_min if meb and meb.posture_aspo_min else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <span class="text-gray-400 text-xs">–</span>
+                        <input type="number" name="posture_aspo_max" min="1" max="4" step="1"
+                               value="{{ meb.posture_aspo_max if meb and meb.posture_aspo_max else 2 }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AsPO</p>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Abordagens compatíveis</label>
+                    <div class="flex gap-4">
+                        {% for ap in ['Adaptativa', 'Preditiva', 'Híbrida'] %}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="compatible_approaches" value="{{ ap }}"
+                                   {% if meb and ap in (meb.compatible_approaches or []) %}checked{% endif %}
+                                   class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                            <span class="text-sm text-gray-600 dark:text-gray-300">{{ ap }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Level 1 approach_compatible — sem seleção, o candidato não é excluído por abordagem</p>
                 </div>
                 <div class="flex flex-col gap-3 justify-center">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="requires_fixed_scope"
                                {% if meb and meb.requires_fixed_scope %}checked{% endif %}
                                class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
-                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer âmbito fixo</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer âmbito fixo (Acceptance threshold — exclusão binária em Level 1)</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="regulatory_compatible"
                                {% if not meb or meb.regulatory_compatible %}checked{% endif %}
                                class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
-                        <span class="text-sm text-gray-600 dark:text-gray-300">Compatível com regulação</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Compatível com regulação (Binding constraint)</span>
                     </label>
                 </div>
             </div>
         </div>
 
-        <!-- Scores MCDM -->
+        <!-- Tipologia de candidato -->
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Scores MCDM (0 – 1)</h2>
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
+                Tipologia de Candidato (admissibilidade Level 1)
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tipo de candidato</label>
+                    {% set candidate_type_options = ['framework', 'flow_method', 'guide_bok', 'hybrid_methodology',
+                                                      'scaling_framework', 'engineering_method', 'methodology',
+                                                      'domain_process_model', 'guidance_standard'] %}
+                    <select name="candidate_type"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="">—</option>
+                        {% for opt in candidate_type_options %}
+                        <option value="{{ opt }}" {% if meb and meb.candidate_type == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Papel do candidato</label>
+                    {% set candidate_role_options = ['primary_envelope', 'primary_team_level', 'primary_or_complementary',
+                                                      'primary_in_data_projects', 'complementary', 'complementary_engineering',
+                                                      'reference_overlay', 'normative_overlay'] %}
+                    <select name="candidate_role"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="">—</option>
+                        {% for opt in candidate_role_options %}
+                        <option value="{{ opt }}" {% if meb and meb.candidate_role == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="eligible_as_primary_envelope"
+                               {% if not meb or meb.eligible_as_primary_envelope %}checked{% endif %}
+                               class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">
+                            Elegível como envelope metodológico primário
+                            <span class="text-gray-400">— desmarcar para guias/normas/métodos complementares que não devem competir sozinhos pelo top-1 (Level 1)</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
+                        Compatível como componente de envelope de
+                        <span class="text-gray-400 font-normal">— primários com os quais este candidato pode compor um envelope (nunca compete no MAVT)</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {% for pcode in primary_codes if not meb or pcode != meb.code %}
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="compatible_as_component_of" value="{{ pcode }}"
+                                   {% if meb and pcode in (meb.compatible_as_component_of or []) %}checked{% endif %}
+                                   class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
+                            <span class="text-sm font-mono text-gray-600 dark:text-gray-300">{{ pcode }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critérios C1-C7 (Stage 3 Level 2) -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
+                Critérios C1-C7 (0 – 1) — únicos critérios usados no MAVT de Level 2
+            </h2>
             <div class="space-y-4">
                 {% set score_fields = [
-                    ('score_assurance',    'Assurance',       'Governança, rastreabilidade e conformidade'),
-                    ('score_agility',      'Agilidade',       'Velocidade, iteração e adaptabilidade'),
-                    ('score_scalability',  'Escalabilidade',  'Capacidade de crescer com a organização'),
-                    ('score_hybridisation','Hibridização',    'Compatibilidade com abordagens mistas')
+                    ('score_c1_responsiveness',    'C1 — Responsiveness',        'Cadência, controlo de WIP, absorção de mudança'),
+                    ('score_c2_alignment',         'C2 — Alignment',             'Alinhamento de stakeholders, discovery, sensemaking'),
+                    ('score_c3_traceability',      'C3 — Evidence Traceability', 'Profundidade de rastreabilidade, artefactos de auditoria'),
+                    ('score_c4_compliance',        'C4 — Compliance Readiness',  'Preparação normativa, gates formais'),
+                    ('score_c5_pace_criticality',  'C5 — Pace/Criticality',      'Ritmo sob escalonamento, assurance e risco'),
+                    ('score_c6_integration_risk',  'C6 — Integration Risk',      'Coevolução hw/sw, gestão de dependências'),
+                    ('score_c7_distributed_support','C7 — Distributed Support',  'Coordenação, escala, entrega distribuída')
                 ] %}
                 {% for field, label, hint in score_fields %}
                 <div>

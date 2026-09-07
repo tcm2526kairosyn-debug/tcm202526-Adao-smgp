@@ -106,11 +106,11 @@
                     {% if d.agpi_score is not none %}
                     <div class="text-center">
                         <p class="text-lg font-black text-slate-800">{{ "%.2f"|format(d.agpi_score) }}</p>
-                        <p class="text-[9px] text-slate-400 uppercase font-bold">AgPI</p>
+                        <p class="text-[9px] text-slate-400 uppercase font-bold">AdPO</p>
                     </div>
                     <div class="text-center">
                         <p class="text-lg font-black text-red-600">{{ "%.2f"|format(d.aspi_score) }}</p>
-                        <p class="text-[9px] text-red-400 uppercase font-bold">AsPI</p>
+                        <p class="text-[9px] text-red-400 uppercase font-bold">AsPO</p>
                     </div>
                     {% endif %}
                     {% if d.suggested_approach %}
@@ -129,7 +129,7 @@
                 </div>
 
                 <!-- Ação -->
-                <div class="flex gap-2 shrink-0">
+                <div class="flex gap-2 shrink-0 flex-wrap">
                     <a href="{{ url_for('main.workflow', id=d.id) }}"
                        class="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold text-xs hover:bg-slate-200 transition">
                         Ver estado
@@ -142,6 +142,23 @@
                     {% elif d.current_stage == 'stage_4_fit_t' %}
                     <a href="{{ url_for('main.etapa4', id=d.id) }}" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 transition shadow shadow-slate-300">Continuar →</a>
                     {% endif %}
+                    {% elif projeto.status != 'Concluído' %}
+                    <form method="POST" action="{{ url_for('main.reassess_decision', id=d.id) }}"
+                          onsubmit="return confirm('Criar uma nova execução a partir da Etapa 2? O diagnóstico #{{ d.id }} mantém-se como registo concluído e rastreável.')">
+                        <input type="hidden" name="target" value="stage_2_approach">
+                        <button type="submit"
+                                class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold text-xs hover:bg-amber-100 transition">
+                            ↺ Reavaliar abordagem (E2)
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('main.reassess_decision', id=d.id) }}"
+                          onsubmit="return confirm('Criar uma nova execução a partir da Etapa 3? O diagnóstico #{{ d.id }} mantém-se como registo concluído e rastreável.')">
+                        <input type="hidden" name="target" value="stage_3_fit_m">
+                        <button type="submit"
+                                class="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-semibold text-xs hover:bg-amber-100 transition">
+                            ↺ Reavaliar metodologia (E3)
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
             </div>

@@ -34,8 +34,6 @@ flowchart TD
     s4 -.-> s2
     s4 -.-> s3
     s3 -.-> s2
-    s3 -.-> s1
-    s2 -.-> s1
     style s2 fill:#334155,color:#fff,stroke:#334155,stroke-width:3px
     style s1 fill:#22c55e,color:#fff,stroke:#22c55e,stroke-width:2px
                 </div>
@@ -55,20 +53,20 @@ flowchart TD
             <!-- Índices -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-50 rounded-xl p-5 text-center shadow border border-slate-100">
-                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">AgPI</p>
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">AdPO</p>
                     <p class="text-4xl font-bold text-slate-800">{{ "%.2f"|format(decision.agpi_score) }}</p>
-                    <p class="text-xs text-slate-400 mt-1">Pressão de Agilidade</p>
+                    <p class="text-xs text-slate-400 mt-1">Pressão de Adaptação</p>
                 </div>
                 <div class="bg-red-50 dark:bg-red-900 rounded-xl p-5 text-center shadow">
-                    <p class="text-xs text-red-600 dark:text-red-300 font-semibold uppercase tracking-wider mb-1">AsPI</p>
+                    <p class="text-xs text-red-600 dark:text-red-300 font-semibold uppercase tracking-wider mb-1">AsPO</p>
                     <p class="text-4xl font-bold text-red-700 dark:text-red-200">{{ "%.2f"|format(decision.aspi_score) }}</p>
                     <p class="text-xs text-red-500 mt-1">Pressão de Assurance</p>
                 </div>
             </div>
 
-            <!-- Decision Map AgPI × AsPI -->
+            <!-- Decision Map AdPO × AsPO -->
             <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow border border-slate-100">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Mapa de Decisão — AgPI × AsPI</p>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Mapa de Decisão — AdPO × AsPO</p>
                 <canvas id="decision-map" height="200"></canvas>
             </div>
 
@@ -83,9 +81,9 @@ flowchart TD
                 <p class="text-3xl font-bold text-{{ color }}-700 dark:text-{{ color }}-200">{{ decision.suggested_approach }}</p>
                 <p class="text-sm text-{{ color }}-600 dark:text-{{ color }}-300 mt-2">
                     {% if decision.suggested_approach == "Adaptativa" %}
-                        AgPI ≥ 3 ∧ AsPI ≤ 2 — Contexto dinâmico favorece iterações curtas e equipas auto-organizadas.
+                        AdPO ≥ 3 ∧ AsPO ≤ 2 — Contexto dinâmico favorece iterações curtas e equipas auto-organizadas.
                     {% elif decision.suggested_approach == "Preditiva" %}
-                        AsPI ≥ 3 ∧ AgPI ≤ 2 — Elevada criticidade e compliance exigem planeamento detalhado e controlo rigoroso.
+                        AsPO ≥ 3 ∧ AdPO ≤ 2 — Elevada criticidade e compliance exigem planeamento detalhado e controlo rigoroso.
                     {% else %}
                         Cenário misto — Combinação de práticas preditivas e adaptativas maximiza o valor entregue.
                     {% endif %}
@@ -110,37 +108,62 @@ flowchart TD
                     </div>
                 </div>
 
-                <div class="flex gap-3 justify-between mt-4">
-                    <button type="submit" name="action" value="REVISE_CONTEXT"
-                            class="px-5 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
-                        ← Rever Diagnóstico
-                    </button>
+                <!-- Motor MCDM -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mt-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Motor MCDM</label>
+                    <p class="text-xs text-gray-400 mb-3">Algoritmo de ranking utilizado nas Etapas 3 e 4</p>
+                    {% set current_engine = decision.mcdm_engine or 'MAVT' %}
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if current_engine == 'MAVT' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-mavt">
+                            <input type="radio" name="mcdm_engine" value="MAVT" {% if current_engine == 'MAVT' %}checked{% endif %}
+                                   class="mt-0.5 accent-slate-700" onchange="selectMethod('MAVT')">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">MAVT</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Multi-Attribute Value Theory — soma ponderada direta sobre os critérios C1-C7/CD1-CD8 (já funções de valor 0-1, sem renormalização)</p>
+                            </div>
+                        </label>
+                        <label class="flex-1 flex items-start gap-3 p-4 rounded-lg border-2 {% if current_engine == 'AHP' %}border-slate-700 bg-slate-100{% else %}border-gray-200 dark:border-gray-600{% endif %} cursor-pointer" id="label-ahp">
+                            <input type="radio" name="mcdm_engine" value="AHP" {% if current_engine == 'AHP' %}checked{% endif %}
+                                   class="mt-0.5 accent-slate-700" onchange="selectMethod('AHP')">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                                    AHP
+                                    <span class="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-1.5 py-0.5 rounded">stub</span>
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Analytic Hierarchy Process — recorre a MAVT enquanto a matriz par-a-par não estiver implementada</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Decision-Control Register (se existir) -->
+                {% if decision.decision_control_register %}
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mt-4">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 uppercase tracking-wider">Decision-Control Register</h2>
+                    {% set level_labels = {'binding_constraints': 'Binding constraints', 'acceptance_thresholds': 'Acceptance thresholds', 'advisory_guidelines': 'Advisory guidelines'} %}
+                    {% for level, constraints in decision.decision_control_register.items() %}
+                    {% if constraints %}
+                    <div class="mb-3">
+                        <p class="text-xs font-bold uppercase tracking-wider mb-1
+                            {% if level == 'binding_constraints' %}text-red-600{% elif level == 'acceptance_thresholds' %}text-yellow-600{% else %}text-green-600{% endif %}">
+                            {{ level_labels.get(level, level) }}
+                        </p>
+                        {% for c in constraints %}
+                        <p class="text-xs text-gray-600 dark:text-gray-400">· {{ c.constraint }} = {{ c.value }} <span class="text-gray-400">[scope: {{ c.scope }}]</span> — {{ c.reason }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="flex gap-3 justify-end mt-4">
                     <button type="submit" name="action" value="CONFIRM_APPROACH"
                             class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-8 rounded-xl transition shadow">
                         Confirmar e Avançar →
                     </button>
                 </div>
             </form>
-
-            <!-- Governance Register (se existir) -->
-            {% if decision.governance_register %}
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 uppercase tracking-wider">Governance Register</h2>
-                {% for level, constraints in decision.governance_register.items() %}
-                {% if constraints %}
-                <div class="mb-3">
-                    <p class="text-xs font-bold uppercase tracking-wider mb-1
-                        {% if level == 'hard' %}text-red-600{% elif level == 'threshold' %}text-yellow-600{% else %}text-green-600{% endif %}">
-                        {{ level }}
-                    </p>
-                    {% for c in constraints %}
-                    <p class="text-xs text-gray-600 dark:text-gray-400">· {{ c.constraint }} = {{ c.value }} <span class="text-gray-400">[scope: {{ c.scope }}]</span> — {{ c.reason }}</p>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-            {% endif %}
 
         </div><!-- end content col -->
     </div><!-- end grid -->
@@ -209,17 +232,28 @@ flowchart TD
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (c) => `${c.dataset.label} — AgPI: ${c.parsed.x.toFixed(2)}, AsPI: ${c.parsed.y.toFixed(2)}`
+                        label: (c) => `${c.dataset.label} — AdPO: ${c.parsed.x.toFixed(2)}, AsPO: ${c.parsed.y.toFixed(2)}`
                     }
                 }
             },
             scales: {
-                x: { min: 1, max: 4, title: { display: true, text: 'AgPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                y: { min: 1, max: 4, title: { display: true, text: 'AsPI →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                x: { min: 1, max: 4, title: { display: true, text: 'AdPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { min: 1, max: 4, title: { display: true, text: 'AsPO →', font: { size: 10 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
             }
         },
         plugins: [zonePlugin]
     });
 })();
+
+function selectMethod(val) {
+    const mavt = document.getElementById('label-mavt');
+    const ahp  = document.getElementById('label-ahp');
+    mavt.classList.toggle('border-slate-700', val === 'MAVT');
+    mavt.classList.toggle('bg-slate-100',     val === 'MAVT');
+    mavt.classList.toggle('border-gray-200',  val !== 'MAVT');
+    ahp.classList.toggle('border-slate-700',  val === 'AHP');
+    ahp.classList.toggle('bg-slate-100',      val === 'AHP');
+    ahp.classList.toggle('border-gray-200',   val !== 'AHP');
+}
 </script>
 {% endblock %}
