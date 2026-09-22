@@ -12,14 +12,11 @@ def run_seeds():
 def _seed_mcdm_weights():
     from datetime import datetime
 
-    # Level 2 (Stage 3) — explicit, elicited weights over C1-C7 only.
-    # No posture/context signal is amplified automatically (no ALPHA reweighting).
     _upsert_weights('MEB',
                     weights=[0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12],
                     labels=['C1_responsiveness', 'C2_alignment', 'C3_traceability', 'C4_compliance',
                             'C5_pace_criticality', 'C6_integration_risk', 'C7_distributed_support'])
 
-    # Level B (Stage 4) — explicit weights over CD1-CD8 only.
     _upsert_weights('TEB',
                     weights=[0.15, 0.12, 0.13, 0.10, 0.10, 0.15, 0.15, 0.10],
                     labels=['CD1_traceability', 'CD2_verification', 'CD3_flow_control', 'CD4_discovery',
@@ -30,7 +27,7 @@ def _upsert_weights(context: str, weights: list, labels: list):
     from datetime import datetime
     existing = MCDMWeights.query.filter_by(context=context, is_active=True).first()
     if existing and existing.labels == labels:
-        return  # already up-to-date
+        return
     now = datetime.utcnow()
     if existing:
         existing.is_active = False
@@ -50,9 +47,6 @@ def _upsert_weights(context: str, weights: list, labels: list):
 
 
 def _seed_meb():
-    # Candidate typology and C1-C7 seed values follow the alignment note
-    # (Tabelas 5 e 8): posture/context signals no longer feed the MAVT matrix
-    # directly — only C1-C7 (methodology-fit criteria) are used in Level 2.
     methodologies = [
         dict(
             code="SCRUM", name="Scrum", posture="Adaptativa", tier=1,
@@ -101,9 +95,6 @@ def _seed_meb():
             code="PRINCE2", name="PRINCE2 Agile", posture="Preditiva", tier=1,
             requires_fixed_scope=True, regulatory_compatible=True,
             posture_adpo_min=2, posture_adpo_max=4, posture_aspo_min=2, posture_aspo_max=4,
-            # Divergência deliberada da Tabela 5 (que lista só "Hybrid"): PRINCE2
-            # combina controlo formal predefinido com adaptação por etapas, pelo
-            # que também é admissível em contextos Preditivos — decisão do autor.
             compatible_approaches=['Preditiva', 'Híbrida'],
             candidate_type="hybrid_methodology", candidate_role="primary_envelope",
             eligible_as_primary_envelope=True,
@@ -216,13 +207,6 @@ def _seed_meb():
 
 
 def _seed_teb():
-    # CD1-CD8 seed values follow the same discrete rubric as C1-C7 (alignment
-    # note Tabela 7): 0.00 ausente, 0.25 limitada/indireta, 0.50 moderada
-    # (requer tailoring), 0.75 forte e operacionalizável, 1.00 muito forte e
-    # estrutural. Illustrative estimates derived from documented product
-    # capabilities (not empirically validated — see thesis limitations).
-    # No posture/context coordinate is used here; agility_support/assurance_support
-    # are retained only as Level A audit metadata (see kairosynlogic.run_fit_t_level_a).
     tools = [
         # Planning
         dict(

@@ -215,15 +215,15 @@
 </div>
 
 <!-- ÍNDICES E ABORDAGEM -->
-<h2>Etapa 2 — Índices e Abordagem de Gestão</h2>
+<h2>Etapa 2, Índices e Abordagem de Gestão</h2>
 <div class="grid-2 no-break" style="margin-bottom:14px;">
   <div class="index-card card-slate">
-    <div class="label">AdPO — Pressão de Adaptação</div>
+    <div class="label">AdPO, Pressão de Adaptação</div>
     <div class="value">{{ "%.2f"|format(decision.agpi_score or 0) }}</div>
     <div class="sub">Escala 1–4</div>
   </div>
   <div class="index-card card-red">
-    <div class="label">AsPO — Pressão de Assurance</div>
+    <div class="label">AsPO, Pressão de Assurance</div>
     <div class="value">{{ "%.2f"|format(decision.aspi_score or 0) }}</div>
     <div class="sub">Escala 1–4</div>
   </div>
@@ -232,7 +232,7 @@
     {% elif decision.suggested_approach == 'Preditiva' %}card-blue
     {% else %}card-purple{% endif %}" style="flex:2;">
     <div class="label">Abordagem KairoSyn</div>
-    <div class="value" style="font-size:24px;">{{ decision.suggested_approach or '—' }}</div>
+    <div class="value" style="font-size:24px;">{{ decision.suggested_approach or '-' }}</div>
     {% if decision.selected_methodology %}
     <div class="sub">Metodologia selecionada: <strong>{{ decision.selected_methodology }}</strong> · Motor: {{ decision.mcdm_engine or 'MAVT' }}</div>
     {% endif %}
@@ -241,7 +241,7 @@
 
 <!-- PERFIL CONTEXTUAL 8D -->
 {% if decision.context_data %}
-<h2>Etapa 1 — Perfil Contextual (8 Dimensões)</h2>
+<h2>Etapa 1, Perfil Contextual (8 Dimensões)</h2>
 <div class="no-break" style="margin-bottom:6px;">
   <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Adaptação (AdPO)</div>
   <div class="dim-grid">
@@ -282,7 +282,7 @@
 {% if decision.decision_control_register %}
 {% set gov = decision.decision_control_register %}
 {% if gov.binding_constraints or gov.acceptance_thresholds or gov.advisory_guidelines %}
-<h2>Etapa 2 — Decision-Control Register</h2>
+<h2>Etapa 2, Decision-Control Register</h2>
 <div class="no-break">
   {% if gov.binding_constraints %}
   <div class="gov-section gov-hard">
@@ -317,7 +317,7 @@
 
 <!-- RANKING DE METODOLOGIAS -->
 {% if decision.methodology_ranking %}
-<h2>Etapa 3 — Ranking MCDM de Metodologias ({{ decision.mcdm_engine or 'MAVT' }})</h2>
+<h2>Etapa 3, Ranking MCDM de Metodologias ({{ decision.mcdm_engine or 'MAVT' }})</h2>
 <table class="no-break">
   <thead>
     <tr>
@@ -371,10 +371,10 @@
 <!-- ENVELOPE METODOLÓGICO COMPOSTO -->
 {% set env = decision.methodological_envelope %}
 {% if env and env.components %}
-<h2>Etapa 3 — Envelope Metodológico Composto</h2>
+<h2>Etapa 3, Envelope Metodológico Composto</h2>
 <p style="font-size:10px; color:#64748b; margin-bottom:6px;">
   Primário: <strong>{{ env.primary.name }}</strong>. Os componentes abaixo integram o envelope com
-  justificação explícita — não competem no ranking MAVT (screening por candidate_role, Level 1).
+  justificação explícita, não competem no ranking MAVT (screening por candidate_role, Level 1).
 </p>
 <table class="no-break">
   <thead>
@@ -398,7 +398,7 @@
 
 <!-- CRITÉRIOS MCDM POR METODOLOGIA -->
 {% if decision.methodology_ranking and decision.methodology_ranking | selectattr('criteria') | list %}
-<h2>Etapa 3 — Perfil de Critérios MCDM por Metodologia</h2>
+<h2>Etapa 3, Perfil de Critérios MCDM por Metodologia</h2>
 <table class="criteria-table no-break">
   <thead>
     <tr>
@@ -440,7 +440,7 @@
 
 <!-- PORTFÓLIO DE FERRAMENTAS -->
 {% if decision.tool_portfolio %}
-<h2>Etapa 4 — Portfólio de Ferramentas (Fit_T)</h2>
+<h2>Etapa 4, Portfólio de Ferramentas (Fit_T)</h2>
 <table class="no-break">
   <thead>
     <tr>
@@ -476,10 +476,10 @@
 
 <!-- CAPABILITY MAP (LEVEL A) -->
 {% if decision.capability_map %}
-<h2>Etapa 4 — Capability Map (Level A)</h2>
+<h2>Etapa 4, Capability Map (Level A)</h2>
 <p style="font-size:10px; color:#64748b; margin-bottom:6px;">
   Cobertura das dimensões de capacidade CD1-CD8 pelo conjunto admissível I_A.
-  Artefacto de auditoria derivado das contribuições registadas na TEB — não entra no scoring MAVT de Level B.
+  Artefacto de auditoria derivado das contribuições registadas na TEB, não entra no scoring MAVT de Level B.
 </p>
 <table class="no-break">
   <thead>
@@ -506,7 +506,7 @@
         {% if cd.covered_by %}
           {% for t in cd.covered_by %}{{ t.code }} ({{ "%.2f"|format(t.contribution) }}){% if not loop.last %} · {% endif %}{% endfor %}
         {% else %}
-          <span style="color:#dc2626; font-weight:600;">Lacuna — nenhuma ferramenta admissível ≥ 0.5</span>
+          <span style="color:#dc2626; font-weight:600;">Lacuna, nenhuma ferramenta admissível ≥ 0.5</span>
         {% endif %}
       </td>
     </tr>
@@ -532,9 +532,9 @@
 
   <div class="sens-callout {% if sensitivity.stable %}sens-callout-ok{% else %}sens-callout-warn{% endif %}">
     {% if sensitivity.stable %}
-    ✓ <strong>{{ sensitivity.top_name }}</strong> mantém-se como recomendação principal em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações com pesos aleatórios — o ranking é robusto.
+    ✓ <strong>{{ sensitivity.top_name }}</strong> mantém-se como recomendação principal em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações com pesos aleatórios, o ranking é robusto.
     {% else %}
-    ⚠ <strong>{{ sensitivity.top_name }}</strong> mantém-se em apenas <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações — o ranking é sensível aos pesos.
+    ⚠ <strong>{{ sensitivity.top_name }}</strong> mantém-se em apenas <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações, o ranking é sensível aos pesos.
     {% endif %}
     {% if sensitivity.runner_up %}
     Alternativa mais competitiva: <strong>{{ sensitivity.runner_up }}</strong> ({{ sensitivity.runner_up_pct }}% das simulações).
@@ -577,7 +577,7 @@
 
 <!-- HISTÓRICO DE TRANSIÇÕES -->
 {% if decision.transition_history %}
-<h2>Auditoria — Histórico de Transições de Estado</h2>
+<h2>Auditoria, Histórico de Transições de Estado</h2>
 <div class="timeline no-break">
   {% for t in decision.transition_history %}
   <div class="tl-item">

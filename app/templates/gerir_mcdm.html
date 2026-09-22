@@ -20,12 +20,12 @@
         <nav class="flex space-x-6" id="mcdm-tabs">
             <button onclick="showTab('meb')" id="tab-btn-meb"
                     class="tab-btn pb-3 text-sm font-semibold border-b-2 border-slate-800 text-slate-800 transition">
-                MEB — Metodologias
+                MEB: Metodologias
                 <span class="ml-1 bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">{{ mebs | length }}</span>
             </button>
             <button onclick="showTab('teb')" id="tab-btn-teb"
                     class="tab-btn pb-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
-                TEB — Ferramentas
+                TEB: Ferramentas
                 <span class="ml-1 bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">{{ tebs | length }}</span>
             </button>
             <button onclick="showTab('pesos')" id="tab-btn-pesos"
@@ -100,7 +100,7 @@
                             {% if m.eligible_as_primary_envelope %}
                                 <span class="text-green-500 text-xs font-bold" title="Compete em Level 2">✓</span>
                             {% else %}
-                                <span class="text-gray-400 text-xs" title="Overlay/complementar — não compete como envelope primário">—</span>
+                                <span class="text-gray-400 text-xs" title="Overlay/complementar, não compete como envelope primário">-</span>
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center">{{ "%.2f"|format(m.score_c1_responsiveness) }}</td>
@@ -280,7 +280,7 @@
             {% if meb_weights %}
             <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                 <div class="flex justify-between items-center mb-1">
-                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos MEB — Etapa 3</h3>
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos MEB, Etapa 3</h3>
                     <a href="{{ url_for('main.historico_pesos', context='MEB') }}"
                        class="text-xs text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1">
                         Histórico
@@ -290,7 +290,7 @@
                     </a>
                 </div>
                 <p class="text-xs text-gray-400 mb-1">
-                    Versão ativa desde {{ meb_weights.active_date.strftime('%d/%m/%Y %H:%M') if meb_weights.active_date else '—' }}
+                    Versão ativa desde {{ meb_weights.active_date.strftime('%d/%m/%Y %H:%M') if meb_weights.active_date else '-' }}
                     {% if meb_weights.updated_by %} · por <strong>{{ meb_weights.updated_by }}</strong>{% endif %}
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Critérios para ranking de metodologias. A soma deve ser <strong>1.0</strong>.</p>
@@ -339,7 +339,7 @@
             {% if teb_weights %}
             <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                 <div class="flex justify-between items-center mb-1">
-                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos TEB — Etapa 4</h3>
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200">Pesos TEB, Etapa 4</h3>
                     <a href="{{ url_for('main.historico_pesos', context='TEB') }}"
                        class="text-xs text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1">
                         Histórico
@@ -349,7 +349,7 @@
                     </a>
                 </div>
                 <p class="text-xs text-gray-400 mb-1">
-                    Versão ativa desde {{ teb_weights.active_date.strftime('%d/%m/%Y %H:%M') if teb_weights.active_date else '—' }}
+                    Versão ativa desde {{ teb_weights.active_date.strftime('%d/%m/%Y %H:%M') if teb_weights.active_date else '-' }}
                     {% if teb_weights.updated_by %} · por <strong>{{ teb_weights.updated_by }}</strong>{% endif %}
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Critérios para ranking de ferramentas. A soma deve ser <strong>1.0</strong>.</p>

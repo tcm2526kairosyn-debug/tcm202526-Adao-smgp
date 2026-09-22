@@ -11,7 +11,7 @@
 
             <div class="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                 <p class="text-[10px] font-black uppercase text-slate-500">Contexto</p>
-                <p class="text-lg font-bold text-slate-800">{{ context }} — {% if context == 'MEB' %}Metodologias (Etapa 3){% else %}Ferramentas (Etapa 4){% endif %}</p>
+                <p class="text-lg font-bold text-slate-800">{{ context }}, {% if context == 'MEB' %}Metodologias (Etapa 3){% else %}Ferramentas (Etapa 4){% endif %}</p>
                 <div class="mt-3 pt-3 border-t border-slate-200">
                     <p class="text-[9px] font-black uppercase text-slate-400">Total de versões</p>
                     <p class="text-xl font-black text-slate-700">{{ versoes | length }}</p>
@@ -22,7 +22,7 @@
             {% if ativa %}
             <div class="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
                 <p class="text-[10px] font-black uppercase text-green-400">Versão Ativa</p>
-                <p class="text-sm font-bold text-green-700">Desde {{ ativa.active_date.strftime('%d/%m/%Y %H:%M') if ativa.active_date else '—' }}</p>
+                <p class="text-sm font-bold text-green-700">Desde {{ ativa.active_date.strftime('%d/%m/%Y %H:%M') if ativa.active_date else '-' }}</p>
                 {% if ativa.updated_by %}
                 <p class="text-xs text-green-600 mt-1">por {{ ativa.updated_by }}</p>
                 {% endif %}
@@ -67,7 +67,7 @@
                     <div>
                         <span class="text-[10px] font-black uppercase text-slate-400">Versão de</span>
                         <time class="block text-sm font-bold text-slate-700">
-                            {{ v.active_date.strftime('%d/%m/%Y %H:%M') if v.active_date else '—' }}
+                            {{ v.active_date.strftime('%d/%m/%Y %H:%M') if v.active_date else '-' }}
                         </time>
                         {% if v.updated_by %}
                         <span class="text-[11px] text-slate-400">por {{ v.updated_by }}</span>
@@ -109,7 +109,7 @@
                     </span>
 
                     {% if not v.is_active %}
-                    {% set restore_label = v.active_date.strftime('%d/%m/%Y') if v.active_date else '—' %}
+                    {% set restore_label = v.active_date.strftime('%d/%m/%Y') if v.active_date else '-' %}
                     <form method="POST" action="{{ url_for('main.restaurar_pesos', id=v.id) }}"
                           onsubmit="return confirm('Restaurar versão de {{ restore_label }}? A versão atual será arquivada.')">
                         <button type="submit"

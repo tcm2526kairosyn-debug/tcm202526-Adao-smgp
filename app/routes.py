@@ -45,7 +45,6 @@ TRANSITIONS = {
     ('stage_4_fit_t',      'REENTRY_METHODOLOGY'): 'stage_3_fit_m',
     ('stage_4_fit_t',      'REVISE_METHODOLOGY'):  'stage_3_fit_m',
     ('stage_4_fit_t',      'REENTRY_APPROACH'):    'stage_2_approach',
-    # legacy actions kept for backwards compat
     ('stage_1_diagnosis',  'NEXT'):                'stage_2_approach',
     ('stage_2_approach',   'NEXT'):                'stage_3_fit_m',
     ('stage_3_fit_m',      'NEXT'):                'stage_4_fit_t',
@@ -71,9 +70,6 @@ def _log_transition(decision, previous, new_state, action, cause=None):
         "user": current_user.username
     }
     if cause:
-        # A causa fica preservada permanentemente no audit log; a coluna
-        # decision.reentry_cause é apenas o estado "pendente" (limpa quando a
-        # etapa de destino volta a ser confirmada).
         entry["reentry_cause"] = cause
     history.append(entry)
     decision.transition_history = history
@@ -126,7 +122,7 @@ def _send_email_async(to, subject, html):
         with app.app_context():
             api_key = app.config.get('RESEND_API_KEY', '')
             if not api_key:
-                app.logger.warning("RESEND_API_KEY não configurado — email não enviado.")
+                app.logger.warning("RESEND_API_KEY não configurado, email não enviado.")
                 return
             try:
                 resend.api_key = api_key
@@ -153,7 +149,7 @@ def _send_approval_email(username, user_email, token):
     approve_url = f"{base_url}{url_for('main.admin_approve', token=token)}"
 
     body_html = f"""
-    <h2>KairoSyn SAD — Pedido de Registo</h2>
+    <h2>KairoSyn SAD, Pedido de Registo</h2>
     <p>Um novo utilizador solicitou acesso ao sistema:</p>
     <ul>
         <li><strong>Username:</strong> {username}</li>
@@ -165,7 +161,7 @@ def _send_approval_email(username, user_email, token):
     </a></p>
     <p style="color:#888;font-size:0.85em;">Este link é de uso único e seguro.</p>
     """
-    _send_email_async(admin, f"KairoSyn SAD — Pedido de registo: {username}", body_html)
+    _send_email_async(admin, f"KairoSyn SAD, Pedido de registo: {username}", body_html)
 
 
 @main.route('/login', methods=['GET', 'POST'])
@@ -227,9 +223,9 @@ def _send_registration_approved_email(recipient_email, username):
     body_html = f"""
     <p>A conta do utilizador <strong>{username}</strong>{email_info} foi <strong>aprovada</strong>.</p>
     <p>O utilizador já pode autenticar-se no sistema com as suas credenciais.</p>
-    <p style="color:#888;font-size:0.85em;">KairoSyn SAD — confirmação de aprovação</p>
+    <p style="color:#888;font-size:0.85em;">KairoSyn SAD, confirmação de aprovação</p>
     """
-    _send_email_async(admin, f"KairoSyn SAD — Conta aprovada: {username}", body_html)
+    _send_email_async(admin, f"KairoSyn SAD, Conta aprovada: {username}", body_html)
 
 
 def _send_approval_reactivation_email(recipient_email, username):
@@ -240,9 +236,9 @@ def _send_approval_reactivation_email(recipient_email, username):
     body_html = f"""
     <p>A conta do utilizador <strong>{username}</strong>{email_info} foi <strong>reativada</strong>.</p>
     <p>O utilizador já pode aceder ao sistema.</p>
-    <p style="color:#888;font-size:0.85em;">KairoSyn SAD — confirmação de reativação</p>
+    <p style="color:#888;font-size:0.85em;">KairoSyn SAD, confirmação de reativação</p>
     """
-    _send_email_async(admin, f"KairoSyn SAD — Conta reativada: {username}", body_html)
+    _send_email_async(admin, f"KairoSyn SAD, Conta reativada: {username}", body_html)
 
 
 def _send_rejection_email(recipient_email, username):
@@ -252,9 +248,9 @@ def _send_rejection_email(recipient_email, username):
     email_info = f" ({recipient_email})" if recipient_email and '@' in recipient_email else ""
     body_html = f"""
     <p>O pedido de acesso do utilizador <strong>{username}</strong>{email_info} foi <strong>rejeitado</strong>.</p>
-    <p style="color:#888;font-size:0.85em;">KairoSyn SAD — confirmação de rejeição</p>
+    <p style="color:#888;font-size:0.85em;">KairoSyn SAD, confirmação de rejeição</p>
     """
-    _send_email_async(admin, f"KairoSyn SAD — Pedido rejeitado: {username}", body_html)
+    _send_email_async(admin, f"KairoSyn SAD, Pedido rejeitado: {username}", body_html)
 
 
 def _send_reactivation_email(user, message, contact_channel):
@@ -265,7 +261,7 @@ def _send_reactivation_email(user, message, contact_channel):
     gerir_url = f"{base_url}{url_for('main.gerirusers')}"
 
     body_html = f"""
-    <h2>KairoSyn SAD — Pedido de Reativação de Conta</h2>
+    <h2>KairoSyn SAD, Pedido de Reativação de Conta</h2>
     <p>O utilizador abaixo solicitou a reativação da sua conta inativada:</p>
     <ul>
         <li><strong>Username:</strong> {user.username}</li>
@@ -278,10 +274,10 @@ def _send_reactivation_email(user, message, contact_channel):
         Gerir Utilizadores
     </a></p>
     """
-    _send_email_async(admin, f"KairoSyn SAD — Pedido de reativação: {user.username}", body_html)
+    _send_email_async(admin, f"KairoSyn SAD, Pedido de reativação: {user.username}", body_html)
 
 
-# ── Admin — aprovação de registos ─────────────────────────────────────────────
+# ── Admin, aprovação de registos ─────────────────────────────────────────────
 
 @main.route('/admin/approve/<token>', methods=['GET', 'POST'])
 def admin_approve(token):
@@ -430,7 +426,6 @@ def listaprojetos():
         d = ProjectDecision.query.filter_by(projeto_id=p.id).order_by(ProjectDecision.created_at.desc()).first()
         if d:
             latest_decisions[p.id] = d
-        # Count all decisions across all versions with same uuid
         version_ids = [v.id for v in Projeto.query.filter_by(projeto_uuid=p.projeto_uuid).all()]
         decision_counts[p.id] = ProjectDecision.query.filter(ProjectDecision.projeto_id.in_(version_ids)).count()
 
@@ -589,9 +584,6 @@ def diagnostico():
             for dim in context_data
         }
 
-        # Stage 1 = context diagnosis only. The organisers AdPO/AsPO, the
-        # suggested approach and the MCDM engine choice are Stage 2
-        # responsibilities — computed/confirmed on entry to etapa2, not here.
         projeto_id_raw = request.form.get('projeto_id')
         projeto_id = int(projeto_id_raw) if projeto_id_raw else None
 
@@ -625,17 +617,13 @@ def diagnostico():
                            prev_decision=prev_decision)
 
 
-# ── Etapa 2 — Abordagem ───────────────────────────────────────────────────────
+# ── Etapa 2, Abordagem ───────────────────────────────────────────────────────
 
 @main.route("/etapa2/<int:id>", methods=["GET", "POST"])
 @login_required
 def etapa2(id):
     decision = ProjectDecision.query.get_or_404(id)
 
-    # Stage 2 responsibility: compute the organisers AdPO/AsPO and resolve the
-    # suggested approach on first entry (Stage 1 produces only the contextual
-    # diagnosis). Computed once — a later revisit must not clobber an approach
-    # the user has meanwhile confirmed/overridden.
     if decision.agpi_score is None or decision.aspi_score is None:
         agpi, aspi = compute_indices(decision.context_data or {})
         decision.agpi_score = agpi
@@ -659,7 +647,7 @@ def etapa2(id):
         action = request.form.get('action', 'CONFIRM_APPROACH')
         previous = decision.current_stage
 
-        decision.reentry_cause = None  # re-entry/reassessment tratado — causa preservada na history
+        decision.reentry_cause = None
         _log_transition(decision, previous, 'stage_3_fit_m', 'CONFIRM_APPROACH')
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
@@ -667,7 +655,7 @@ def etapa2(id):
     return render_template("etapa2.html", decision=decision)
 
 
-# ── Etapa 3 — Fit_M ───────────────────────────────────────────────────────────
+# ── Etapa 3, Fit_M ───────────────────────────────────────────────────────────
 
 @main.route("/etapa3/<int:id>", methods=["GET", "POST"])
 @login_required
@@ -690,9 +678,6 @@ def etapa3(id):
             decision.selected_methodology_id = meth.id
             decision.selected_methodology = meth.name
 
-            # Composite envelope: optional non-competing components (overlays,
-            # norms, complementary methods) — accepted only with an explicit
-            # justification and only if declared compatible with the primary.
             components = []
             dropped = 0
             for cid in request.form.getlist('component_ids'):
@@ -721,7 +706,6 @@ def etapa3(id):
 
         flash("Selecione uma metodologia antes de continuar.", "warning")
 
-    # GET — run Fit_M
     decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
     agpi = decision.agpi_score or 2.0
     aspi = decision.aspi_score or 2.0
@@ -747,11 +731,6 @@ def etapa3(id):
 
     meb_total = MethodologyEvidenceBase.query.count()
 
-    # Sankey data — funil de admissibilidade Level 1, ramificado por causa de
-    # exclusão (auditoria), com os sobreviventes a fluir para o ranking MCDM.
-    # Substitui um Sankey anterior sem funil real (Level 2 não filtra nada, só
-    # ordena quem já passou o Level 1 — a antiga ligação intermédia tinha
-    # sempre o mesmo valor dos dois lados).
     cause_counts = {}
     for e in meb_exclusions:
         cause_counts[e["cause"]] = cause_counts.get(e["cause"], 0) + 1
@@ -767,8 +746,6 @@ def etapa3(id):
 
     sankey_data = {"nodes": sankey_nodes, "links": sankey_links}
 
-    # Opções de envelope composto: para cada candidato ranqueado, os componentes
-    # (overlays/normas/métodos complementares) que declaram compatibilidade com ele
     by_id = {m.id: m for m, _ in viable}
     envelope_options = {
         str(item["id"]): [
@@ -785,14 +762,13 @@ def etapa3(id):
                            sankey_data=json.dumps(sankey_data))
 
 
-# ── Etapa 4 — Fit_T ───────────────────────────────────────────────────────────
+# ── Etapa 4, Fit_T ───────────────────────────────────────────────────────────
 
 @main.route("/etapa4/<int:id>", methods=["GET", "POST"])
 @login_required
 def etapa4(id):
     decision = ProjectDecision.query.get_or_404(id)
 
-    # Resolve common data (needed for both GET and CONFIRM_TOOLS POST)
     selected_meth = None
     if decision.selected_methodology_id:
         selected_meth = MethodologyEvidenceBase.query.get(decision.selected_methodology_id)
@@ -803,9 +779,6 @@ def etapa4(id):
 
     decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
 
-    # Envelope metodológico completo (primário + componentes justificados) —
-    # a admissibilidade de ferramentas em Level A considera o envelope inteiro,
-    # não só o primário (ver kairosynlogic.run_fit_t_level_a).
     envelope_codes = [selected_meth.code] + [
         c["code"] for c in (decision.methodological_envelope or {}).get("components", [])
     ]
@@ -826,7 +799,6 @@ def etapa4(id):
             db.session.commit()
             return redirect(url_for('main.etapa3', id=id))
 
-        # CONFIRM_TOOLS — re-run ranking, read user's selections, save portfolio
         viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
         decision.teb_exclusions = teb_exclusions
         decision.capability_map = build_capability_map(viable_tools)
@@ -848,7 +820,6 @@ def etapa4(id):
         flash("Diagnóstico KairoSyn concluído com sucesso!", "success")
         return redirect(url_for('main.workflow', id=id))
 
-    # GET — run Fit_T and present options
     viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
     decision.teb_exclusions = teb_exclusions
     capability_map = build_capability_map(viable_tools)
@@ -892,14 +863,6 @@ _REASSESS_TARGETS = {
 @main.route("/decision/<int:id>/reassess", methods=["POST"])
 @login_required
 def reassess_decision(id):
-    """
-    REASSESSMENT a partir de Concluído: origina uma NOVA execução versionada
-    que entra diretamente no Stage adequado (Etapa 2 ou Etapa 3), preservando
-    a decisão concluída como registo imutável. O estado Completed não torna a
-    decisão irreversível — mas a reavaliação nunca reabre o registo original:
-    a linhagem fica gravada na transition_history de ambas as decisões
-    (source_decision_id / spawned_decision_id).
-    """
     origin = ProjectDecision.query.get_or_404(id)
     target = request.form.get('target')
 
@@ -920,7 +883,6 @@ def reassess_decision(id):
         projeto_id=origin.projeto_id,
         questionnaire_version=origin.questionnaire_version,
         mcdm_engine=origin.mcdm_engine,
-        # Outputs de Stage 1 transitam — o diagnóstico contextual mantém-se
         context_data=dict(origin.context_data or {}),
         evidence_notes=dict(origin.evidence_notes or {}),
         current_stage=target,
@@ -937,9 +899,6 @@ def reassess_decision(id):
         }],
     )
 
-    # Entrada direta na Etapa 3 exige os outputs de Stage 2 já resolvidos;
-    # entrada na Etapa 2 deixa os organisers a None para serem recalculados
-    # (responsabilidade de Stage 2).
     if target == 'stage_3_fit_m':
         new_decision.agpi_score = origin.agpi_score
         new_decision.aspi_score = origin.aspi_score
@@ -947,10 +906,8 @@ def reassess_decision(id):
         new_decision.decision_control_register = dict(origin.decision_control_register or {})
 
     db.session.add(new_decision)
-    db.session.flush()  # obtém o id da nova decisão para a linhagem
+    db.session.flush()
 
-    # Anotar a linhagem na decisão de origem (audit log; o current_stage
-    # permanece 'stage_complete' — o registo concluído não é reaberto)
     origin_history = list(origin.transition_history or [])
     origin_history.append({
         "from": "stage_complete",
@@ -984,7 +941,7 @@ def workflow(id):
                 decision.methodology_ranking,
             )
         except Exception:
-            pass  # degradação graciosa — não bloqueia o workflow
+            pass
 
     return render_template("workflow.html", decision=decision, projeto=projeto,
                            sensitivity=sensitivity)
@@ -1137,7 +1094,7 @@ def export_decision_pdf(id):
     return response
 
 
-# ── Admin — MCDM Engine ───────────────────────────────────────────────────────
+# ── Admin, MCDM Engine ───────────────────────────────────────────────────────
 
 @main.route('/admin/gerir-mcdm', methods=['GET', 'POST'])
 @login_required
@@ -1174,7 +1131,6 @@ def gerir_mcdm():
                 if abs(total - 1.0) > 0.01:
                     flash(f'A soma dos pesos {context} deve ser 1.0 (atual: {total:.4f}).')
                     return redirect(url_for('main.gerir_mcdm') + '#tab-pesos')
-                # SCD Type-2: inactivate current, create new version
                 now = datetime.utcnow()
                 current.is_active = False
                 current.inactive_date = now
@@ -1244,20 +1200,18 @@ def restaurar_pesos(id):
         return redirect(url_for('main.historico_pesos', context=target.context))
 
     now = datetime.utcnow()
-    # Inactivate current active version
     current = MCDMWeights.query.filter_by(context=target.context, is_active=True).first()
     if current:
         current.is_active = False
         current.inactive_date = now
 
-    # Activate target version
     target.is_active = True
     target.active_date = now
     target.inactive_date = None
     target.updated_at = now
     target.updated_by = current_user.username
     db.session.commit()
-    flash(f'Versão de {target.active_date.strftime("%d/%m/%Y %H:%M") if target.active_date else "—"} restaurada como ativa.')
+    flash(f'Versão de {target.active_date.strftime("%d/%m/%Y %H:%M") if target.active_date else "-"} restaurada como ativa.')
     return redirect(url_for('main.historico_pesos', context=target.context))
 
 
@@ -1324,7 +1278,6 @@ def meb_editar(id):
     meb = MethodologyEvidenceBase.query.get_or_404(id)
     if request.method == 'POST':
         now = datetime.utcnow()
-        # SCD Type-2: archive current version, create new
         meb.is_active = False
         meb.inactive_date = now
         new_meb = MethodologyEvidenceBase(
@@ -1453,7 +1406,6 @@ def teb_editar(id):
     all_mebs = MethodologyEvidenceBase.query.filter_by(is_active=True).order_by(MethodologyEvidenceBase.code).all()
     if request.method == 'POST':
         now = datetime.utcnow()
-        # SCD Type-2: archive current version, create new
         teb.is_active = False
         teb.inactive_date = now
         new_teb = ToolEvidenceBase(
