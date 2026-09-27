@@ -102,6 +102,8 @@ flowchart TD
             </details>
             {% endif %}
 
+            {% include "_weights_panel.html" %}
+
             <!-- Recomendação KairoSyn -->
             {% if ranking %}
             {% set top = ranking[0] %}
@@ -179,6 +181,7 @@ flowchart TD
             <!-- Ranking, mobile cards + desktop table -->
             <form method="POST">
 
+                {% if ranking %}
                 <!-- Mobile cards (sm:hidden) -->
                 <div class="sm:hidden space-y-3">
                     {% for item in ranking %}
@@ -288,6 +291,7 @@ flowchart TD
                         </tbody>
                     </table>
                 </div>
+                {% endif %}
 
                 <input type="hidden" name="action" value="CONFIRM_METHODOLOGY">
                 <input type="hidden" name="selected_methodology_id" id="env-selected-id" value="">

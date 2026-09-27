@@ -18,7 +18,8 @@ from .services.kairosynlogic import (
     run_fit_m_level1, run_fit_m_level2,
     run_fit_t_level_a, run_fit_t_level_b,
     run_sensitivity_analysis, get_envelope_component_candidates,
-    build_capability_map,
+    build_capability_map, get_weights_preset, weights_to_points,
+    points_to_weights, criteria_labels,
 )
 
 main = Blueprint('main', __name__)
@@ -74,6 +75,65 @@ def _log_transition(decision, previous, new_state, action, cause=None):
     history.append(entry)
     decision.transition_history = history
     decision.current_stage = new_state
+
+
+_WEIGHTS_FIELD = {'MEB': 'meb_weights', 'TEB': 'teb_weights'}
+_WEIGHTS_STAGE_LABEL = {'MEB': 'Etapa 3 (C1-C7)', 'TEB': 'Etapa 4 (CD1-CD8)'}
+
+
+def _decision_weights(decision, context):
+    """_decision_weights(decision, 'MEB') -> [0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12] | None"""
+    record = getattr(decision, _WEIGHTS_FIELD[context])
+    return record.get('values') if record else None
+
+
+def _weights_panel(decision, context):
+    record = getattr(decision, _WEIGHTS_FIELD[context])
+    if record:
+        values, source = record['values'], 'decision'
+    else:
+        values, _ = get_weights_preset(context)
+        source = 'preset'
+    return {
+        "stage_label": _WEIGHTS_STAGE_LABEL[context],
+        "criteria": criteria_labels(context),
+        "points": weights_to_points(values),
+        "confirmed": bool(record),
+        "confirmed_by": record.get('confirmed_by') if record else None,
+        "confirmed_at": record.get('confirmed_at', '')[:16].replace('T', ' ') if record else None,
+        "source": source,
+    }
+
+
+def _confirm_weights(decision, context):
+    """_confirm_weights(decision, 'MEB') com w_0..w_6 = 12,12,18,18,15,13,12 -> True"""
+    n = len(criteria_labels(context))
+    try:
+        points = [float(request.form.get(f'w_{i}', '')) for i in range(n)]
+    except ValueError:
+        return False
+    values = points_to_weights(points, n)
+    if values is None:
+        return False
+    _, preset_id = get_weights_preset(context)
+    now = datetime.utcnow().isoformat()
+    setattr(decision, _WEIGHTS_FIELD[context], {
+        "values": values,
+        "preset_id": preset_id,
+        "confirmed_by": current_user.username,
+        "confirmed_at": now,
+    })
+    history = list(decision.transition_history or [])
+    history.append({
+        "from": decision.current_stage,
+        "to": decision.current_stage,
+        "action": f"CONFIRM_WEIGHTS_{context}",
+        "timestamp": now,
+        "user": current_user.username,
+        "weights": values,
+    })
+    decision.transition_history = history
+    return True
 
 
 # ── Autenticação ──────────────────────────────────────────────────────────────
@@ -673,6 +733,18 @@ def etapa3(id):
             db.session.commit()
             return redirect(url_for('main.etapa2', id=id))
 
+        if action == 'CONFIRM_WEIGHTS':
+            if _confirm_weights(decision, 'MEB'):
+                db.session.commit()
+                flash("Pesos C1-C7 confirmados para esta decisão.", "success")
+            else:
+                flash("Pesos inválidos: use valores não negativos com soma superior a 0.", "warning")
+            return redirect(url_for('main.etapa3', id=id))
+
+        if selected_id and not decision.meb_weights:
+            flash("Confirme os pesos C1-C7 antes de selecionar a metodologia.", "warning")
+            return redirect(url_for('main.etapa3', id=id))
+
         if selected_id:
             meth = MethodologyEvidenceBase.query.get(int(selected_id))
             decision.selected_methodology_id = meth.id
@@ -721,12 +793,13 @@ def etapa3(id):
         flash("Nenhuma metodologia viável encontrada. Reveja a abordagem.", "warning")
         return redirect(url_for('main.etapa2', id=id))
 
-    engine = decision.mcdm_engine or 'MAVT'
-    ranking = run_fit_m_level2(viable, engine)
-
-    decision.meb_filtered = [item["id"] for item in ranking]
     decision.meb_exclusions = meb_exclusions
-    decision.methodology_ranking = ranking
+    ranking = []
+    meb_weights = _decision_weights(decision, 'MEB')
+    if meb_weights:
+        ranking = run_fit_m_level2(viable, decision.mcdm_engine or 'MAVT', weights=meb_weights)
+        decision.meb_filtered = [item["id"] for item in ranking]
+        decision.methodology_ranking = ranking
     db.session.commit()
 
     meb_total = MethodologyEvidenceBase.query.count()
@@ -741,7 +814,7 @@ def etapa3(id):
         sankey_nodes.append({"name": f"{cause.replace('_', ' ').capitalize()} ({count})"})
         sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": count})
 
-    sankey_nodes.append({"name": f"Ranking MCDM ({len(ranking)})"})
+    sankey_nodes.append({"name": f"Ranking MCDM ({len(viable)})"})
     sankey_links.append({"source": 0, "target": len(sankey_nodes) - 1, "value": max(len(viable), 1)})
 
     sankey_data = {"nodes": sankey_nodes, "links": sankey_links}
@@ -759,7 +832,8 @@ def etapa3(id):
                            meb_total=meb_total, viable_count=len(viable),
                            meb_exclusions=meb_exclusions,
                            envelope_options=envelope_options,
-                           sankey_data=json.dumps(sankey_data))
+                           sankey_data=json.dumps(sankey_data),
+                           wp=_weights_panel(decision, 'MEB'))
 
 
 # ── Etapa 4, Fit_T ───────────────────────────────────────────────────────────
@@ -799,10 +873,23 @@ def etapa4(id):
             db.session.commit()
             return redirect(url_for('main.etapa3', id=id))
 
+        if action == 'CONFIRM_WEIGHTS':
+            if _confirm_weights(decision, 'TEB'):
+                db.session.commit()
+                flash("Pesos CD1-CD8 confirmados para esta decisão.", "success")
+            else:
+                flash("Pesos inválidos: use valores não negativos com soma superior a 0.", "warning")
+            return redirect(url_for('main.etapa4', id=id))
+
+        teb_weights = _decision_weights(decision, 'TEB')
+        if not teb_weights:
+            flash("Confirme os pesos CD1-CD8 antes de concluir.", "warning")
+            return redirect(url_for('main.etapa4', id=id))
+
         viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
         decision.teb_exclusions = teb_exclusions
         decision.capability_map = build_capability_map(viable_tools)
-        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
+        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
         portfolio = []
         seen_codes = set()
         for cat, tools in ranked_by_category.items():
@@ -832,7 +919,10 @@ def etapa4(id):
         flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
         return redirect(url_for('main.etapa3', id=id))
 
-    ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT')
+    ranked_by_category = {}
+    teb_weights = _decision_weights(decision, 'TEB')
+    if teb_weights:
+        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
     decision.teb_filtered = [t.id for t in viable_tools]
     db.session.commit()
 
@@ -841,7 +931,8 @@ def etapa4(id):
                            selected_meth=selected_meth,
                            teb_exclusions=teb_exclusions,
                            capability_map=capability_map,
-                           viable_count=len(viable_tools))
+                           viable_count=len(viable_tools),
+                           wp=_weights_panel(decision, 'TEB'))
 
 
 # ── Reassessment pós-conclusão (nova execução clonada) ───────────────────────
@@ -939,6 +1030,7 @@ def workflow(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
+                weights=_decision_weights(decision, 'MEB'),
             )
         except Exception:
             pass
@@ -1005,6 +1097,7 @@ def export_decision(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
+                weights=_decision_weights(decision, 'MEB'),
             )
         except Exception:
             pass
@@ -1028,6 +1121,7 @@ def export_decision(id):
         # Etapa 3
         "meb_filtered": decision.meb_filtered,
         "meb_exclusions": decision.meb_exclusions,
+        "meb_weights": decision.meb_weights,
         "methodology_ranking": decision.methodology_ranking,
         "selected_methodology": decision.selected_methodology,
         "methodological_envelope": decision.methodological_envelope,
@@ -1036,6 +1130,7 @@ def export_decision(id):
         # Etapa 4
         "teb_filtered": decision.teb_filtered,
         "teb_exclusions": decision.teb_exclusions,
+        "teb_weights": decision.teb_weights,
         "capability_map": decision.capability_map,
         "tool_portfolio": decision.tool_portfolio,
         # Auditoria
@@ -1050,9 +1145,9 @@ def export_decision(id):
                        "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
-                       "meb_filtered", "meb_exclusions", "methodology_ranking",
+                       "meb_filtered", "meb_exclusions", "meb_weights", "methodology_ranking",
                        "methodological_envelope", "sensitivity_analysis",
-                       "teb_filtered", "teb_exclusions", "capability_map", "tool_portfolio", "transition_history"]
+                       "teb_filtered", "teb_exclusions", "teb_weights", "capability_map", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
             json.dumps(payload[f], ensure_ascii=False) if payload[f] is not None else ""
@@ -1082,6 +1177,7 @@ def export_decision_pdf(id):
         try:
             sensitivity = run_sensitivity_analysis(
                 decision.methodology_ranking,
+                weights=_decision_weights(decision, 'MEB'),
             )
         except Exception:
             pass

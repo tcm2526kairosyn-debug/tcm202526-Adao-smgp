@@ -39,7 +39,7 @@ O **KairoSyn SAD** responde a este problema operacionalizando a Framework KairoS
 | RF07 | **Decision Log** | Gravação persistente em PostgreSQL de todas as etapas, transições, parâmetros e rankings de cada decisão. Associa decisões a projetos com SCD Tipo-2. |
 | RF08 | **Exportação** | Exportação do *Decision Log* em JSON, CSV e PDF por decisão, para uso em relatórios e revisão por pares. |
 | RF09 | **Re-entry e Máquina de Estados** | O sistema implementa re-entry controlado: se nenhuma metodologia ou ferramenta for viável, as transições retroativas são registadas com a causa (`governance_infeasibility`, `evidence_inconsistency`). |
-| RF10 | **Gestão da Evidence Base** | Interface administrativa para criar, editar e desativar metodologias (MEB) e ferramentas (TEB) com histórico SCD Tipo-2 e ajuste dos pesos MCDM. |
+| RF10 | **Gestão da Evidence Base** | Interface administrativa para criar, editar e desativar metodologias (MEB) e ferramentas (TEB) com histórico SCD Tipo-2 e gestão de presets de pesos MCDM (valores de referência, não o vetor usado em cada decisão). |
 | RF11 | **Gestão de Utilizadores** | Registo com aprovação manual por administrador (via email Resend), inativação e reativação de contas, controlo de acessos por role (`user`, `admin`, `inativado`). |
 | RF12 | **Visualizações de Apoio à Decisão** | Gráficos interativos (Chart.js e D3.js) em cada etapa: mapa de decisão AdPO×AsPO, radar MCDM de metodologias, bar chart do portfólio, diagrama Sankey e perfil 8D. |
 
@@ -439,7 +439,7 @@ Determina **quem pode ser comparado** em Level 2. Uma pontuação elevada noutro
 
 #### `run_fit_m_level2(...)`: Ranking MCDM Level 2, compensatória (Etapa 3)
 
-Constrói a matriz de avaliação `X_M` apenas com os **7 critérios C1-C7** (`score_c1_responsiveness` … `score_c7_distributed_support`), aplica o motor MCDM com pesos explícitos de `MCDMWeights('MEB')`. **Sem** reponderação automática por AdPO/AsPO, **sem** bónus de tier, **sem** penalização compensatória de thresholds, estes eram os canais que causavam a circularidade identificada na nota técnica de alinhamento (o mesmo sinal contextual a entrar várias vezes no ranking).
+Constrói a matriz de avaliação `X_M` apenas com os **7 critérios C1-C7** (`score_c1_responsiveness` … `score_c7_distributed_support`), aplica o motor MCDM com o vetor de pesos C1-C7 elicitado e confirmado pelo gestor de projeto nessa decisão (`ProjectDecision.meb_weights`), pré-preenchido a partir do preset `MCDMWeights('MEB')`. O ranking só é calculado depois da confirmação. **Sem** reponderação automática por AdPO/AsPO, **sem** bónus de tier, **sem** penalização compensatória de thresholds, estes eram os canais que causavam a circularidade identificada na nota técnica de alinhamento (o mesmo sinal contextual a entrar várias vezes no ranking).
 
 O resultado inclui, por metodologia: `score`, `posture_alignment_tier` (exact/adjacent/distant, auditoria), `misfit` (derivado da tier, auditoria, não parte do score), `candidate_type`, `candidate_role` e o dicionário `criteria` com os 7 valores C1-C7 (para visualização em radar).
 
@@ -451,7 +451,7 @@ O resultado inclui, por metodologia: `score`, `posture_alignment_tier` (exact/ad
 
 #### `run_sensitivity_analysis(ranking, n_mc=500)`: Análise de Sensibilidade MCDM
 
-Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variações nos pesos dos critérios. Devolve `None` se o ranking tiver menos de 2 alternativas ou se as pontuações por critério não estiverem disponíveis.
+Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variações nos pesos dos critérios, partindo do vetor confirmado na própria decisão (`meb_weights`). Devolve `None` se o ranking tiver menos de 2 alternativas ou se as pontuações por critério não estiverem disponíveis.
 
 **Dois mecanismos complementares:**
 
@@ -565,7 +565,7 @@ Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de
 
 A seleção **não é greedy**: após o ranking MCDM (Level B), o sistema devolve o top-N (por omissão 3) ranqueado de cada categoria e o utilizador escolhe a ferramenta final por categoria na Etapa 4.
 
-**MCDMWeights**, pesos base para MEB `[0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12]` (C1-C7) e TEB `[0.15, 0.12, 0.13, 0.10, 0.10, 0.15, 0.15, 0.10]` (CD1-CD8), explícitos, não reponderados por AdPO/AsPO, editáveis em runtime pelo administrador sem redeployment.
+**MCDMWeights**, pesos base para MEB `[0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12]` (C1-C7) e TEB `[0.15, 0.12, 0.13, 0.10, 0.10, 0.15, 0.15, 0.10]` (CD1-CD8), explícitos, não reponderados por AdPO/AsPO. Funcionam como **presets**, editáveis pelo administrador: servem para pré-preencher a elicitação, mas o vetor efetivamente usado é confirmado pelo gestor de projeto em cada `ProjectDecision`, separadamente para a Etapa 3 (`meb_weights`) e a Etapa 4 (`teb_weights`), com utilizador, data e preset de referência. Cada confirmação fica também registada no `transition_history` (`CONFIRM_WEIGHTS_MEB` / `CONFIRM_WEIGHTS_TEB`).
 
 O `run_seeds()` é chamado automaticamente no arranque da aplicação, tornando o sistema imediatamente funcional após `docker compose up`.
 

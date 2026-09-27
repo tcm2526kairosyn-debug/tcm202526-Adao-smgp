@@ -27,6 +27,56 @@ def _load_weights(context: str, fallback: np.ndarray) -> np.ndarray:
 MEB_WEIGHTS = _MEB_WEIGHTS_DEFAULT
 TEB_WEIGHTS = _TEB_WEIGHTS_DEFAULT
 
+_MEB_CRITERIA_LABELS = [
+    ('C1', 'Responsiveness'), ('C2', 'Alignment'), ('C3', 'Traceability'), ('C4', 'Compliance'),
+    ('C5', 'Pace/Criticality'), ('C6', 'Integration Risk'), ('C7', 'Distributed Support'),
+]
+
+
+def get_weights_preset(context: str) -> tuple[list[float], int | None]:
+    """get_weights_preset('MEB') -> ([0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12], 7)"""
+    fallback = _MEB_WEIGHTS_DEFAULT if context == 'MEB' else _TEB_WEIGHTS_DEFAULT
+    try:
+        from ..models import MCDMWeights
+        row = MCDMWeights.query.filter_by(context=context, is_active=True).first()
+        if row and row.weights and len(row.weights) == len(fallback):
+            return [float(w) for w in row.weights], row.id
+    except Exception:
+        pass
+    return fallback.tolist(), None
+
+
+def weights_to_points(weights: list[float]) -> list[int]:
+    """weights_to_points([0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12]) -> [12, 12, 18, 18, 15, 13, 12]"""
+    total = sum(weights) or 1.0
+    raw = [w / total * 100 for w in weights]
+    points = [int(r) for r in raw]
+    order = sorted(range(len(raw)), key=lambda i: raw[i] - points[i], reverse=True)
+    for i in order[:100 - sum(points)]:
+        points[i] += 1
+    return points
+
+
+def points_to_weights(points: list[float], n: int) -> list[float] | None:
+    """points_to_weights([12, 12, 18, 18, 15, 13, 12], 7) -> [0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12]"""
+    if len(points) != n or any(p < 0 for p in points) or sum(points) <= 0:
+        return None
+    total = float(sum(points))
+    return [round(p / total, 4) for p in points]
+
+
+def criteria_labels(context: str) -> list[dict]:
+    """criteria_labels('TEB')[0] -> {'code': 'CD1', 'label': 'Evidence & Traceability'}"""
+    if context == 'MEB':
+        return [{"code": c, "label": l} for c, l in _MEB_CRITERIA_LABELS]
+    return [{"code": c, "label": l} for _, c, l in _CD_LABELS]
+
+
+def _resolve_weights(weights, context: str, fallback: np.ndarray) -> np.ndarray:
+    if weights is not None and len(weights) == len(fallback):
+        return np.array(weights, dtype=float)
+    return _load_weights(context, fallback)
+
 
 # ── Etapa 2 ─────────────────────────────────────────────────────────────────
 
@@ -199,16 +249,16 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
     return viable, exclusions
 
 
-def run_fit_m_level2(viable: list, engine_name: str = 'MAVT') -> list:
+def run_fit_m_level2(viable: list, engine_name: str = 'MAVT', weights: list = None) -> list:
     """
-    run_fit_m_level2([(PRINCE2,'exact'), (PM2,'exact')])
+    run_fit_m_level2([(PRINCE2,'exact'), (PM2,'exact')], weights=[0.12,0.12,0.18,0.18,0.15,0.13,0.12])
     -> [{'code':'PRINCE2','score':0.7325,...}, {'code':'PM2','score':0.7025,...}]
     """
     if not viable:
         return []
 
     X = np.array([[getattr(m, c) or 0.5 for c in _MEB_CRITERIA] for m, _ in viable])
-    weights = _load_weights('MEB', _MEB_WEIGHTS_DEFAULT)
+    weights = _resolve_weights(weights, 'MEB', _MEB_WEIGHTS_DEFAULT)
 
     engine = MCDMEngine(method=engine_name)
     ranked_indices = engine.rank(X, weights)
@@ -340,7 +390,8 @@ def build_capability_map(viable_tools: list) -> list:
     return capability_map
 
 
-def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int = 3) -> dict:
+def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int = 3,
+                      weights: list = None) -> dict:
     """
     run_fit_t_level_b(viable_tools, top_n=2)
     -> {'Documentation':['CONFLUENCE'], 'Planning':['MS_PROJECT','PROJECTLIBRE'], 'Communication':['TEAMS','SLACK']}
@@ -351,7 +402,7 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
     X = np.array([[getattr(t, c) or 0.5 for c in _TEB_CRITERIA] for t in viable_tools])
 
     engine = MCDMEngine(method=engine_name)
-    ranked = engine.rank(X, _load_weights('TEB', _TEB_WEIGHTS_DEFAULT))
+    ranked = engine.rank(X, _resolve_weights(weights, 'TEB', _TEB_WEIGHTS_DEFAULT))
 
     all_scored = []
     for idx, score in ranked:
@@ -387,7 +438,7 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
 
 # ── Sensitivity Analysis ──────────────────────────────────────────────────────
 
-def run_sensitivity_analysis(ranking: list, n_mc: int = 500) -> dict | None:
+def run_sensitivity_analysis(ranking: list, n_mc: int = 500, weights: list = None) -> dict | None:
     """
     run_sensitivity_analysis(ranking_B, n_mc=500)
     -> {'top_name':'PRINCE2 Agile', 'robustness_pct':100.0, 'stable':True,
@@ -406,7 +457,7 @@ def run_sensitivity_analysis(ranking: list, n_mc: int = 500) -> dict | None:
 
     X = np.array([[m['criteria'].get(c, 0.5) for c in CRITERIA] for m in ranking])
 
-    w0 = _load_weights('MEB', _MEB_WEIGHTS_DEFAULT)
+    w0 = _resolve_weights(weights, 'MEB', _MEB_WEIGHTS_DEFAULT)
 
     def _top(w: np.ndarray) -> int:
         return MCDMEngine(method='MAVT').rank(X, w)[0][0]

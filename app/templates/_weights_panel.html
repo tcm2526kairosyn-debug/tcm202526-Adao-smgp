@@ -1,0 +1,53 @@
+<!-- Elicitação dos pesos MAVT desta execução -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 {% if wp.confirmed %}border-green-500{% else %}border-amber-500{% endif %}">
+    <details {% if not wp.confirmed %}open{% endif %}>
+        <summary class="cursor-pointer select-none flex flex-wrap items-center gap-2">
+            <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Pesos MAVT, {{ wp.stage_label }}</span>
+            {% if wp.confirmed %}
+            <span class="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold uppercase">Confirmados</span>
+            <span class="text-[10px] text-gray-400">por {{ wp.confirmed_by }} em {{ wp.confirmed_at }}</span>
+            {% else %}
+            <span class="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold uppercase">Por confirmar</span>
+            {% endif %}
+        </summary>
+
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-3 mb-4">
+            Distribua 100 pontos pelos critérios de acordo com as preferências desta execução.
+            Os valores iniciais vêm {% if wp.source == 'decision' %}dos pesos já confirmados nesta decisão{% else %}do preset ativo definido pelo administrador{% endif %}.
+            O ranking só é calculado depois de confirmar.
+        </p>
+
+        <form method="POST" id="weights-form">
+            <input type="hidden" name="action" value="CONFIRM_WEIGHTS">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                {% for c in wp.criteria %}
+                <label class="flex items-center justify-between gap-3 text-sm">
+                    <span class="text-gray-700 dark:text-gray-200"><span class="font-mono font-bold">{{ c.code }}</span> {{ c.label }}</span>
+                    <input type="number" name="w_{{ loop.index0 }}" min="0" max="100" step="1" required
+                           value="{{ wp.points[loop.index0] }}" oninput="updateWeightsSum()"
+                           class="w-20 px-2 py-1 text-right border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </label>
+                {% endfor %}
+            </div>
+            <div class="flex flex-wrap justify-between items-center gap-2 mt-4">
+                <p class="text-xs">Total: <span id="weights-sum" class="font-bold">0</span> / 100</p>
+                <button type="submit" id="weights-submit"
+                        class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold px-5 py-2 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    {% if wp.confirmed %}Atualizar pesos e recalcular{% else %}Confirmar pesos e calcular ranking{% endif %}
+                </button>
+            </div>
+        </form>
+    </details>
+</div>
+<script>
+function updateWeightsSum() {
+    const inputs = document.querySelectorAll('#weights-form input[type=number]');
+    let sum = 0;
+    inputs.forEach(i => { sum += Number(i.value) || 0; });
+    const el = document.getElementById('weights-sum');
+    el.textContent = sum;
+    el.className = 'font-bold ' + (sum === 100 ? 'text-green-600' : 'text-red-600');
+    document.getElementById('weights-submit').disabled = sum !== 100;
+}
+updateWeightsSum();
+</script>
