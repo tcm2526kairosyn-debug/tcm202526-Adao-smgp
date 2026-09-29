@@ -30,7 +30,7 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Código <span class="text-red-500">*</span>
-                        {% if meb %}<span class="ml-1 text-gray-400 font-normal">(identificador estável — não editável)</span>{% endif %}
+                        {% if meb %}<span class="ml-1 text-gray-400 font-normal">(identificador estável, não editável)</span>{% endif %}
                     </label>
                     {% if meb %}
                     <input type="hidden" name="code" value="{{ meb.code }}">
@@ -61,8 +61,8 @@
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tier</label>
                     <select name="tier"
                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="1" {% if not meb or meb.tier == 1 %}selected{% endif %}>1 — Principal</option>
-                        <option value="2" {% if meb and meb.tier == 2 %}selected{% endif %}>2 — Secundário</option>
+                        <option value="1" {% if not meb or meb.tier == 1 %}selected{% endif %}>1, Principal</option>
+                        <option value="2" {% if meb and meb.tier == 2 %}selected{% endif %}>2, Secundário</option>
                     </select>
                 </div>
                 <div class="sm:col-span-2">
@@ -97,7 +97,7 @@
                                value="{{ meb.posture_adpo_max if meb and meb.posture_adpo_max else 2 }}"
                                class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AdPO (Tabela 5 — nota de alinhamento)</p>
+                    <p class="text-xs text-gray-400 mt-1">Região de postura admissível em AdPO (Tabela 5, nota de alinhamento)</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Região AsPO (mín–máx, 1–4)</label>
@@ -124,14 +124,14 @@
                         </label>
                         {% endfor %}
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Level 1 approach_compatible — sem seleção, o candidato não é excluído por abordagem</p>
+                    <p class="text-xs text-gray-400 mt-1">Level 1 approach_compatible, sem seleção, o candidato não é excluído por abordagem</p>
                 </div>
                 <div class="flex flex-col gap-3 justify-center">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="requires_fixed_scope"
                                {% if meb and meb.requires_fixed_scope %}checked{% endif %}
                                class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
-                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer âmbito fixo (Acceptance threshold — exclusão binária em Level 1)</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Requer âmbito fixo (Acceptance threshold, exclusão binária em Level 1)</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="regulatory_compatible"
@@ -156,7 +156,7 @@
                                                       'domain_process_model', 'guidance_standard'] %}
                     <select name="candidate_type"
                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="">—</option>
+                        <option value="">-</option>
                         {% for opt in candidate_type_options %}
                         <option value="{{ opt }}" {% if meb and meb.candidate_type == opt %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
@@ -169,7 +169,7 @@
                                                       'reference_overlay', 'normative_overlay'] %}
                     <select name="candidate_role"
                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                        <option value="">—</option>
+                        <option value="">-</option>
                         {% for opt in candidate_role_options %}
                         <option value="{{ opt }}" {% if meb and meb.candidate_role == opt %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
@@ -182,14 +182,14 @@
                                class="w-4 h-4 text-slate-700 rounded border-gray-300 focus:ring-slate-400">
                         <span class="text-sm text-gray-600 dark:text-gray-300">
                             Elegível como envelope metodológico primário
-                            <span class="text-gray-400">— desmarcar para guias/normas/métodos complementares que não devem competir sozinhos pelo top-1 (Level 1)</span>
+                            <span class="text-gray-400">, desmarcar para guias/normas/métodos complementares que não devem competir sozinhos pelo top-1 (Level 1)</span>
                         </span>
                     </label>
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
                         Compatível como componente de envelope de
-                        <span class="text-gray-400 font-normal">— primários com os quais este candidato pode compor um envelope (nunca compete no MAVT)</span>
+                        <span class="text-gray-400 font-normal">, primários com os quais este candidato pode compor um envelope (nunca compete no MAVT)</span>
                     </label>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {% for pcode in primary_codes if not meb or pcode != meb.code %}
@@ -208,23 +208,23 @@
         <!-- Critérios C1-C7 (Stage 3 Level 2) -->
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
-                Critérios C1-C7 (0 – 1) — únicos critérios usados no MAVT de Level 2
+                Critérios C1-C7 (0 – 1), únicos critérios usados no MAVT de Level 2
             </h2>
             <div class="space-y-4">
                 {% set score_fields = [
-                    ('score_c1_responsiveness',    'C1 — Responsiveness',        'Cadência, controlo de WIP, absorção de mudança'),
-                    ('score_c2_alignment',         'C2 — Alignment',             'Alinhamento de stakeholders, discovery, sensemaking'),
-                    ('score_c3_traceability',      'C3 — Evidence Traceability', 'Profundidade de rastreabilidade, artefactos de auditoria'),
-                    ('score_c4_compliance',        'C4 — Compliance Readiness',  'Preparação normativa, gates formais'),
-                    ('score_c5_pace_criticality',  'C5 — Pace/Criticality',      'Ritmo sob escalonamento, assurance e risco'),
-                    ('score_c6_integration_risk',  'C6 — Integration Risk',      'Coevolução hw/sw, gestão de dependências'),
-                    ('score_c7_distributed_support','C7 — Distributed Support',  'Coordenação, escala, entrega distribuída')
+                    ('score_c1_responsiveness',    'C1: Responsiveness',        'Cadência, controlo de WIP, absorção de mudança'),
+                    ('score_c2_alignment',         'C2: Alignment',             'Alinhamento de stakeholders, discovery, sensemaking'),
+                    ('score_c3_traceability',      'C3: Evidence Traceability', 'Profundidade de rastreabilidade, artefactos de auditoria'),
+                    ('score_c4_compliance',        'C4: Compliance Readiness',  'Preparação normativa, gates formais'),
+                    ('score_c5_pace_criticality',  'C5: Pace/Criticality',      'Ritmo sob escalonamento, assurance e risco'),
+                    ('score_c6_integration_risk',  'C6: Integration Risk',      'Coevolução hw/sw, gestão de dependências'),
+                    ('score_c7_distributed_support','C7: Distributed Support',  'Coordenação, escala, entrega distribuída')
                 ] %}
                 {% for field, label, hint in score_fields %}
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                            {{ label }} <span class="text-gray-400 font-normal">— {{ hint }}</span>
+                            {{ label }} <span class="text-gray-400 font-normal">, {{ hint }}</span>
                         </label>
                         <span class="text-xs font-mono font-semibold text-slate-700" id="meb-score-val-{{ loop.index0 }}">
                             {{ "%.2f"|format(meb[field] if meb else 0.5) }}

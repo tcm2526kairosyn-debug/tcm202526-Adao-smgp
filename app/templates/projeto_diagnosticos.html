@@ -37,7 +37,7 @@
                     {% endif %}
                 {% else %}
                 <span class="px-4 py-2 bg-slate-100 text-slate-400 rounded-xl font-bold text-sm cursor-not-allowed border border-slate-200"
-                      title="Projeto concluído — não é possível iniciar novos diagnósticos">
+                      title="Projeto concluído, não é possível iniciar novos diagnósticos">
                     ↺ Rever diagnóstico
                 </span>
                 {% endif %}
@@ -96,7 +96,7 @@
                             {% endif %}
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            Iniciado em {{ d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else '—' }}
+                            Iniciado em {{ d.created_at.strftime('%d/%m/%Y %H:%M') if d.created_at else '-' }}
                         </p>
                     </div>
                 </div>

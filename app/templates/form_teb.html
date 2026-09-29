@@ -30,7 +30,7 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Código <span class="text-red-500">*</span>
-                        {% if teb %}<span class="ml-1 text-gray-400 font-normal">(identificador estável — não editável)</span>{% endif %}
+                        {% if teb %}<span class="ml-1 text-gray-400 font-normal">(identificador estável, não editável)</span>{% endif %}
                     </label>
                     {% if teb %}
                     <input type="hidden" name="code" value="{{ teb.code }}">
@@ -137,24 +137,24 @@
         <!-- Critérios CD1-CD8 (Stage 4 Level B) -->
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
-                Critérios CD1-CD8 (0 – 1) — únicos critérios usados no MAVT de Level B
+                Critérios CD1-CD8 (0 – 1), únicos critérios usados no MAVT de Level B
             </h2>
             <div class="space-y-4">
                 {% set score_fields = [
-                    ('contribution_cd1', 'CD1 — Evidence & Traceability',     'Profundidade de rastreabilidade e evidência'),
-                    ('contribution_cd2', 'CD2 — Verification/Review',        'Cadência de verificação e controlos de revisão'),
-                    ('contribution_cd3', 'CD3 — Iteration & Flow',           'Controlo de iteração e fluxo de trabalho'),
-                    ('contribution_cd4', 'CD4 — Discovery & Feedback',       'Capacidade de descoberta e feedback'),
-                    ('contribution_cd5', 'CD5 — Risk/Safety/Security',       'Rotinas de evidência de risco e segurança'),
-                    ('contribution_cd6', 'CD6 — Compliance & Audit',         'Preparação para conformidade e auditoria'),
-                    ('contribution_cd7', 'CD7 — Lifecycle Integration',      'Integração de ciclo de vida e automação de evidência'),
-                    ('contribution_cd8', 'CD8 — Dependency & Interface',     'Gestão de dependências e interfaces')
+                    ('contribution_cd1', 'CD1: Evidence & Traceability',     'Profundidade de rastreabilidade e evidência'),
+                    ('contribution_cd2', 'CD2: Verification/Review',        'Cadência de verificação e controlos de revisão'),
+                    ('contribution_cd3', 'CD3: Iteration & Flow',           'Controlo de iteração e fluxo de trabalho'),
+                    ('contribution_cd4', 'CD4: Discovery & Feedback',       'Capacidade de descoberta e feedback'),
+                    ('contribution_cd5', 'CD5: Risk/Safety/Security',       'Rotinas de evidência de risco e segurança'),
+                    ('contribution_cd6', 'CD6: Compliance & Audit',         'Preparação para conformidade e auditoria'),
+                    ('contribution_cd7', 'CD7: Lifecycle Integration',      'Integração de ciclo de vida e automação de evidência'),
+                    ('contribution_cd8', 'CD8: Dependency & Interface',     'Gestão de dependências e interfaces')
                 ] %}
                 {% for field, label, hint in score_fields %}
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                            {{ label }} <span class="text-gray-400 font-normal">— {{ hint }}</span>
+                            {{ label }} <span class="text-gray-400 font-normal">, {{ hint }}</span>
                         </label>
                         <span class="text-xs font-mono font-semibold text-slate-700" id="teb-score-val-{{ loop.index0 }}">
                             {{ "%.2f"|format(teb[field] if teb else 0.5) }}

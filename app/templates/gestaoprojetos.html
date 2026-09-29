@@ -83,7 +83,7 @@
                         {% if d.suggested_approach == 'Adaptativa' %}bg-green-100 text-green-700
                         {% elif d.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-700
                         {% else %}bg-purple-100 text-purple-700{% endif %}">
-                        {{ d.suggested_approach or '—' }}
+                        {{ d.suggested_approach or '-' }}
                     </span>
                     <span class="text-slate-400 font-normal">{{ d.current_stage | replace('stage_','') | replace('_',' ') | title }}</span>
                 </a>
@@ -196,7 +196,7 @@
                                 {% if d.suggested_approach == 'Adaptativa' %}bg-green-100 text-green-700
                                 {% elif d.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-700
                                 {% else %}bg-purple-100 text-purple-700{% endif %}">
-                                {{ d.suggested_approach or '—' }}
+                                {{ d.suggested_approach or '-' }}
                             </span>
                             <span class="text-slate-400 font-normal">{{ d.current_stage | replace('stage_','') | replace('_',' ') | title }}</span>
                         </a>

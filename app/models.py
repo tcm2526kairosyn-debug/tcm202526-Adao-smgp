@@ -80,39 +80,26 @@ class MethodologyEvidenceBase(db.Model):
     __tablename__ = 'methodology_evidence_base'
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(20), nullable=False)   # not unique — SCD Type-2
+    code = db.Column(db.String(20), nullable=False)   # not unique, SCD Type-2
     name = db.Column(db.String(100), nullable=False)
     posture = db.Column(db.String(20))   # Adaptativa | Preditiva | Híbrida
     tier = db.Column(db.Integer)         # 1 or 2
 
-    # Constraint flags for Level 1 filter
     max_team_size = db.Column(db.Integer)
     requires_fixed_scope = db.Column(db.Boolean, default=False)
     regulatory_compatible = db.Column(db.Boolean, default=True)
 
-    # Posture region in (AdPO, AsPO) space — used for Level 1 alignment
-    # classification only (admissibility tier), never as a Level 2 MAVT column.
-    # A degenerate region (min == max) behaves exactly like the old point model.
     posture_adpo_min = db.Column(db.Integer, default=2)  # {1,2,3,4}
     posture_adpo_max = db.Column(db.Integer, default=2)  # {1,2,3,4}
     posture_aspo_min = db.Column(db.Integer, default=2)  # {1,2,3,4}
     posture_aspo_max = db.Column(db.Integer, default=2)  # {1,2,3,4}
-    # Approaches (Adaptativa/Preditiva/Híbrida) this candidate is admissible
-    # under — Level 1 approach_compatible check (kairosynlogic._approach_compatible)
     compatible_approaches = db.Column(db.JSON)
 
-    # Candidate typology — prevents treating overlays/norms/complementary methods
-    # as autonomous substitutes for a primary methodological envelope (Level 1).
     candidate_type = db.Column(db.String(40))   # framework | method | guide | norm | domain_process_model
     candidate_role = db.Column(db.String(40))   # primary_envelope | complementary | reference_overlay | normative_overlay
     eligible_as_primary_envelope = db.Column(db.Boolean, default=True)
-    # Primary-envelope codes this candidate may join as a non-competing
-    # component of a composite methodological_envelope (empty = never a component)
     compatible_as_component_of = db.Column(db.JSON)
 
-    # Stage 3 Level 2 fit criteria C1-C7 (benefit-oriented, normalized 0-1).
-    # These are the ONLY criteria consumed by the MAVT matrix — no posture or
-    # context signal is re-introduced here (see kairosynlogic.run_fit_m_level2).
     score_c1_responsiveness = db.Column(db.Float, default=0.5)      # cadence, WIP control, change absorption
     score_c2_alignment = db.Column(db.Float, default=0.5)           # stakeholder alignment, discovery, sensemaking
     score_c3_traceability = db.Column(db.Float, default=0.5)        # evidence traceability, audit artefacts
@@ -137,26 +124,20 @@ class ToolEvidenceBase(db.Model):
     __tablename__ = 'tool_evidence_base'
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(30), nullable=False)   # not unique — SCD Type-2
+    code = db.Column(db.String(30), nullable=False)   # not unique, SCD Type-2
     name = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.JSON)          # ["Planning", "Tracking", ...]  — multi-category support
+    category = db.Column(db.JSON)          # ["Planning", "Tracking", ...], multi-category support
     cost_tier = db.Column(db.String(10))  # free | low | medium | high
     cost_monthly_eur = db.Column(db.Float, default=0.0)
 
-    # Stored as JSON arrays for cross-DB compatibility
     compatible_postures = db.Column(db.JSON)       # ["Adaptativa", "Híbrida"]
     compatible_methodologies = db.Column(db.JSON)  # ["SCRUM", "KANBAN"]
 
-    # Hard constraints
     gdpr_compliant = db.Column(db.Boolean, default=True)
 
-    # Posture metadata in (AdPO, AsPO) space — retained for Level A audit/display;
-    # NOT consumed by Level B MAVT scoring (see kairosynlogic.run_fit_t_level_b).
     agility_support = db.Column(db.Integer, default=2)   # {1,2,3,4}
     assurance_support = db.Column(db.Integer, default=2)  # {1,2,3,4}
 
-    # Stage 4 Level B implementation capability dimensions CD1-CD8 (normalized 0-1).
-    # These are the ONLY criteria consumed by the MAVT matrix.
     contribution_cd1 = db.Column(db.Float, default=0.5)  # evidence & traceability depth
     contribution_cd2 = db.Column(db.Float, default=0.5)  # verification cadence & review controls
     contribution_cd3 = db.Column(db.Float, default=0.5)  # iteration & flow control
@@ -180,7 +161,7 @@ class MCDMWeights(db.Model):
     __tablename__ = 'mcdm_weights'
 
     id = db.Column(db.Integer, primary_key=True)
-    context = db.Column(db.String(10), nullable=False)  # 'MEB' | 'TEB' — not unique (SCD Type-2)
+    context = db.Column(db.String(10), nullable=False)  # 'MEB' | 'TEB', not unique (SCD Type-2)
     weights = db.Column(db.JSON, nullable=False)
     labels = db.Column(db.JSON, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -215,19 +196,18 @@ class ProjectDecision(db.Model):
     # Etapa 3
     selected_methodology = db.Column(db.String(100))
     selected_methodology_id = db.Column(db.Integer, db.ForeignKey('methodology_evidence_base.id'), nullable=True)
-    # Composite envelope: {primary: {id, code, name}, components: [{id, code, name, role, justification}]}
-    # Components never compete in the Level 2 MAVT — they join the envelope only
-    # with an explicit human justification (audit requirement).
-    methodological_envelope = db.Column(db.JSON)
+    methodological_envelope = db.Column(db.JSON)  # {primary: {...}, components: [{...}, ...]}
     meb_filtered = db.Column(db.JSON)        # IDs que passaram Level 1
-    meb_exclusions = db.Column(db.JSON)      # [{code, name, cause, detail}] — auditoria Level 1
+    meb_exclusions = db.Column(db.JSON)      # [{code, name, cause, detail}], auditoria Level 1
     methodology_ranking = db.Column(db.JSON) # [{id, code, name, score, misfit}, ...]
     mcdm_engine = db.Column(db.String(20), default='MAVT')
+    meb_weights = db.Column(db.JSON)  # {values: [7], preset_id, confirmed_by, confirmed_at}
 
     # Etapa 4
     teb_filtered = db.Column(db.JSON)   # IDs que passaram Level A
-    teb_exclusions = db.Column(db.JSON) # [{code, name, cause, detail}] — auditoria Level A
+    teb_exclusions = db.Column(db.JSON) # [{code, name, cause, detail}], auditoria Level A
     capability_map = db.Column(db.JSON) # cobertura CD1-CD8 pelo conjunto admissível I_A (Level A)
+    teb_weights = db.Column(db.JSON)    # {values: [8], preset_id, confirmed_by, confirmed_at}
     tool_portfolio = db.Column(db.JSON) # [{id, code, name, score, category}, ...]
 
     # State machine
@@ -238,3 +218,34 @@ class ProjectDecision(db.Model):
     context_data = db.Column(db.JSON)
     transition_history = db.Column(db.JSON, default=list)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    _STAGE_LABELS = {'stage_1_diagnosis': 'Stage1', 'stage_2_approach': 'Stage2',
+                     'stage_3_fit_m': 'Stage3', 'stage_4_fit_t': 'Stage4', 'stage_complete': 'Complete'}
+
+    @property
+    def stage3_output(self) -> dict:
+        """decision.stage3_output -> {'status': 'OK', 'stage3_admissible_set': [...], ..., 'reentry_target': None}"""
+        last = next((e for e in reversed(self.transition_history or [])
+                     if e.get('from') == 'stage_3_fit_m' and e.get('to') != 'stage_3_fit_m'), None)
+        if last is None:
+            status, cause, target = 'PENDING', None, None
+        elif last.get('action') == 'CONFIRM_METHODOLOGY':
+            status, cause, target = 'OK', None, None
+        else:
+            status = 'REENTRY'
+            cause = last.get('reentry_cause')
+            target = self._STAGE_LABELS.get(last.get('to'), last.get('to'))
+
+        ranking = self.methodology_ranking or []
+        return {
+            "status": status,
+            "stage3_admissible_set": self.meb_filtered or [],
+            "stage3_exclusions": self.meb_exclusions or [],
+            "stage3_eval_matrix": [{"id": r["id"], "code": r["code"], "criteria": r.get("criteria", {})}
+                                   for r in ranking],
+            "stage3_value_scores": [{"id": r["id"], "code": r["code"], "score": r["score"]} for r in ranking],
+            "stage3_weights_info": self.meb_weights,
+            "methodological_envelope": self.methodological_envelope,
+            "reentry_cause": cause,
+            "reentry_target": target,
+        }

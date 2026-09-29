@@ -4,7 +4,7 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Decision Log</h1>
-            <p class="text-gray-600 dark:text-gray-400">Histórico de Seleção Metodológica — Framework KairoSyn</p>
+            <p class="text-gray-600 dark:text-gray-400">Histórico de Seleção Metodológica, Framework KairoSyn</p>
         </div>
     </div>
 
@@ -25,7 +25,7 @@
                     {% if decision.suggested_approach == 'Adaptativa' %}bg-green-100 text-green-800
                     {% elif decision.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-800
                     {% else %}bg-purple-100 text-purple-800{% endif %}">
-                    {{ decision.suggested_approach or '—' }}
+                    {{ decision.suggested_approach or '-' }}
                 </span>
             </div>
             <div class="flex items-center gap-2 flex-wrap mb-3">
@@ -88,11 +88,11 @@
                             {% if decision.suggested_approach == 'Adaptativa' %}bg-green-100 text-green-800
                             {% elif decision.suggested_approach == 'Preditiva' %}bg-blue-100 text-blue-800
                             {% else %}bg-purple-100 text-purple-800{% endif %}">
-                            {{ decision.suggested_approach or '—' }}
+                            {{ decision.suggested_approach or '-' }}
                         </span>
                     </td>
                     <td class="px-4 py-4 text-gray-700 dark:text-gray-300">
-                        {{ decision.selected_methodology or '—' }}
+                        {{ decision.selected_methodology or '-' }}
                     </td>
                     <td class="px-4 py-4">
                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ decision.current_stage | replace('stage_', '') | replace('_', ' ') | title }}</span>

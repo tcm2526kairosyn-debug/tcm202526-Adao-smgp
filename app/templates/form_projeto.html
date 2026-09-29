@@ -24,7 +24,7 @@
                 <label class="block text-xs font-black uppercase text-slate-400 mb-2">Gestor de Projeto</label>
                 <select name="gestor" required
                         class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-400 transition-all">
-                    <option value="">— Selecionar gestor —</option>
+                    <option value="">, Selecionar gestor, </option>
                     {% for u in users %}
                     <option value="{{ u.username }}"
                         {% if projeto and projeto.gestor_projeto == u.username %}selected{% endif %}>
@@ -46,7 +46,7 @@
                     <div class="team-row flex items-center gap-3">
                         <select name="team_role[]"
                                 class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
-                            <option value="">— Role —</option>
+                            <option value="">, Role, </option>
                             {% for r in [
                                 'Gestor de Projeto','Scrum Master','Product Owner',
                                 'Arquiteto de Software','Tech Lead',
@@ -72,7 +72,7 @@
                 <div class="team-row flex items-center gap-3">
                     <select name="team_role[]"
                             class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
-                        <option value="">— Role —</option>
+                        <option value="">, Role, </option>
                         {% for r in [
                             'Gestor de Projeto','Scrum Master','Product Owner',
                             'Arquiteto de Software','Tech Lead',
@@ -290,7 +290,7 @@ function addTeamRow() {
     row.innerHTML = `
         <select name="team_role[]"
                 class="flex-1 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm transition-all">
-            <option value="">— Role —</option>${opts}
+            <option value="">, Role, </option>${opts}
         </select>
         <input type="number" name="team_qty[]" min="1" max="99" value="1"
                class="w-20 p-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-400 text-sm text-center transition-all">

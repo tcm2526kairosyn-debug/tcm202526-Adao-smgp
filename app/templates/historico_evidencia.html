@@ -28,7 +28,7 @@
             {% if ativa %}
             <div class="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
                 <p class="text-[10px] font-black uppercase text-green-400">Versão Ativa</p>
-                <p class="text-sm font-bold text-green-700">Desde {{ ativa.active_date.strftime('%d/%m/%Y %H:%M') if ativa.active_date else '—' }}</p>
+                <p class="text-sm font-bold text-green-700">Desde {{ ativa.active_date.strftime('%d/%m/%Y %H:%M') if ativa.active_date else '-' }}</p>
                 {% if ativa.updated_by %}
                 <p class="text-xs text-green-600 mt-1">por {{ ativa.updated_by }}</p>
                 {% endif %}
@@ -73,7 +73,7 @@
                     <div>
                         <span class="text-[10px] font-black uppercase text-slate-400">Versão de</span>
                         <time class="block text-sm font-bold text-slate-700">
-                            {{ v.active_date.strftime('%d/%m/%Y %H:%M') if v.active_date else '—' }}
+                            {{ v.active_date.strftime('%d/%m/%Y %H:%M') if v.active_date else '-' }}
                         </time>
                         {% if v.updated_by %}
                         <span class="text-[11px] text-slate-400">por {{ v.updated_by }}</span>
@@ -143,7 +143,7 @@
 
                 <div class="flex items-center justify-end pt-3 border-t border-slate-100">
                     {% if not v.is_active %}
-                    {% set restore_label = v.active_date.strftime('%d/%m/%Y') if v.active_date else '—' %}
+                    {% set restore_label = v.active_date.strftime('%d/%m/%Y') if v.active_date else '-' %}
                     <form method="POST"
                           action="{{ url_for('main.restaurar_meb', id=v.id) if tipo == 'MEB' else url_for('main.restaurar_teb', id=v.id) }}"
                           onsubmit="return confirm('Restaurar versão de {{ restore_label }}? A versão atual será arquivada.')">

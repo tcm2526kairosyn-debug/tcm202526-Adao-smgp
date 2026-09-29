@@ -3,7 +3,7 @@
 <div class="max-w-7xl mx-auto py-10 px-4">
 
     <div class="mb-6 text-center">
-        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 3 — Seleção de Metodologia (Fit_M)</h1>
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Etapa 3: Seleção de Metodologia (Fit_M)</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-1">
             Framework KairoSyn · {{ decision.project_name }} ·
             Abordagem: <strong>{{ decision.suggested_approach }}</strong> ·
@@ -21,15 +21,15 @@
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-600"></span>
                     </span>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">KairoSyn — State Machine</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">KairoSyn: State Machine</span>
                 </div>
                 <div class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff','primaryTextColor': '#475569','primaryBorderColor': '#e2e8f0','lineColor': '#94a3b8','fontSize': '12px','fontFamily': 'Inter, sans-serif'}}}%%
 flowchart TD
     s1(["Etapa 1<br/><b>Diagnóstico Contextual</b>"])
     s2(["Etapa 2<br/><b>Resolução da Abordagem</b>"])
-    s3(["Etapa 3<br/><b>Fit_M — Metodologia</b>"])
-    s4(["Etapa 4<br/><b>Fit_T — Ferramentas</b>"])
+    s3(["Etapa 3<br/><b>Fit_M: Metodologia</b>"])
+    s4(["Etapa 4<br/><b>Fit_T: Ferramentas</b>"])
     sc(["✓<br/><b>Concluído</b>"])
     s1 --> s2
     s2 --> s3
@@ -71,19 +71,19 @@ flowchart TD
                 </div>
             </div>
 
-            <!-- Diagrama Sankey — funil de admissibilidade Level 1 por causa de exclusão -->
+            <!-- Diagrama Sankey, funil de admissibilidade Level 1 por causa de exclusão -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Triagem Level 1 — por causa de exclusão</h2>
+                <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Triagem Level 1, por causa de exclusão</h2>
                 <p class="text-[10px] text-slate-400 mb-4">Cinzento = MEB total · Âmbar = excluído (causa) · Verde = sobreviveu ao Level 1</p>
                 <div id="sankey-chart" class="w-full" style="height:160px;"></div>
                 <div id="sankey-data" data-sankey="{{ sankey_data }}" class="hidden"></div>
             </div>
 
-            <!-- Auditoria Level 1 — causas de exclusão -->
+            <!-- Auditoria Level 1, causas de exclusão -->
             {% if meb_exclusions %}
             <details class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
                 <summary class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none">
-                    Auditoria da Triagem L1 — {{ meb_exclusions|length }} exclusõe{{ 's' if meb_exclusions|length != 1 else '' }} registada{{ 's' if meb_exclusions|length != 1 else '' }}
+                    Auditoria da Triagem L1, {{ meb_exclusions|length }} exclusõe{{ 's' if meb_exclusions|length != 1 else '' }} registada{{ 's' if meb_exclusions|length != 1 else '' }}
                 </summary>
                 <div class="mt-4 space-y-2">
                     {% for ex in meb_exclusions %}
@@ -102,16 +102,17 @@ flowchart TD
             </details>
             {% endif %}
 
+            {% include "_weights_panel.html" %}
+
             <!-- Recomendação KairoSyn -->
             {% if ranking %}
             {% set top = ranking[0] %}
             {% set posture_match = decision.suggested_approach in (top.compatible_approaches or [top.posture]) %}
-            {% set misfit_label = 'Excelente' if top.misfit < 0.5 else ('Bom' if top.misfit < 1.0 else ('Moderado' if top.misfit < 1.5 else 'Elevado')) %}
-            {% set misfit_color = 'green' if top.misfit < 0.5 else ('green' if top.misfit < 1.0 else ('yellow' if top.misfit < 1.5 else 'red')) %}
+            {% set posture_tier_color = 'green' if top.posture_alignment_tier == 'exact' else ('yellow' if top.posture_alignment_tier == 'adjacent' else 'red') %}
             <div class="bg-gradient-to-br from-slate-50 to-zinc-100 border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div class="flex items-start justify-between gap-4 flex-wrap">
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Recomendação KairoSyn — Fit_M</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Recomendação KairoSyn, Fit_M</p>
                         <h3 class="text-xl font-black text-slate-800">{{ top.name }}</h3>
                         {% if top.description %}
                         <p class="text-sm text-slate-600 mt-1 max-w-xl">{{ top.description }}</p>
@@ -139,10 +140,10 @@ flowchart TD
                         </div>
                         <p class="text-[9px] text-slate-500 mt-1">Melhor do ranking (L2)</p>
                     </div>
-                    <div class="bg-white rounded-xl p-3 border border-{{ misfit_color }}-100">
-                        <p class="text-[9px] font-black uppercase text-{{ misfit_color }}-400 tracking-widest">Misfit Δk</p>
-                        <p class="text-2xl font-black text-{{ misfit_color }}-600 mt-0.5">{{ "%.2f"|format(top.misfit) }}</p>
-                        <p class="text-[9px] text-{{ misfit_color }}-500 mt-1">Ajuste {{ misfit_label }}</p>
+                    <div class="bg-white rounded-xl p-3 border border-{{ posture_tier_color }}-100">
+                        <p class="text-[9px] font-black uppercase text-{{ posture_tier_color }}-400 tracking-widest">Posture Alignment</p>
+                        <p class="text-2xl font-black text-{{ posture_tier_color }}-600 mt-0.5">{{ top.posture_alignment_tier | title }}</p>
+                        <p class="text-[9px] text-{{ posture_tier_color }}-500 mt-1">Distância à região de postura declarada (Level 1)</p>
                     </div>
                     {% if ranking|length > 1 %}
                     {% set alt = ranking[1] %}
@@ -151,7 +152,7 @@ flowchart TD
                         <p class="text-[9px] font-black uppercase text-slate-400 tracking-widest">2ª Opção</p>
                         <p class="text-sm font-black text-slate-700 mt-0.5">{{ alt.name }}</p>
                         <p class="text-[9px] text-slate-400 mt-1">
-                            Δscore {{ "%.3f"|format(gap) }} — {% if gap < 0.05 %}opções muito próximas{% else %}diferença clara{% endif %}
+                            Δscore {{ "%.3f"|format(gap) }}, {% if gap < 0.05 %}opções muito próximas{% else %}diferença clara{% endif %}
                         </p>
                     </div>
                     {% endif %}
@@ -165,10 +166,10 @@ flowchart TD
             </div>
             {% endif %}
 
-            <!-- Radar Chart — perfil MCDM top metodologias -->
+            <!-- Radar Chart, perfil MCDM top metodologias -->
             {% if ranking %}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Perfil MCDM — Top Metodologias</p>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Perfil MCDM, Top Metodologias</p>
                 <div class="relative" style="max-width:360px; margin:0 auto;">
                     <canvas id="radar-mcdm"></canvas>
                 </div>
@@ -176,9 +177,10 @@ flowchart TD
             <script>window._radarRanking = {{ ranking[:3] | tojson }};</script>
             {% endif %}
 
-            <!-- Ranking — mobile cards + desktop table -->
+            <!-- Ranking, mobile cards + desktop table -->
             <form method="POST">
 
+                {% if ranking %}
                 <!-- Mobile cards (sm:hidden) -->
                 <div class="sm:hidden space-y-3">
                     {% for item in ranking %}
@@ -210,8 +212,8 @@ flowchart TD
                             <span class="text-xs text-gray-400">T{{ item.tier }}</span>
                             <span class="text-xs font-mono text-gray-600">Score {{ "%.3f"|format(item.score) }}</span>
                             <span class="text-xs font-mono
-                                {% if item.misfit < 1.0 %}text-green-600{% elif item.misfit < 1.5 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                                Δk {{ "%.2f"|format(item.misfit) }}
+                                {% if item.posture_alignment_tier == 'exact' %}text-green-600{% elif item.posture_alignment_tier == 'adjacent' %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                {{ item.posture_alignment_tier | title }}
                             </span>
                         </div>
                     </div>
@@ -228,7 +230,7 @@ flowchart TD
                                 <th class="px-4 py-3 text-left">Abordagem</th>
                                 <th class="px-4 py-3 text-left">Tier</th>
                                 <th class="px-4 py-3 text-left">Value Score</th>
-                                <th class="px-4 py-3 text-left">Misfit Δk</th>
+                                <th class="px-4 py-3 text-left">Posture Alignment</th>
                                 <th class="px-4 py-3 text-center">Selecionar</th>
                             </tr>
                         </thead>
@@ -272,9 +274,9 @@ flowchart TD
                                         <span class="text-xs font-mono text-gray-600 dark:text-gray-300">{{ "%.3f"|format(item.score) }}</span>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-xs font-mono
-                                    {% if item.misfit < 1.0 %}text-green-600{% elif item.misfit < 1.5 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                                    {{ "%.2f"|format(item.misfit) }}
+                                <td class="px-4 py-3 text-xs font-semibold
+                                    {% if item.posture_alignment_tier == 'exact' %}text-green-600{% elif item.posture_alignment_tier == 'adjacent' %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                    {{ item.posture_alignment_tier | title }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <button type="button" data-mid="{{ item.id }}" data-mname="{{ item.name }}"
@@ -288,26 +290,31 @@ flowchart TD
                         </tbody>
                     </table>
                 </div>
+                {% endif %}
 
                 <input type="hidden" name="action" value="CONFIRM_METHODOLOGY">
                 <input type="hidden" name="selected_methodology_id" id="env-selected-id" value="">
 
                 <!-- Envelope metodológico composto (§5.1 da nota de alinhamento):
-                     componentes NÃO competem no MAVT — juntam-se ao envelope
+                     componentes NÃO competem no MAVT, juntam-se ao envelope
                      apenas com justificação explícita -->
                 <div id="envelope-panel" class="hidden mt-4 bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-slate-600">
                     <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        Envelope Metodológico — primário: <span id="env-primary-name" class="text-slate-800 dark:text-white"></span>
+                        Envelope Metodológico, primário: <span id="env-primary-name" class="text-slate-800 dark:text-white"></span>
                     </h2>
                     <p id="env-intro" class="text-xs text-gray-400 mt-1 mb-4">
                         Opcionalmente, adicione guias/normas/métodos complementares como componentes do envelope.
-                        Cada componente exige justificação — os componentes não entram no ranking MAVT.
+                        Cada componente exige justificação, os componentes não entram no ranking MAVT.
                     </p>
                     <p id="env-empty" class="hidden text-xs text-gray-400 italic mb-2">
                         Nenhum candidato da MEB se declara compatível como componente deste primário
                         (<code>compatible_as_component_of</code>). Podes avançar sem envelope composto.
                     </p>
                     <div id="env-components" class="space-y-3"></div>
+                    <div id="env-excluded" class="hidden mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Compatíveis por metadado mas não admissíveis</p>
+                        <div id="env-excluded-list" class="space-y-1"></div>
+                    </div>
                     <div class="flex gap-2 justify-end mt-5">
                         <button type="button" onclick="cancelEnvelope()"
                                 class="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm transition">
@@ -330,17 +337,25 @@ flowchart TD
 
             <div id="envelope-options" data-options='{{ envelope_options | tojson }}' class="hidden"></div>
             <script>
+            const CAUSE_LABELS = {
+                binding_regulatory_incompatible: 'restrição regulatória vinculativa (binding constraint) do decision-control register',
+                acceptance_threshold_requires_fixed_scope: 'exige âmbito fixo (acceptance threshold) não suportado',
+                approach_incompatible: 'abordagem incompatível com a resolvida nesta decisão',
+                posture_distant: 'postura fora da região declarada face ao AdPO/AsPO desta decisão',
+            };
             function selectPrimary(btn) {
                 const mid = btn.dataset.mid, mname = btn.dataset.mname;
                 document.getElementById('env-selected-id').value = mid;
                 const options = JSON.parse(document.getElementById('envelope-options').dataset.options || '{}');
-                const comps = options[mid] || [];
+                const opt = options[mid] || {};
+                const comps = opt.eligible || [];
+                const excluded = opt.excluded || [];
 
                 document.getElementById('env-primary-name').textContent = mname;
                 const container = document.getElementById('env-components');
                 container.innerHTML = '';
                 document.getElementById('env-intro').classList.toggle('hidden', comps.length === 0);
-                document.getElementById('env-empty').classList.toggle('hidden', comps.length > 0);
+                document.getElementById('env-empty').classList.toggle('hidden', comps.length > 0 || excluded.length > 0);
                 comps.forEach(c => {
                     const row = document.createElement('div');
                     row.className = 'border border-gray-200 dark:border-gray-600 rounded-lg p-3';
@@ -353,10 +368,23 @@ flowchart TD
                         '<span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded uppercase font-bold">' + (c.role || '') + '</span>' +
                         '</label>' +
                         '<textarea name="component_justification_' + c.id + '" rows="2" disabled ' +
-                        'placeholder="Justificação obrigatória — porque deve este componente integrar o envelope?" ' +
+                        'placeholder="Justificação obrigatória, porque deve este componente integrar o envelope?" ' +
                         'class="hidden mt-2 w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400"></textarea>';
                     container.appendChild(row);
                 });
+
+                const excludedList = document.getElementById('env-excluded-list');
+                excludedList.innerHTML = '';
+                document.getElementById('env-excluded').classList.toggle('hidden', excluded.length === 0);
+                excluded.forEach(e => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-start gap-2 text-xs text-gray-400';
+                    row.innerHTML =
+                        '<span class="font-mono font-semibold text-gray-400 shrink-0">' + e.code + '</span>' +
+                        '<span>' + (CAUSE_LABELS[e.cause] || e.cause.replace(/_/g, ' ')) + '</span>';
+                    excludedList.appendChild(row);
+                });
+
                 document.getElementById('envelope-panel').classList.remove('hidden');
                 document.getElementById('btn-avancar').disabled = false;
                 document.getElementById('envelope-panel').scrollIntoView({behavior: 'smooth', block: 'center'});

@@ -8,7 +8,6 @@ def create_app():
 
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-insecure-key')
     db_url = os.environ.get('DATABASE_URL', 'postgresql://user:secret@db:5432/postgres')
-    # Railway uses 'postgres://' prefix — SQLAlchemy requires 'postgresql://'
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
