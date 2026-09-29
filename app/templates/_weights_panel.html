@@ -29,6 +29,9 @@
                 </label>
                 {% endfor %}
             </div>
+            <textarea name="weights_justification" rows="2"
+                      placeholder="Justificação dos pesos (opcional): porque é que estes critérios pesam mais nesta decisão?"
+                      class="mt-4 w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400">{{ wp.justification or '' }}</textarea>
             <div class="flex flex-wrap justify-between items-center gap-2 mt-4">
                 <p class="text-xs">Total: <span id="weights-sum" class="font-bold">0</span> / 100</p>
                 <button type="submit" id="weights-submit"

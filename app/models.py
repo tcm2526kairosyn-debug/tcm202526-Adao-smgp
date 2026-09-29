@@ -218,3 +218,34 @@ class ProjectDecision(db.Model):
     context_data = db.Column(db.JSON)
     transition_history = db.Column(db.JSON, default=list)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    _STAGE_LABELS = {'stage_1_diagnosis': 'Stage1', 'stage_2_approach': 'Stage2',
+                     'stage_3_fit_m': 'Stage3', 'stage_4_fit_t': 'Stage4', 'stage_complete': 'Complete'}
+
+    @property
+    def stage3_output(self) -> dict:
+        """decision.stage3_output -> {'status': 'OK', 'stage3_admissible_set': [...], ..., 'reentry_target': None}"""
+        last = next((e for e in reversed(self.transition_history or [])
+                     if e.get('from') == 'stage_3_fit_m' and e.get('to') != 'stage_3_fit_m'), None)
+        if last is None:
+            status, cause, target = 'PENDING', None, None
+        elif last.get('action') == 'CONFIRM_METHODOLOGY':
+            status, cause, target = 'OK', None, None
+        else:
+            status = 'REENTRY'
+            cause = last.get('reentry_cause')
+            target = self._STAGE_LABELS.get(last.get('to'), last.get('to'))
+
+        ranking = self.methodology_ranking or []
+        return {
+            "status": status,
+            "stage3_admissible_set": self.meb_filtered or [],
+            "stage3_exclusions": self.meb_exclusions or [],
+            "stage3_eval_matrix": [{"id": r["id"], "code": r["code"], "criteria": r.get("criteria", {})}
+                                   for r in ranking],
+            "stage3_value_scores": [{"id": r["id"], "code": r["code"], "score": r["score"]} for r in ranking],
+            "stage3_weights_info": self.meb_weights,
+            "methodological_envelope": self.methodological_envelope,
+            "reentry_cause": cause,
+            "reentry_target": target,
+        }

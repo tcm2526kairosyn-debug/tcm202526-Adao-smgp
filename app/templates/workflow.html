@@ -260,7 +260,7 @@ flowchart TD
                         <th class="pb-3 text-left font-semibold">Abordagem</th>
                         <th class="pb-3 text-left font-semibold">Tier</th>
                         <th class="pb-3 text-left font-semibold">Value Score</th>
-                        <th class="pb-3 text-left font-semibold">Misfit Δk</th>
+                        <th class="pb-3 text-left font-semibold">Posture Alignment</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -294,11 +294,11 @@ flowchart TD
                                 <span class="text-xs font-mono text-slate-600">{{ "%.3f"|format(item.score) }}</span>
                             </div>
                         </td>
-                        <td class="py-3 text-xs font-mono
-                            {% if item.misfit < 0.5 %}text-green-600
-                            {% elif item.misfit < 1.5 %}text-yellow-600
+                        <td class="py-3 text-xs font-semibold
+                            {% if item.posture_alignment_tier == 'exact' %}text-green-600
+                            {% elif item.posture_alignment_tier == 'adjacent' %}text-yellow-600
                             {% else %}text-red-500{% endif %}">
-                            {{ "%.2f"|format(item.misfit) }}
+                            {{ item.posture_alignment_tier | title }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -438,12 +438,12 @@ window._wfData = {
             beforeDraw(chart) {
                 const { ctx, chartArea: ca, scales: { x, y } } = chart;
                 if (!ca) return;
-                const x2 = x.getPixelForValue(2), y2 = y.getPixelForValue(2), y3 = y.getPixelForValue(3);
+                const x2 = x.getPixelForValue(2), x3 = x.getPixelForValue(3), y2 = y.getPixelForValue(2), y3 = y.getPixelForValue(3);
                 ctx.save();
                 ctx.fillStyle = 'rgba(168,85,247,0.07)';
                 ctx.fillRect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top);
                 ctx.fillStyle = 'rgba(34,197,94,0.16)';
-                ctx.fillRect(x2, y2, ca.right - x2, ca.bottom - y2);
+                ctx.fillRect(x3, y2, ca.right - x3, ca.bottom - y2);
                 ctx.fillStyle = 'rgba(59,130,246,0.16)';
                 ctx.fillRect(ca.left, ca.top, x2 - ca.left, y3 - ca.top);
                 ctx.restore();
@@ -451,13 +451,13 @@ window._wfData = {
             afterDraw(chart) {
                 const { ctx, chartArea: ca, scales: { x, y } } = chart;
                 if (!ca) return;
-                const x2 = x.getPixelForValue(2), y2 = y.getPixelForValue(2), y3 = y.getPixelForValue(3);
+                const x2 = x.getPixelForValue(2), x3 = x.getPixelForValue(3), y2 = y.getPixelForValue(2), y3 = y.getPixelForValue(3);
                 ctx.save();
                 ctx.font = 'bold 9px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = 'rgba(22,163,74,0.8)';
-                ctx.fillText('Adaptativa', (x2 + ca.right) / 2, (y2 + ca.bottom) / 2);
+                ctx.fillText('Adaptativa', (x3 + ca.right) / 2, (y2 + ca.bottom) / 2);
                 ctx.fillStyle = 'rgba(37,99,235,0.8)';
                 ctx.fillText('Preditiva', (ca.left + x2) / 2, (ca.top + y3) / 2);
                 ctx.fillStyle = 'rgba(126,34,206,0.65)';

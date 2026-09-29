@@ -101,6 +101,7 @@ def _weights_panel(decision, context):
         "confirmed": bool(record),
         "confirmed_by": record.get('confirmed_by') if record else None,
         "confirmed_at": record.get('confirmed_at', '')[:16].replace('T', ' ') if record else None,
+        "justification": record.get('justification') if record else None,
         "source": source,
     }
 
@@ -119,6 +120,9 @@ def _confirm_weights(decision, context):
     now = datetime.utcnow().isoformat()
     setattr(decision, _WEIGHTS_FIELD[context], {
         "values": values,
+        "points": points,
+        "elicitation_method": "direct_100_points",
+        "justification": (request.form.get('weights_justification') or '').strip() or None,
         "preset_id": preset_id,
         "confirmed_by": current_user.username,
         "confirmed_at": now,
@@ -722,6 +726,11 @@ def etapa2(id):
 def etapa3(id):
     decision = ProjectDecision.query.get_or_404(id)
 
+    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
+    agpi = decision.agpi_score or 2.0
+    aspi = decision.aspi_score or 2.0
+    approach = decision.suggested_approach or 'Híbrida'
+
     if request.method == "POST":
         selected_id = request.form.get('selected_methodology_id')
         action = request.form.get('action', 'CONFIRM_METHODOLOGY')
@@ -750,12 +759,20 @@ def etapa3(id):
             decision.selected_methodology_id = meth.id
             decision.selected_methodology = meth.name
 
+            admissible_components, _comp_exclusions = get_envelope_component_candidates(
+                meth, decision_control_register, agpi, aspi, approach)
+            admissible_ids = {c.id for c in admissible_components}
+            by_comp_id = {c.id: c for c in admissible_components}
+
             components = []
             dropped = 0
+            inadmissible = 0
             for cid in request.form.getlist('component_ids'):
-                comp = MethodologyEvidenceBase.query.get(int(cid))
-                if not comp or meth.code not in (comp.compatible_as_component_of or []):
+                cid = int(cid)
+                if cid not in admissible_ids:
+                    inadmissible += 1
                     continue
+                comp = by_comp_id[cid]
                 justification = (request.form.get(f'component_justification_{cid}') or '').strip()
                 if not justification:
                     dropped += 1
@@ -770,6 +787,8 @@ def etapa3(id):
             }
             if dropped:
                 flash(f"{dropped} componente(s) do envelope ignorado(s) por falta de justificação.", "warning")
+            if inadmissible:
+                flash(f"{inadmissible} componente(s) ignorado(s): deixaram de ser admissíveis face às restrições do decision-control register.", "warning")
 
             decision.reentry_cause = None
             _log_transition(decision, previous, 'stage_4_fit_t', 'CONFIRM_METHODOLOGY')
@@ -778,27 +797,24 @@ def etapa3(id):
 
         flash("Selecione uma metodologia antes de continuar.", "warning")
 
-    decision_control_register = decision.decision_control_register or {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
-    agpi = decision.agpi_score or 2.0
-    aspi = decision.aspi_score or 2.0
-
-    approach = decision.suggested_approach or 'Híbrida'
     viable, meb_exclusions = run_fit_m_level1(decision_control_register, agpi, aspi, approach=approach)
 
     if not viable:
-        decision.reentry_cause = 'governance_infeasibility'
+        decision.reentry_cause = 'no_feasible_methodology_after_level1'
         decision.meb_exclusions = meb_exclusions
-        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE', cause='governance_infeasibility')
+        decision.meb_filtered = []
+        decision.methodology_ranking = []
+        _log_transition(decision, decision.current_stage, 'stage_2_approach', 'REENTRY_GOVERNANCE', cause='no_feasible_methodology_after_level1')
         db.session.commit()
         flash("Nenhuma metodologia viável encontrada. Reveja a abordagem.", "warning")
         return redirect(url_for('main.etapa2', id=id))
 
     decision.meb_exclusions = meb_exclusions
+    decision.meb_filtered = [m.id for m, _ in viable]
     ranking = []
     meb_weights = _decision_weights(decision, 'MEB')
     if meb_weights:
         ranking = run_fit_m_level2(viable, decision.mcdm_engine or 'MAVT', weights=meb_weights)
-        decision.meb_filtered = [item["id"] for item in ranking]
         decision.methodology_ranking = ranking
     db.session.commit()
 
@@ -820,13 +836,17 @@ def etapa3(id):
     sankey_data = {"nodes": sankey_nodes, "links": sankey_links}
 
     by_id = {m.id: m for m, _ in viable}
-    envelope_options = {
-        str(item["id"]): [
-            {"id": c.id, "code": c.code, "name": c.name, "role": c.candidate_role}
-            for c in get_envelope_component_candidates(by_id.get(item["id"]))
-        ]
-        for item in ranking
-    }
+    envelope_options = {}
+    for item in ranking:
+        eligible, comp_exclusions = get_envelope_component_candidates(
+            by_id.get(item["id"]), decision_control_register, agpi, aspi, approach)
+        envelope_options[str(item["id"])] = {
+            "eligible": [
+                {"id": c.id, "code": c.code, "name": c.name, "role": c.candidate_role}
+                for c in eligible
+            ],
+            "excluded": comp_exclusions,
+        }
 
     return render_template("etapa3.html", decision=decision, ranking=ranking,
                            meb_total=meb_total, viable_count=len(viable),
@@ -1122,6 +1142,7 @@ def export_decision(id):
         "meb_filtered": decision.meb_filtered,
         "meb_exclusions": decision.meb_exclusions,
         "meb_weights": decision.meb_weights,
+        "stage3_output": decision.stage3_output,
         "methodology_ranking": decision.methodology_ranking,
         "selected_methodology": decision.selected_methodology,
         "methodological_envelope": decision.methodological_envelope,
@@ -1145,7 +1166,7 @@ def export_decision(id):
                        "adpo_score", "aspo_score",
                        "suggested_approach", "selected_methodology", "mcdm_engine"]
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
-                       "meb_filtered", "meb_exclusions", "meb_weights", "methodology_ranking",
+                       "meb_filtered", "meb_exclusions", "meb_weights", "stage3_output", "methodology_ranking",
                        "methodological_envelope", "sensitivity_analysis",
                        "teb_filtered", "teb_exclusions", "teb_weights", "capability_map", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields

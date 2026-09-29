@@ -69,7 +69,7 @@ O ciclo de vida de cada decisão é controlado por uma máquina de estados deter
 | `stage_2_approach` | `REVISE_CONTEXT` | `stage_1_diagnosis` | Utilizador | Confiança insuficiente |
 | `stage_3_fit_m` | `CONFIRM_METHODOLOGY` | `stage_4_fit_t` | Utilizador |, |
 | `stage_3_fit_m` | `REVISE_APPROACH` | `stage_2_approach` | Utilizador |, |
-| `stage_3_fit_m` | `REENTRY_GOVERNANCE` | `stage_2_approach` | **Sistema** | `governance_infeasibility` |
+| `stage_3_fit_m` | `REENTRY_GOVERNANCE` | `stage_2_approach` | **Sistema** | `no_feasible_methodology_after_level1` |
 | `stage_3_fit_m` | `REENTRY_DIAGNOSIS` | `stage_1_diagnosis` | Utilizador | `evidence_inconsistency` |
 | `stage_4_fit_t` | `CONFIRM_TOOLS` | `stage_complete` | Utilizador |, |
 | `stage_4_fit_t` | `REENTRY_METHODOLOGY` | `stage_3_fit_m` | Utilizador |, |
@@ -80,7 +80,7 @@ O ciclo de vida de cada decisão é controlado por uma máquina de estados deter
 
 Dois triggers forçam re-entry sem intervenção do utilizador:
 
-- **`REENTRY_GOVERNANCE` em Etapa 3**: disparado quando `run_fit_m_level1()` devolve lista vazia (nenhuma metodologia da MEB cumpre as restrições Hard do Governance Register). O sistema transiciona automaticamente para `stage_2_approach` e regista `reentry_cause = "governance_infeasibility"`.
+- **`REENTRY_GOVERNANCE` em Etapa 3**: disparado quando `run_fit_m_level1()` devolve lista vazia (nenhuma candidata da MEB sobrevive à triagem L1). Level 2 não chega a ser executado. O sistema preserva as exclusões (`meb_exclusions`), transiciona automaticamente para `stage_2_approach` e regista `reentry_cause = "no_feasible_methodology_after_level1"` — distinto de `governance_infeasibility`, que fica reservado para quando é o próprio gestor de projeto a rever manualmente a abordagem (`REVISE_APPROACH`), sem que a triagem L1 tenha esgotado os candidatos.
 - **`no_viable_tool_bundle` em Etapa 4**: se `run_fit_t_level_a()` não encontrar ferramentas compatíveis, o sistema alerta e o utilizador pode acionar `REENTRY_METHODOLOGY`.
 
 ### Fluxo Normal vs. Fluxo com Re-entry
@@ -359,12 +359,12 @@ Esta escolha é deliberada: AdPO e AsPO são **organisadores ordinais**, não m�
 Aplica as regras de transição da Framework KairoSyn:
 
 ```python
-if adpo >= 2 and aspo <= 2  →  "Adaptativa"   # pressão ágil dominante
-elif aspo >= 3 and adpo <= 2 →  "Preditiva"   # pressão de assurance dominante
+if adpo >= 3 and aspo <= 2  →  "Adaptativa"   # pressão ágil dominante
+elif adpo <= 2 and aspo >= 3 →  "Preditiva"   # pressão de assurance dominante
 else                         →  "Híbrida"      # pressões equilibradas
 ```
 
-O limiar `adpo >= 2` (não 3) reflete que mesmo uma pressão ágil moderada é suficiente para preferir adaptabilidade quando a pressão de assurance é baixa.
+Os dois limiares são simétricos: só uma pressão ágil (AdPO) ou de assurance (AsPO) claramente dominante (≥3, no nível "alto" ou "muito alto") resolve para Adaptativa/Preditiva; qualquer combinação intermédia (incluindo AdPO=2 com AsPO baixo) resolve para Híbrida.
 
 #### `build_decision_control_register(...)`: Etapa 2
 
@@ -436,6 +436,9 @@ Determina **quem pode ser comparado** em Level 2. Uma pontuação elevada noutro
 3. **`candidate_role` / `eligible_as_primary_envelope`**, exclui guias, normas e métodos complementares (PMBoK, ISO 21502, XP) de competir como envelope metodológico primário autónomo
 4. **`approach_compatible`**, verifica se a abordagem resolvida está na lista `compatible_approaches` do candidato (ex.: `['Adaptativa','Híbrida']`); não há bridging implícito, cada candidato declara explicitamente as abordagens sob as quais é admissível
 5. **`posture_compatible`**, tier `'distant'` é excluído aqui; `'exact'`/`'adjacent'` passam e ficam só para auditoria
+6. **Evidência completa**, uma candidata sem valor em algum critério C1-C7 é excluída com `missing_criteria_evidence` em vez de receber um valor por omissão (o mesmo se aplica às ferramentas em Level A, para CD1-CD8). Um valor 0.0 é tratado como avaliação legítima ("ausente"), não como valor em falta.
+
+`run_fit_m_level2()`, `run_fit_t_level_b()` e `run_sensitivity_analysis()` exigem o vetor de pesos confirmado na decisão (`weights=`), não existe fallback para o preset do administrador. Sem pesos confirmados não há ranking nem análise de sensibilidade.
 
 #### `run_fit_m_level2(...)`: Ranking MCDM Level 2, compensatória (Etapa 3)
 
@@ -443,15 +446,32 @@ Constrói a matriz de avaliação `X_M` apenas com os **7 critérios C1-C7** (`s
 
 O resultado inclui, por metodologia: `score`, `posture_alignment_tier` (exact/adjacent/distant, auditoria), `misfit` (derivado da tier, auditoria, não parte do score), `candidate_type`, `candidate_role` e o dicionário `criteria` com os 7 valores C1-C7 (para visualização em radar).
 
+#### `ProjectDecision.stage3_output`: contrato de output da Etapa 3
+
+Agrega, a partir dos campos persistidos da decisão, o output necessário para reproduzir a Etapa 3:
+
+| Campo | Origem |
+|---|---|
+| `status` | `OK` (metodologia confirmada), `REENTRY` (saída retroativa da Etapa 3) ou `PENDING`, derivado do `transition_history` |
+| `stage3_admissible_set` | IDs que sobreviveram ao Level 1 (`meb_filtered`, atualizado a cada execução do Level 1) |
+| `stage3_exclusions` | Exclusões de Level 1 com causa (`meb_exclusions`) |
+| `stage3_eval_matrix` | Critérios C1-C7 efetivamente usados em Level 2, por candidata |
+| `stage3_value_scores` | Scores MAVT por candidata |
+| `stage3_weights_info` | Vetor de pesos, pontos atribuídos, método de elicitação (`direct_100_points`), justificação, preset de referência, utilizador e data (`meb_weights`) |
+| `methodological_envelope` | Componente primário e componentes complementares admissíveis e justificados |
+| `reentry_cause` / `reentry_target` | Preenchidos quando `status = REENTRY` (ex.: `no_feasible_methodology_after_level1` → `Stage2`) |
+
+`selected_methodology` mantém-se como campo interno/UI. O contrato é incluído na exportação JSON/CSV da decisão.
+
 #### `run_fit_t_level_a/b(...)`: Fit_T (Etapa 4)
 
 `level_a` filtra a TEB por: compatibilidade com o envelope metodológico (primário + componentes justificados), postura e restrições GDPR. `level_b` aplica MCDM com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e devolve o top-N ranqueado **por categoria** (não greedy), o utilizador escolhe a ferramenta final em cada categoria na Etapa 4.
 
 ---
 
-#### `run_sensitivity_analysis(ranking, n_mc=500)`: Análise de Sensibilidade MCDM
+#### `run_sensitivity_analysis(ranking, n_mc=500, *, weights)`: Análise de Sensibilidade MCDM
 
-Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variações nos pesos dos critérios, partindo do vetor confirmado na própria decisão (`meb_weights`). Devolve `None` se o ranking tiver menos de 2 alternativas ou se as pontuações por critério não estiverem disponíveis.
+Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variações nos pesos dos critérios, partindo do vetor confirmado na própria decisão (`meb_weights`) e da mesma matriz C1-C7 usada no ranking. Devolve `None` se o ranking tiver menos de 2 alternativas, se as pontuações por critério não estiverem disponíveis ou se a decisão não tiver pesos confirmados.
 
 **Dois mecanismos complementares:**
 
@@ -471,9 +491,9 @@ Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variaç�
 
 ```python
 {
-  'label': 'C3 Evidence Traceability',  # nome legível
+  'label': 'C3 Traceability',           # nome legível
   'key': 'c3_traceability',             # chave interna
-  'current': 0.18,                      # peso atual (explícito, não context-adjusted)
+  'current': 0.18,                      # peso confirmado na decisão (sem ajuste por AdPO/AsPO)
   'min': 0.0,                           # limite inferior de estabilidade
   'max': 0.47,                          # limite superior de estabilidade
   'range': 0.47,                        # amplitude (quanto pode variar sem mudar top-1)
@@ -543,7 +563,7 @@ Esta abordagem preserva o histórico de alterações na *Evidence Base*, requisi
 
 ¹ A Tabela 5 do orientador lista PRINCE2 Agile apenas como "Hybrid"; os seeds usam `['Preditiva','Híbrida']` por decisão do autor (ver Cenário B/D). O seed de PM² também diverge da Tabela 5 em `requires_fixed_scope` (aqui `True`, refletindo uma metodologia estruturada), garantindo que os Cenários B/D têm sempre pelo menos um candidato viável (PM²) mesmo sob a leitura literal da tabela para PRINCE2.
 
-Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de referência, normas ou métodos de engenharia complementares, o Level 1 exclui-os de competir como envelope metodológico primário autónomo, mas podem integrar um `methodological_envelope` composto como componentes justificados (ver `compatible_as_component_of` e a Etapa 3).
+Os três candidatos marcados como "Não" (PMBoK, XP, ISO 21502) são overlays de referência, normas ou métodos de engenharia complementares, o Level 1 exclui-os de competir como envelope metodológico primário autónomo, mas podem integrar um `methodological_envelope` composto como componentes justificados (ver `compatible_as_component_of` e a Etapa 3). O metadado `compatible_as_component_of` delimita a elegibilidade inicial, mas cada componente proposto continua sujeito às mesmas condições de admissibilidade de Level 1 aplicáveis (binding constraints, acceptance thresholds, compatibilidade de abordagem e de postura), reavaliadas em `get_envelope_component_candidates()` e reverificadas no servidor no momento da confirmação, a justificação do GP documenta a escolha, mas não substitui essa verificação.
 
 **TEB, 13 ferramentas** distribuídas por 5 categorias, cada uma com coordenadas de contexto `(agility_support, assurance_support)` e scores de critérios CD1-CD8:
 

@@ -13,20 +13,6 @@ _TEB_CRITERIA = ['contribution_cd1', 'contribution_cd2', 'contribution_cd3', 'co
 _MISFIT_BY_TIER = {'exact': 0.0, 'adjacent': 0.7, 'distant': 1.5}
 
 
-def _load_weights(context: str, fallback: np.ndarray) -> np.ndarray:
-    try:
-        from ..models import MCDMWeights
-        row = MCDMWeights.query.filter_by(context=context, is_active=True).first()
-        if row and row.weights:
-            return np.array(row.weights)
-    except Exception:
-        pass
-    return fallback
-
-
-MEB_WEIGHTS = _MEB_WEIGHTS_DEFAULT
-TEB_WEIGHTS = _TEB_WEIGHTS_DEFAULT
-
 _MEB_CRITERIA_LABELS = [
     ('C1', 'Responsiveness'), ('C2', 'Alignment'), ('C3', 'Traceability'), ('C4', 'Compliance'),
     ('C5', 'Pace/Criticality'), ('C6', 'Integration Risk'), ('C7', 'Distributed Support'),
@@ -72,10 +58,11 @@ def criteria_labels(context: str) -> list[dict]:
     return [{"code": c, "label": l} for _, c, l in _CD_LABELS]
 
 
-def _resolve_weights(weights, context: str, fallback: np.ndarray) -> np.ndarray:
-    if weights is not None and len(weights) == len(fallback):
-        return np.array(weights, dtype=float)
-    return _load_weights(context, fallback)
+def _require_weights(weights, n: int) -> np.ndarray:
+    """_require_weights([0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12], 7) -> array([...])"""
+    if weights is None or len(weights) != n:
+        raise ValueError(f"Vetor de pesos confirmado em falta ou com dimensão errada (esperado {n}).")
+    return np.array(weights, dtype=float)
 
 
 # ── Etapa 2 ─────────────────────────────────────────────────────────────────
@@ -104,9 +91,9 @@ def compute_indices(context_data: dict) -> tuple[float, float]:
 
 def resolve_approach(adpo: float, aspo: float) -> str:
     """resolve_approach(4.0, 1.0) -> 'Adaptativa'"""
-    if adpo >= 2.0 and aspo <= 2.0:
+    if adpo >= 3.0 and aspo <= 2.0:
         return "Adaptativa"
-    elif aspo >= 3.0 and adpo <= 2.0:
+    elif adpo <= 2.0 and aspo >= 3.0:
         return "Preditiva"
     else:
         return "Híbrida"
@@ -184,6 +171,54 @@ def _approach_compatible(compatible_approaches: list, approach: str) -> bool:
 
 # ── Etapa 3 ─────────────────────────────────────────────────────────────────
 
+def _meb_scoped_constraints(decision_control_register: dict) -> tuple[dict, dict]:
+    """_meb_scoped_constraints(dcr) -> ({'regulatory_compatible': True}, {'requires_fixed_scope': True})"""
+    binding_constraints = {c["constraint"]: c["value"]
+                           for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "M"}
+    acceptance_thresholds = {c["constraint"]: c["value"]
+                             for c in decision_control_register.get("acceptance_thresholds", []) if c["scope"] == "M"}
+    return binding_constraints, acceptance_thresholds
+
+
+def _check_binding_and_acceptance(m, binding_constraints: dict, acceptance_thresholds: dict) -> dict | None:
+    """_check_binding_and_acceptance(XP, {}, {}) -> None"""
+    if "regulatory_compatible" in binding_constraints:
+        if m.regulatory_compatible != binding_constraints["regulatory_compatible"]:
+            return {"cause": "binding_regulatory_incompatible",
+                    "detail": "Binding constraint: regulatory_compatible exigido pelo decision-control register."}
+
+    if "requires_fixed_scope" in acceptance_thresholds:
+        required = acceptance_thresholds["requires_fixed_scope"]
+        has_scope = m.requires_fixed_scope or False
+        if required and not has_scope:
+            return {"cause": "acceptance_threshold_requires_fixed_scope",
+                    "detail": "Acceptance threshold: âmbito fixo exigido, não suportado pela metodologia."}
+    return None
+
+
+def _check_approach_and_posture(m, approach: str, adpo: float, aspo: float) -> tuple[dict | None, str]:
+    """_check_approach_and_posture(ISO21502, 'Adaptativa', 4.0, 1.0) -> ({'cause': 'approach_incompatible', ...}, None)"""
+    if not _approach_compatible(m.compatible_approaches, approach):
+        return {"cause": "approach_incompatible",
+                "detail": f"Abordagens compatíveis {m.compatible_approaches} não incluem '{approach}'."}, None
+
+    adpo_min = m.posture_adpo_min if m.posture_adpo_min is not None else 2
+    adpo_max = m.posture_adpo_max if m.posture_adpo_max is not None else 2
+    aspo_min = m.posture_aspo_min if m.posture_aspo_min is not None else 2
+    aspo_max = m.posture_aspo_max if m.posture_aspo_max is not None else 2
+    tier = _posture_alignment_tier(adpo, aspo, adpo_min, adpo_max, aspo_min, aspo_max)
+    if tier == 'distant':
+        return {"cause": "posture_distant",
+                "detail": f"(AdPO={adpo:.0f}, AsPO={aspo:.0f}) fora da região de postura declarada "
+                          f"AdPO∈[{adpo_min},{adpo_max}] × AsPO∈[{aspo_min},{aspo_max}] (distância ≥ 2)."}, tier
+    return None, tier
+
+
+def _missing_criteria(obj, criteria: list[str]) -> list[str]:
+    """_missing_criteria(JIRA, _TEB_CRITERIA) -> []"""
+    return [c for c in criteria if getattr(obj, c) is None]
+
+
 def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
                      approach: str = 'Híbrida') -> list:
     """
@@ -197,10 +232,7 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
         MethodologyEvidenceBase.is_active == True
     ).all()
 
-    binding_constraints = {c["constraint"]: c["value"]
-                           for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "M"}
-    acceptance_thresholds = {c["constraint"]: c["value"]
-                             for c in decision_control_register.get("acceptance_thresholds", []) if c["scope"] == "M"}
+    binding_constraints, acceptance_thresholds = _meb_scoped_constraints(decision_control_register)
 
     viable = []
     exclusions = []
@@ -209,39 +241,25 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
         exclusions.append({"code": m.code, "name": m.name, "cause": cause, "detail": detail})
 
     for m in candidates:
-        if "regulatory_compatible" in binding_constraints:
-            if m.regulatory_compatible != binding_constraints["regulatory_compatible"]:
-                _exclude(m, "binding_regulatory_incompatible",
-                         "Binding constraint: regulatory_compatible exigido pelo decision-control register.")
-                continue
-
-        if "requires_fixed_scope" in acceptance_thresholds:
-            required = acceptance_thresholds["requires_fixed_scope"]
-            has_scope = m.requires_fixed_scope or False
-            if required and not has_scope:
-                _exclude(m, "acceptance_threshold_requires_fixed_scope",
-                         "Acceptance threshold: âmbito fixo exigido, não suportado pela metodologia.")
-                continue
+        exc = _check_binding_and_acceptance(m, binding_constraints, acceptance_thresholds)
+        if exc:
+            _exclude(m, exc["cause"], exc["detail"])
+            continue
 
         if m.eligible_as_primary_envelope is False:
             _exclude(m, "not_eligible_primary_envelope",
                      f"candidate_role='{m.candidate_role}', não elegível como envelope metodológico primário.")
             continue
 
-        if not _approach_compatible(m.compatible_approaches, approach):
-            _exclude(m, "approach_incompatible",
-                     f"Abordagens compatíveis {m.compatible_approaches} não incluem '{approach}'.")
+        exc, tier = _check_approach_and_posture(m, approach, adpo, aspo)
+        if exc:
+            _exclude(m, exc["cause"], exc["detail"])
             continue
 
-        adpo_min = m.posture_adpo_min if m.posture_adpo_min is not None else 2
-        adpo_max = m.posture_adpo_max if m.posture_adpo_max is not None else 2
-        aspo_min = m.posture_aspo_min if m.posture_aspo_min is not None else 2
-        aspo_max = m.posture_aspo_max if m.posture_aspo_max is not None else 2
-        tier = _posture_alignment_tier(adpo, aspo, adpo_min, adpo_max, aspo_min, aspo_max)
-        if tier == 'distant':
-            _exclude(m, "posture_distant",
-                     f"(AdPO={adpo:.0f}, AsPO={aspo:.0f}) fora da região de postura declarada "
-                     f"AdPO∈[{adpo_min},{adpo_max}] × AsPO∈[{aspo_min},{aspo_max}] (distância ≥ 2).")
+        missing = _missing_criteria(m, _MEB_CRITERIA)
+        if missing:
+            _exclude(m, "missing_criteria_evidence",
+                     f"Sem valor na MEB para {', '.join(missing)}, não pode entrar no MAVT sem evidência.")
             continue
 
         viable.append((m, tier))
@@ -249,7 +267,7 @@ def run_fit_m_level1(decision_control_register: dict, adpo: float, aspo: float,
     return viable, exclusions
 
 
-def run_fit_m_level2(viable: list, engine_name: str = 'MAVT', weights: list = None) -> list:
+def run_fit_m_level2(viable: list, engine_name: str = 'MAVT', *, weights: list) -> list:
     """
     run_fit_m_level2([(PRINCE2,'exact'), (PM2,'exact')], weights=[0.12,0.12,0.18,0.18,0.15,0.13,0.12])
     -> [{'code':'PRINCE2','score':0.7325,...}, {'code':'PM2','score':0.7025,...}]
@@ -257,8 +275,8 @@ def run_fit_m_level2(viable: list, engine_name: str = 'MAVT', weights: list = No
     if not viable:
         return []
 
-    X = np.array([[getattr(m, c) or 0.5 for c in _MEB_CRITERIA] for m, _ in viable])
-    weights = _resolve_weights(weights, 'MEB', _MEB_WEIGHTS_DEFAULT)
+    X = np.array([[float(getattr(m, c)) for c in _MEB_CRITERIA] for m, _ in viable])
+    weights = _require_weights(weights, len(_MEB_CRITERIA))
 
     engine = MCDMEngine(method=engine_name)
     ranked_indices = engine.rank(X, weights)
@@ -284,28 +302,55 @@ def run_fit_m_level2(viable: list, engine_name: str = 'MAVT', weights: list = No
             "candidate_role": m.candidate_role,
             "description": m.description or "",
             "criteria": {
-                "c1_responsiveness": round(m.score_c1_responsiveness or 0.5, 3),
-                "c2_alignment": round(m.score_c2_alignment or 0.5, 3),
-                "c3_traceability": round(m.score_c3_traceability or 0.5, 3),
-                "c4_compliance": round(m.score_c4_compliance or 0.5, 3),
-                "c5_pace_criticality": round(m.score_c5_pace_criticality or 0.5, 3),
-                "c6_integration_risk": round(m.score_c6_integration_risk or 0.5, 3),
-                "c7_distributed_support": round(m.score_c7_distributed_support or 0.5, 3),
+                "c1_responsiveness": round(m.score_c1_responsiveness, 3),
+                "c2_alignment": round(m.score_c2_alignment, 3),
+                "c3_traceability": round(m.score_c3_traceability, 3),
+                "c4_compliance": round(m.score_c4_compliance, 3),
+                "c5_pace_criticality": round(m.score_c5_pace_criticality, 3),
+                "c6_integration_risk": round(m.score_c6_integration_risk, 3),
+                "c7_distributed_support": round(m.score_c7_distributed_support, 3),
             }
         })
     return sorted(result, key=lambda x: x["score"], reverse=True)
 
 
-def get_envelope_component_candidates(primary_meth) -> list:
-    """get_envelope_component_candidates(PRINCE2) -> [ISO21502 (normative_overlay), PMBOK6 (reference_overlay)]"""
+def get_envelope_component_candidates(primary_meth, decision_control_register: dict,
+                                      adpo: float, aspo: float, approach: str) -> tuple:
+    """
+    get_envelope_component_candidates(PRINCE2, dcr, adpo=1.0, aspo=4.0, approach='Preditiva')
+    -> (eligible=[ISO21502],
+        exclusions=[{'code':'PMBOK6','name':'PMBoK 6ª Edição','cause':'acceptance_threshold_requires_fixed_scope',...}])
+    """
     from ..models import MethodologyEvidenceBase
 
     if primary_meth is None:
-        return []
+        return [], []
+
+    binding_constraints, acceptance_thresholds = _meb_scoped_constraints(decision_control_register)
+
     rows = MethodologyEvidenceBase.query.filter_by(is_active=True).all()
-    return [m for m in rows
-            if m.id != primary_meth.id
-            and primary_meth.code in (m.compatible_as_component_of or [])]
+    metadata_compatible = [m for m in rows
+                           if m.id != primary_meth.id
+                           and primary_meth.code in (m.compatible_as_component_of or [])]
+
+    eligible = []
+    exclusions = []
+
+    def _exclude(m, cause, detail):
+        exclusions.append({"code": m.code, "name": m.name, "cause": cause, "detail": detail})
+
+    for m in metadata_compatible:
+        exc = _check_binding_and_acceptance(m, binding_constraints, acceptance_thresholds)
+        if exc:
+            _exclude(m, exc["cause"], exc["detail"])
+            continue
+        exc, _tier = _check_approach_and_posture(m, approach, adpo, aspo)
+        if exc:
+            _exclude(m, exc["cause"], exc["detail"])
+            continue
+        eligible.append(m)
+
+    return eligible, exclusions
 
 
 # ── Etapa 4 ─────────────────────────────────────────────────────────────────
@@ -348,6 +393,12 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict,
                      f"Não declara compatibilidade com a postura '{selected_meth.posture}'.")
             continue
 
+        missing = _missing_criteria(t, _TEB_CRITERIA)
+        if missing:
+            _exclude(t, "missing_criteria_evidence",
+                     f"Sem valor na TEB para {', '.join(missing)}, não pode entrar no MAVT sem evidência.")
+            continue
+
         viable.append(t)
 
     return viable, exclusions
@@ -374,7 +425,7 @@ def build_capability_map(viable_tools: list) -> list:
     capability_map = []
     for attr, code, label in _CD_LABELS:
         contribs = sorted(
-            ({"code": t.code, "name": t.name, "contribution": round(getattr(t, attr) or 0.0, 2)}
+            ({"code": t.code, "name": t.name, "contribution": round(float(getattr(t, attr)), 2)}
              for t in viable_tools),
             key=lambda x: x["contribution"], reverse=True)
         max_c = contribs[0]["contribution"] if contribs else 0.0
@@ -391,18 +442,18 @@ def build_capability_map(viable_tools: list) -> list:
 
 
 def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int = 3,
-                      weights: list = None) -> dict:
+                      *, weights: list) -> dict:
     """
-    run_fit_t_level_b(viable_tools, top_n=2)
+    run_fit_t_level_b(viable_tools, top_n=2, weights=[0.15,0.12,0.13,0.10,0.10,0.15,0.15,0.10])
     -> {'Documentation':['CONFLUENCE'], 'Planning':['MS_PROJECT','PROJECTLIBRE'], 'Communication':['TEAMS','SLACK']}
     """
     if not viable_tools:
         return {}
 
-    X = np.array([[getattr(t, c) or 0.5 for c in _TEB_CRITERIA] for t in viable_tools])
+    X = np.array([[float(getattr(t, c)) for c in _TEB_CRITERIA] for t in viable_tools])
 
     engine = MCDMEngine(method=engine_name)
-    ranked = engine.rank(X, _resolve_weights(weights, 'TEB', _TEB_WEIGHTS_DEFAULT))
+    ranked = engine.rank(X, _require_weights(weights, len(_TEB_CRITERIA)))
 
     all_scored = []
     for idx, score in ranked:
@@ -416,14 +467,14 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
             "cost_monthly_eur": t.cost_monthly_eur,
             "score": round(score, 4),
             "criteria": {
-                "cd1_traceability": round(t.contribution_cd1 or 0.5, 3),
-                "cd2_verification": round(t.contribution_cd2 or 0.5, 3),
-                "cd3_flow_control": round(t.contribution_cd3 or 0.5, 3),
-                "cd4_discovery": round(t.contribution_cd4 or 0.5, 3),
-                "cd5_risk_safety": round(t.contribution_cd5 or 0.5, 3),
-                "cd6_compliance": round(t.contribution_cd6 or 0.5, 3),
-                "cd7_integration": round(t.contribution_cd7 or 0.5, 3),
-                "cd8_dependency": round(t.contribution_cd8 or 0.5, 3),
+                "cd1_traceability": round(t.contribution_cd1, 3),
+                "cd2_verification": round(t.contribution_cd2, 3),
+                "cd3_flow_control": round(t.contribution_cd3, 3),
+                "cd4_discovery": round(t.contribution_cd4, 3),
+                "cd5_risk_safety": round(t.contribution_cd5, 3),
+                "cd6_compliance": round(t.contribution_cd6, 3),
+                "cd7_integration": round(t.contribution_cd7, 3),
+                "cd8_dependency": round(t.contribution_cd8, 3),
             }
         })
 
@@ -438,13 +489,13 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
 
 # ── Sensitivity Analysis ──────────────────────────────────────────────────────
 
-def run_sensitivity_analysis(ranking: list, n_mc: int = 500, weights: list = None) -> dict | None:
+def run_sensitivity_analysis(ranking: list, n_mc: int = 500, *, weights: list | None) -> dict | None:
     """
-    run_sensitivity_analysis(ranking_B, n_mc=500)
+    run_sensitivity_analysis(ranking_B, n_mc=500, weights=[0.12,0.12,0.18,0.18,0.15,0.13,0.12])
     -> {'top_name':'PRINCE2 Agile', 'robustness_pct':100.0, 'stable':True,
         'runner_up':'PM2 (Comissão Europeia)', 'runner_up_pct':100.0, 'per_criterion':[...7 entries...]}
     """
-    if not ranking or len(ranking) < 2:
+    if not ranking or len(ranking) < 2 or weights is None:
         return None
     if not all('criteria' in m for m in ranking):
         return None
@@ -455,9 +506,9 @@ def run_sensitivity_analysis(ranking: list, n_mc: int = 500, weights: list = Non
                 'C5 Pace/Criticality', 'C6 Integration Risk', 'C7 Distributed Support']
     N = len(CRITERIA)
 
-    X = np.array([[m['criteria'].get(c, 0.5) for c in CRITERIA] for m in ranking])
+    X = np.array([[float(m['criteria'][c]) for c in CRITERIA] for m in ranking])
 
-    w0 = _resolve_weights(weights, 'MEB', _MEB_WEIGHTS_DEFAULT)
+    w0 = _require_weights(weights, 7)
 
     def _top(w: np.ndarray) -> int:
         return MCDMEngine(method='MAVT').rank(X, w)[0][0]

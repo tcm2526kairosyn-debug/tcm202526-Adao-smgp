@@ -326,7 +326,7 @@
       <th style="width:14%;">Abordagem</th>
       <th style="width:8%;">Tier</th>
       <th style="width:26%;">Value Score</th>
-      <th style="width:10%;">Misfit Δk</th>
+      <th style="width:10%;">Posture Alignment</th>
     </tr>
   </thead>
   <tbody>
@@ -356,11 +356,11 @@
           <span style="font-family:monospace; font-size:10px;">{{ "%.3f"|format(item.score) }}</span>
         </div>
       </td>
-      <td style="font-family:monospace; text-align:center;
-        {% if item.misfit < 0.5 %}color:#16a34a;
-        {% elif item.misfit < 1.5 %}color:#ca8a04;
+      <td style="font-weight:600; text-align:center;
+        {% if item.posture_alignment_tier == 'exact' %}color:#16a34a;
+        {% elif item.posture_alignment_tier == 'adjacent' %}color:#ca8a04;
         {% else %}color:#dc2626;{% endif %}">
-        {{ "%.2f"|format(item.misfit) }}
+        {{ item.posture_alignment_tier | title }}
       </td>
     </tr>
     {% endfor %}
