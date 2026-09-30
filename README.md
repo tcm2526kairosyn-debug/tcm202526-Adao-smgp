@@ -72,16 +72,20 @@ O ciclo de vida de cada decisão é controlado por uma máquina de estados deter
 | `stage_3_fit_m` | `REENTRY_GOVERNANCE` | `stage_2_approach` | **Sistema** | `no_feasible_methodology_after_level1` |
 | `stage_3_fit_m` | `REENTRY_DIAGNOSIS` | `stage_1_diagnosis` | Utilizador | `evidence_inconsistency` |
 | `stage_4_fit_t` | `CONFIRM_TOOLS` | `stage_complete` | Utilizador |, |
-| `stage_4_fit_t` | `REENTRY_METHODOLOGY` | `stage_3_fit_m` | Utilizador |, |
-| `stage_4_fit_t` | `REENTRY_APPROACH` | `stage_2_approach` | Utilizador | `governance_infeasibility` |
+| `stage_4_fit_t` | `REENTRY_METHODOLOGY` | `stage_3_fit_m` | Utilizador | `tool_infeasibility` |
+| `stage_4_fit_t` | `REENTRY_METHODOLOGY` | `stage_3_fit_m` | **Sistema** | `no_feasible_tailoring_after_level_a` / `no_viable_portfolio` |
+| `stage_4_fit_t` | `REENTRY_APPROACH` | `stage_2_approach` | Utilizador | `governance_threshold` |
 | qualquer estado | `REVISE_CONTEXT` | `stage_1_diagnosis` | Utilizador |, |
 
 ### Re-entry Automático (Sistema)
 
-Dois triggers forçam re-entry sem intervenção do utilizador:
+Três triggers forçam re-entry sem intervenção do utilizador:
 
-- **`REENTRY_GOVERNANCE` em Etapa 3**: disparado quando `run_fit_m_level1()` devolve lista vazia (nenhuma candidata da MEB sobrevive à triagem L1). Level 2 não chega a ser executado. O sistema preserva as exclusões (`meb_exclusions`), transiciona automaticamente para `stage_2_approach` e regista `reentry_cause = "no_feasible_methodology_after_level1"` — distinto de `governance_infeasibility`, que fica reservado para quando é o próprio gestor de projeto a rever manualmente a abordagem (`REVISE_APPROACH`), sem que a triagem L1 tenha esgotado os candidatos.
-- **`no_viable_tool_bundle` em Etapa 4**: se `run_fit_t_level_a()` não encontrar ferramentas compatíveis, o sistema alerta e o utilizador pode acionar `REENTRY_METHODOLOGY`.
+- **`REENTRY_GOVERNANCE` em Etapa 3**: disparado quando `run_fit_m_level1()` devolve lista vazia (nenhuma candidata da MEB sobrevive à triagem L1). Level 2 não chega a ser executado. O sistema preserva as exclusões (`meb_exclusions`), transiciona automaticamente para `stage_2_approach` e regista `reentry_cause = "no_feasible_methodology_after_level1"`, distinto de `governance_infeasibility`, que fica reservado para quando é o próprio gestor de projeto a rever manualmente a abordagem (`REVISE_APPROACH`), sem que a triagem L1 tenha esgotado os candidatos.
+- **Level A vazio em Etapa 4**: se `run_fit_t_level_a()` devolver I_A vazio, Level B não é executado; as exclusões ficam em `teb_exclusions` e o sistema volta automaticamente a `stage_3_fit_m` com `reentry_cause = "no_feasible_tailoring_after_level_a"`.
+- **Portfolio vazio em Etapa 4**: se o GP confirmar sem nenhuma ferramenta selecionada, a decisão não é concluída; volta a `stage_3_fit_m` com `reentry_cause = "no_viable_portfolio"`.
+
+O `REENTRY_METHODOLOGY` acionado manualmente pelo GP ("← Rever Metodologia") regista `tool_infeasibility`. Um retorno mais profundo (Etapa 2 ou 1) exige uma ação explícita do GP.
 
 ### Fluxo Normal vs. Fluxo com Re-entry
 
@@ -465,7 +469,11 @@ Agrega, a partir dos campos persistidos da decisão, o output necessário para r
 
 #### `run_fit_t_level_a/b(...)`: Fit_T (Etapa 4)
 
-`level_a` filtra a TEB por: compatibilidade com o envelope metodológico (primário + componentes justificados), postura e restrições GDPR. `level_b` aplica MCDM com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e devolve o top-N ranqueado **por categoria** (não greedy), o utilizador escolhe a ferramenta final em cada categoria na Etapa 4.
+`level_a` filtra a TEB por: binding constraints (`gdpr_compliant`), acceptance thresholds com `scope="T"` (`min_<atributo>` para mínimos numéricos, ex. `min_contribution_cd6`, ou igualdade para os restantes; causa `acceptance_threshold_<constraint>`), compatibilidade com o envelope metodológico (primário + componentes justificados), compatibilidade de postura (label da metodologia face a `compatible_postures`) e evidência completa CD1-CD8. O `build_decision_control_register()` atual não gera thresholds de ferramenta, mas o contrato de Level A suporta-os.
+
+`level_b` aplica MAVT com os **8 critérios CD1-CD8** (`contribution_cd1` … `contribution_cd8`) e os pesos confirmados para a Etapa 4, devolvendo uma **shortlist** de até 3 ferramentas por categoria. O **portfolio** só existe depois da confirmação do GP, que escolhe no máximo uma ferramenta por categoria (ou nenhuma). Esta seleção por categoria é uma simplificação da camada de configuração do KairoSyn: o protótipo não otimiza dependências, precedências, incompatibilidades nem overhead entre ferramentas.
+
+Há dois capability maps: `capability_map`, calculado sobre I_A (cobertura potencial), e `portfolio_capability_map`, calculado depois da confirmação, só com as ferramentas do portfolio.
 
 ---
 

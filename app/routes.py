@@ -81,6 +81,15 @@ _WEIGHTS_FIELD = {'MEB': 'meb_weights', 'TEB': 'teb_weights'}
 _WEIGHTS_STAGE_LABEL = {'MEB': 'Etapa 3 (C1-C7)', 'TEB': 'Etapa 4 (CD1-CD8)'}
 
 
+def _stage4_reentry(decision, cause, message):
+    """_stage4_reentry(decision, 'no_viable_portfolio', '...') -> redirect para a Etapa 3"""
+    decision.reentry_cause = cause
+    _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY', cause=cause)
+    db.session.commit()
+    flash(message, "warning")
+    return redirect(url_for('main.etapa3', id=decision.id))
+
+
 def _decision_weights(decision, context):
     """_decision_weights(decision, 'MEB') -> [0.12, 0.12, 0.18, 0.18, 0.15, 0.13, 0.12] | None"""
     record = getattr(decision, _WEIGHTS_FIELD[context])
@@ -909,18 +918,28 @@ def etapa4(id):
         viable_tools, teb_exclusions = run_fit_t_level_a(selected_meth, decision_control_register, envelope_codes)
         decision.teb_exclusions = teb_exclusions
         decision.capability_map = build_capability_map(viable_tools)
-        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
+        decision.teb_filtered = [t.id for t in viable_tools]
+        if not viable_tools:
+            return _stage4_reentry(decision, 'no_feasible_tailoring_after_level_a',
+                                   "Nenhuma ferramenta admissível após o Level A. Reveja a metodologia.")
+
+        shortlist_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
         portfolio = []
         seen_codes = set()
-        for cat, tools in ranked_by_category.items():
+        for cat, tools in shortlist_by_category.items():
             chosen_code = request.form.get(f'sel_{cat}')
-            selected = next((t for t in tools if t['code'] == chosen_code), tools[0] if tools else None)
+            selected = next((t for t in tools if t['code'] == chosen_code), None)
             if selected and selected['code'] not in seen_codes:
                 portfolio.append(selected)
                 seen_codes.add(selected['code'])
 
+        if not portfolio:
+            return _stage4_reentry(decision, 'no_viable_portfolio',
+                                   "Nenhuma ferramenta confirmada: não é possível constituir um portfolio. Reveja a metodologia.")
+
         decision.tool_portfolio = portfolio
-        decision.teb_filtered = [t.id for t in viable_tools]
+        portfolio_tools = ToolEvidenceBase.query.filter(ToolEvidenceBase.id.in_([t['id'] for t in portfolio])).all()
+        decision.portfolio_capability_map = build_capability_map(portfolio_tools)
         decision.reentry_cause = None
         _log_transition(decision, previous, 'stage_complete', 'CONFIRM_TOOLS')
         db.session.commit()
@@ -932,22 +951,19 @@ def etapa4(id):
     capability_map = build_capability_map(viable_tools)
     decision.capability_map = capability_map
 
+    decision.teb_filtered = [t.id for t in viable_tools]
     if not viable_tools:
-        decision.reentry_cause = 'tool_infeasibility'
-        _log_transition(decision, decision.current_stage, 'stage_3_fit_m', 'REENTRY_METHODOLOGY', cause='tool_infeasibility')
-        db.session.commit()
-        flash("Nenhuma ferramenta compatível encontrada. Reveja a metodologia.", "warning")
-        return redirect(url_for('main.etapa3', id=id))
+        return _stage4_reentry(decision, 'no_feasible_tailoring_after_level_a',
+                               "Nenhuma ferramenta admissível após o Level A. Reveja a metodologia.")
 
-    ranked_by_category = {}
+    shortlist_by_category = {}
     teb_weights = _decision_weights(decision, 'TEB')
     if teb_weights:
-        ranked_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
-    decision.teb_filtered = [t.id for t in viable_tools]
+        shortlist_by_category = run_fit_t_level_b(viable_tools, decision.mcdm_engine or 'MAVT', weights=teb_weights)
     db.session.commit()
 
     return render_template("etapa4.html", decision=decision,
-                           ranked_by_category=ranked_by_category,
+                           shortlist_by_category=shortlist_by_category,
                            selected_meth=selected_meth,
                            teb_exclusions=teb_exclusions,
                            capability_map=capability_map,
@@ -1152,6 +1168,7 @@ def export_decision(id):
         "teb_filtered": decision.teb_filtered,
         "teb_exclusions": decision.teb_exclusions,
         "teb_weights": decision.teb_weights,
+        "portfolio_capability_map": decision.portfolio_capability_map,
         "capability_map": decision.capability_map,
         "tool_portfolio": decision.tool_portfolio,
         # Auditoria
@@ -1168,7 +1185,7 @@ def export_decision(id):
         json_fields = ["context_data", "evidence_notes", "decision_control_register",
                        "meb_filtered", "meb_exclusions", "meb_weights", "stage3_output", "methodology_ranking",
                        "methodological_envelope", "sensitivity_analysis",
-                       "teb_filtered", "teb_exclusions", "teb_weights", "capability_map", "tool_portfolio", "transition_history"]
+                       "teb_filtered", "teb_exclusions", "teb_weights", "capability_map", "portfolio_capability_map", "tool_portfolio", "transition_history"]
         headers = flat_fields + json_fields
         values = [payload.get(f, "") for f in flat_fields] + [
             json.dumps(payload[f], ensure_ascii=False) if payload[f] is not None else ""

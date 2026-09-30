@@ -474,13 +474,18 @@
 </table>
 {% endif %}
 
-<!-- CAPABILITY MAP (LEVEL A) -->
-{% if decision.capability_map %}
-<h2>Etapa 4, Capability Map (Level A)</h2>
-<p style="font-size:10px; color:#64748b; margin-bottom:6px;">
-  Cobertura das dimensões de capacidade CD1-CD8 pelo conjunto admissível I_A.
-  Artefacto de auditoria derivado das contribuições registadas na TEB, não entra no scoring MAVT de Level B.
-</p>
+<!-- CAPABILITY MAPS (I_A e portfolio confirmado) -->
+{% set cap_maps = [
+  ('Etapa 4, Capability Map (Level A, conjunto admissível I_A)',
+   'Cobertura potencial das dimensões CD1-CD8 pelo conjunto admissível I_A, antes da seleção do portfolio. Uma dimensão pode surgir como forte mesmo que a ferramenta que a cobre não venha a ser selecionada. Não entra no scoring MAVT de Level B.',
+   decision.capability_map),
+  ('Etapa 4, Capability Map do portfolio confirmado',
+   'Cobertura das dimensões CD1-CD8 apenas pelas ferramentas efetivamente confirmadas pelo GP.',
+   decision.portfolio_capability_map),
+] %}
+{% for title, desc, cmap in cap_maps if cmap %}
+<h2>{{ title }}</h2>
+<p style="font-size:10px; color:#64748b; margin-bottom:6px;">{{ desc }}</p>
 <table class="no-break">
   <thead>
     <tr>
@@ -491,7 +496,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for cd in decision.capability_map %}
+    {% for cd in cmap %}
     <tr>
       <td style="font-weight:700;">{{ cd.code }}</td>
       <td>{{ cd.label }}</td>
@@ -506,14 +511,14 @@
         {% if cd.covered_by %}
           {% for t in cd.covered_by %}{{ t.code }} ({{ "%.2f"|format(t.contribution) }}){% if not loop.last %} · {% endif %}{% endfor %}
         {% else %}
-          <span style="color:#dc2626; font-weight:600;">Lacuna, nenhuma ferramenta admissível ≥ 0.5</span>
+          <span style="color:#dc2626; font-weight:600;">Lacuna, nenhuma ferramenta ≥ 0.5</span>
         {% endif %}
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-{% endif %}
+{% endfor %}
 
 <!-- ANÁLISE DE SENSIBILIDADE MCDM -->
 {% if sensitivity %}

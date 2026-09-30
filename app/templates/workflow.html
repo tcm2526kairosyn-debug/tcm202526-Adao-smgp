@@ -384,6 +384,32 @@ flowchart TD
             </div>
             {% endfor %}
         </div>
+
+        {% if decision.portfolio_capability_map %}
+        {% macro capmap(cmap) %}
+        <div class="space-y-1.5">
+            {% for cd in cmap %}
+            <div class="flex items-center gap-2" title="{{ cd.label }}: {% if cd.covered_by %}{% for t in cd.covered_by %}{{ t.code }} ({{ '%.2f'|format(t.contribution) }}){% if not loop.last %} · {% endif %}{% endfor %}{% else %}sem cobertura ≥ 0.5, lacuna{% endif %}">
+                <span class="text-[10px] font-black w-8 shrink-0
+                    {% if cd.coverage == 'strong' %}text-green-600{% elif cd.coverage == 'partial' %}text-amber-600{% else %}text-red-600{% endif %}">{{ cd.code }}</span>
+                <span class="text-[10px] text-slate-500 w-36 shrink-0 truncate">{{ cd.label }}</span>
+                <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full
+                        {% if cd.coverage == 'strong' %}bg-green-500{% elif cd.coverage == 'partial' %}bg-amber-500{% else %}bg-red-400{% endif %}"
+                         style="width: {{ (cd.max_contribution * 100) | int }}%"></div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 w-8 text-right">{{ "%.2f"|format(cd.max_contribution) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endmacro %}
+        <div class="mt-6 pt-5 border-t border-slate-100 max-w-2xl">
+            <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Capability Map do portfolio confirmado</p>
+            <p class="text-[10px] text-slate-400 mb-3">Cobertura CD1-CD8 só pelas ferramentas selecionadas.</p>
+            {{ capmap(decision.portfolio_capability_map) }}
+        </div>
+        <p class="text-[10px] text-slate-400 mt-3">Verde = forte (≥ 0.7) · Âmbar = parcial (≥ 0.4) · Vermelho = lacuna (&lt; 0.4). Passe o rato sobre uma linha para ver as ferramentas que cobrem a capacidade.</p>
+        {% endif %}
     </div>
     {% endif %}
 

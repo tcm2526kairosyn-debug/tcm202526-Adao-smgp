@@ -209,6 +209,7 @@ class ProjectDecision(db.Model):
     capability_map = db.Column(db.JSON) # cobertura CD1-CD8 pelo conjunto admissível I_A (Level A)
     teb_weights = db.Column(db.JSON)    # {values: [8], preset_id, confirmed_by, confirmed_at}
     tool_portfolio = db.Column(db.JSON) # [{id, code, name, score, category}, ...]
+    portfolio_capability_map = db.Column(db.JSON)  # cobertura CD1-CD8 pelo portfolio confirmado
 
     # State machine
     current_stage = db.Column(db.String(50), default='stage_1_diagnosis')
