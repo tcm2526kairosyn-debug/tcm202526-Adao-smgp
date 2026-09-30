@@ -235,7 +235,7 @@ def run_migrations(db):
             "ALTER TABLE project_decision "
             "ADD COLUMN IF NOT EXISTS capability_map JSON"
         ))
-        for col in ('meb_weights', 'teb_weights'):
+        for col in ('meb_weights', 'teb_weights', 'portfolio_capability_map'):
             conn.execute(text(
                 f"ALTER TABLE project_decision ADD COLUMN IF NOT EXISTS {col} JSON"
             ))

@@ -355,6 +355,26 @@ def get_envelope_component_candidates(primary_meth, decision_control_register: d
 
 # ── Etapa 4 ─────────────────────────────────────────────────────────────────
 
+def _check_tool_acceptance_thresholds(t, acceptance_thresholds: dict) -> dict | None:
+    """
+    _check_tool_acceptance_thresholds(TEAMS, {'min_contribution_cd6': 0.75})
+    -> {'cause': 'acceptance_threshold_min_contribution_cd6', 'detail': 'contribution_cd6 = 0.50 < 0.75 ...'}
+    """
+    for constraint, required in acceptance_thresholds.items():
+        attr = constraint[len('min_'):] if constraint.startswith('min_') else constraint
+        if not hasattr(t, attr):
+            raise ValueError(f"Acceptance threshold desconhecido para a TEB: '{constraint}'.")
+        value = getattr(t, attr)
+        if constraint.startswith('min_'):
+            if value is None or value < required:
+                return {"cause": f"acceptance_threshold_{constraint}",
+                        "detail": f"Acceptance threshold: {attr} = {value} < {required} exigido pelo decision-control register."}
+        elif value != required:
+            return {"cause": f"acceptance_threshold_{constraint}",
+                    "detail": f"Acceptance threshold: {attr} = {value}, exigido {required} pelo decision-control register."}
+    return None
+
+
 def run_fit_t_level_a(selected_meth, decision_control_register: dict,
                       envelope_codes: list = None) -> tuple:
     """
@@ -369,6 +389,8 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict,
     tools = ToolEvidenceBase.query.filter_by(is_active=True).all()
     binding_constraints = {c["constraint"]: c["value"]
                            for c in decision_control_register.get("binding_constraints", []) if c["scope"] == "T"}
+    acceptance_thresholds = {c["constraint"]: c["value"]
+                             for c in decision_control_register.get("acceptance_thresholds", []) if c["scope"] == "T"}
 
     viable = []
     exclusions = []
@@ -382,6 +404,11 @@ def run_fit_t_level_a(selected_meth, decision_control_register: dict,
                 _exclude(t, "binding_gdpr_incompatible",
                          "Binding constraint: gdpr_compliant exigido pelo decision-control register.")
                 continue
+
+        exc = _check_tool_acceptance_thresholds(t, acceptance_thresholds)
+        if exc:
+            _exclude(t, exc["cause"], exc["detail"])
+            continue
 
         if not (set(t.compatible_methodologies or []) & set(envelope_codes)):
             _exclude(t, "methodology_incompatible",
@@ -445,7 +472,7 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
                       *, weights: list) -> dict:
     """
     run_fit_t_level_b(viable_tools, top_n=2, weights=[0.15,0.12,0.13,0.10,0.10,0.15,0.15,0.10])
-    -> {'Documentation':['CONFLUENCE'], 'Planning':['MS_PROJECT','PROJECTLIBRE'], 'Communication':['TEAMS','SLACK']}
+    -> shortlist {'Documentation':['CONFLUENCE'], 'Planning':['MS_PROJECT','PROJECTLIBRE'], 'Communication':['TEAMS','SLACK']}
     """
     if not viable_tools:
         return {}
@@ -484,7 +511,8 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
         for cat in cats:
             by_category.setdefault(cat, []).append(item)
 
-    return {cat: tools[:top_n] for cat, tools in by_category.items()}
+    shortlist_by_category = {cat: tools[:top_n] for cat, tools in by_category.items()}
+    return shortlist_by_category
 
 
 # ── Sensitivity Analysis ──────────────────────────────────────────────────────
