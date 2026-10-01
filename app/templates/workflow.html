@@ -320,37 +320,33 @@ flowchart TD
         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
             <div>
                 <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Análise de Sensibilidade MCDM</h2>
-                <p class="text-xs text-slate-400 mt-1">{{ sensitivity.n_simulations }} simulações Monte Carlo · pesos Dirichlet uniformes</p>
+                <p class="text-xs text-slate-400 mt-1">{{ sensitivity.n_simulations }} vetores Dirichlet(1,…,1): exploração uniforme de todo o simplex de pesos C1-C7, não perturbação em torno dos pesos confirmados</p>
             </div>
             <div class="text-center shrink-0">
-                <p class="text-4xl font-black {% if sensitivity.stable %}text-green-600{% else %}text-amber-600{% endif %}">
-                    {{ sensitivity.robustness_pct }}%
-                </p>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Robustez</p>
+                <p class="text-4xl font-black text-slate-700">ρ = {{ sensitivity.robustness_pct }}%</p>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Estabilidade global do top-1</p>
             </div>
         </div>
 
-        <div class="mb-5 p-3 rounded-xl text-xs
-            {% if sensitivity.stable %}bg-green-50 border border-green-100 text-green-700
-            {% else %}bg-amber-50 border border-amber-100 text-amber-700{% endif %}">
-            {% if sensitivity.stable %}
-            ✓ <strong>{{ sensitivity.top_name }}</strong> mantém-se como recomendação principal em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações com pesos aleatórios, o ranking é robusto.
+        <div class="mb-5 p-3 rounded-xl text-xs bg-slate-50 border border-slate-100 text-slate-600">
+            <strong>{{ sensitivity.top_name }}</strong> mantém o 1.º lugar em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações
+            {%- if sensitivity.displaced_pct %} e é deslocado em {{ sensitivity.displaced_pct }}%{% endif %}.
+            {% if sensitivity.displacing_alternative %}
+            Nas simulações em que é deslocado, quem mais vezes ocupa o 1.º lugar é <strong>{{ sensitivity.displacing_alternative }}</strong> ({{ sensitivity.displacing_alternative_pct }}% do total de simulações).
             {% else %}
-            ⚠ <strong>{{ sensitivity.top_name }}</strong> mantém-se em apenas <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações, o ranking é sensível aos pesos.
+            Nenhuma alternativa o desloca em nenhuma simulação.
             {% endif %}
-            {% if sensitivity.runner_up %}
-            &nbsp;Alternativa mais competitiva: <strong>{{ sensitivity.runner_up }}</strong> ({{ sensitivity.runner_up_pct }}% das simulações).
-            {% endif %}
+            <span class="block mt-1.5 text-[10px] text-slate-400">
+                Limiar de apoio à decisão do protótipo (prototype decision-support threshold): ρ ≥ {{ (sensitivity.stability_threshold * 100) | int }}%,
+                {% if sensitivity.stable %}atingido{% else %}não atingido{% endif %}. Convenção da prova de conceito, não é uma medida de confiança estatística.
+            </span>
         </div>
 
         <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
             Intervalo de estabilidade por critério
         </p>
         <p class="text-[10px] text-slate-400 mb-3">
-            Barra = range de pesos onde <strong>{{ sensitivity.top_name }}</strong> permanece #1 &nbsp;·&nbsp;
-            <span class="text-green-600 font-semibold">verde</span> = robusto &nbsp;
-            <span class="text-yellow-600 font-semibold">amarelo</span> = moderado &nbsp;
-            <span class="text-red-500 font-semibold">vermelho</span> = sensível
+            Barra = intervalo de pesos em que <strong>{{ sensitivity.top_name }}</strong> se mantém em 1.º lugar (restantes pesos redistribuídos proporcionalmente) &nbsp;·&nbsp; traço = peso confirmado na decisão
         </p>
         <canvas id="sensitivity-chart" style="max-height:230px;"></canvas>
     </div>
@@ -570,7 +566,6 @@ window._wfData = {
     const sensEl = document.getElementById('sensitivity-chart');
     if (sensEl && d.sensitivity && d.sensitivity.per_criterion) {
         const pc = d.sensitivity.per_criterion;
-        const rangeColor = (r) => r >= 0.4 ? 'rgba(22,163,74,0.75)' : r >= 0.15 ? 'rgba(202,138,4,0.75)' : 'rgba(239,68,68,0.75)';
         const currentMarkerPlugin = {
             id: 'currentWeightMarker',
             afterDatasetsDraw(chart) {
@@ -598,7 +593,7 @@ window._wfData = {
                 datasets: [{
                     label: 'Range estável',
                     data: pc.map(c => [c.min, c.max]),
-                    backgroundColor: pc.map(c => rangeColor(c.range)),
+                    backgroundColor: 'rgba(71,85,105,0.55)',
                     borderRadius: 3,
                     borderSkipped: false,
                 }]

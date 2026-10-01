@@ -526,35 +526,38 @@
 <div class="no-break">
   <div class="sens-header">
     <div>
-      <div style="font-size:9px; color:#64748b;">{{ sensitivity.n_simulations }} simulações Monte Carlo · pesos Dirichlet uniformes</div>
+      <div style="font-size:9px; color:#64748b;">{{ sensitivity.n_simulations }} vetores Dirichlet(1,…,1): exploração uniforme de todo o simplex de pesos C1-C7, não perturbação em torno dos pesos confirmados</div>
       <div style="font-size:9px; color:#64748b; margin-top:2px;">Metodologia avaliada: <strong>{{ sensitivity.top_name }}</strong></div>
+      <div style="font-size:9px; color:#64748b; margin-top:2px;">Resultado registado na confirmação da Etapa 3{% if sensitivity.computed_at %} ({{ sensitivity.computed_at[:16] | replace('T', ' ') }}){% endif %} · semente {{ sensitivity.seed }} · pesos base {{ sensitivity.base_weights | join(', ') }}</div>
     </div>
     <div class="sens-robustness">
-      <div class="pct {% if sensitivity.stable %}sens-stable{% else %}sens-unstable{% endif %}">{{ sensitivity.robustness_pct }}%</div>
-      <div class="lbl">Robustez</div>
+      <div class="pct" style="color:#334155;">ρ = {{ sensitivity.robustness_pct }}%</div>
+      <div class="lbl">Estabilidade global do top-1</div>
     </div>
   </div>
 
-  <div class="sens-callout {% if sensitivity.stable %}sens-callout-ok{% else %}sens-callout-warn{% endif %}">
-    {% if sensitivity.stable %}
-    ✓ <strong>{{ sensitivity.top_name }}</strong> mantém-se como recomendação principal em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações com pesos aleatórios, o ranking é robusto.
+  <div class="sens-callout" style="background:#f8fafc; border:1px solid #e2e8f0; color:#475569;">
+    <strong>{{ sensitivity.top_name }}</strong> mantém o 1.º lugar em <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações
+    {%- if sensitivity.displaced_pct %} e é deslocado em {{ sensitivity.displaced_pct }}%{% endif %}.
+    {% if sensitivity.displacing_alternative %}
+    Nas simulações em que é deslocado, quem mais vezes ocupa o 1.º lugar é <strong>{{ sensitivity.displacing_alternative }}</strong> ({{ sensitivity.displacing_alternative_pct }}% do total de simulações).
     {% else %}
-    ⚠ <strong>{{ sensitivity.top_name }}</strong> mantém-se em apenas <strong>{{ sensitivity.robustness_pct }}%</strong> das simulações, o ranking é sensível aos pesos.
+    Nenhuma alternativa o desloca em nenhuma simulação.
     {% endif %}
-    {% if sensitivity.runner_up %}
-    Alternativa mais competitiva: <strong>{{ sensitivity.runner_up }}</strong> ({{ sensitivity.runner_up_pct }}% das simulações).
-    {% endif %}
+    <div style="font-size:8px; color:#94a3b8; margin-top:4px;">
+      Limiar de apoio à decisão do protótipo (prototype decision-support threshold): ρ ≥ {{ (sensitivity.stability_threshold * 100) | int }}%,
+      {% if sensitivity.stable %}atingido{% else %}não atingido{% endif %}. Convenção da prova de conceito, não é uma medida de confiança estatística.
+    </div>
   </div>
 
   <table class="sens-table">
     <thead>
       <tr>
         <th>Critério</th>
-        <th>Peso atual</th>
+        <th>Peso confirmado</th>
         <th>Mín estável</th>
         <th>Máx estável</th>
         <th>Amplitude (Δ)</th>
-        <th>Estabilidade</th>
       </tr>
     </thead>
     <tbody>
@@ -564,20 +567,74 @@
         <td>{{ "%.1f"|format(c.current * 100) }}%</td>
         <td>{{ "%.1f"|format(c.min * 100) }}%</td>
         <td>{{ "%.1f"|format(c.max * 100) }}%</td>
-        <td class="{% if c.range >= 0.3 %}range-robust{% elif c.range >= 0.1 %}range-moderate{% else %}range-sensitive{% endif %}">
-          {{ "%.1f"|format(c.range * 100) }}pp
-        </td>
-        <td class="{% if c.range >= 0.3 %}range-robust{% elif c.range >= 0.1 %}range-moderate{% else %}range-sensitive{% endif %}">
-          {% if c.range >= 0.3 %}Robusto{% elif c.range >= 0.1 %}Moderado{% else %}Sensível{% endif %}
-        </td>
+        <td>{{ "%.1f"|format(c.range * 100) }}pp</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   <div style="font-size:8px; color:#94a3b8; margin-top:5px;">
-    Δ ≥ 30pp = robusto &nbsp;·&nbsp; 10pp ≤ Δ &lt; 30pp = moderado &nbsp;·&nbsp; Δ &lt; 10pp = sensível ao peso
+    Amplitude = intervalo de pesos do critério em que o top-1 se mantém, com os restantes pesos redistribuídos proporcionalmente.
   </div>
 </div>
+{% endif %}
+
+<!-- PROVENIÊNCIA: EVIDÊNCIA E PREFERÊNCIAS -->
+{% if provenance %}
+<h2>Proveniência: evidência e preferências</h2>
+<p style="font-size:10px; color:#64748b; margin-bottom:6px;">
+  Vetores de pesos efetivamente usados em cada etapa e versões da Evidence Base (MEB/TEB) a que a decisão se refere.
+</p>
+{% for w in provenance.weights %}
+<div class="no-break" style="margin-bottom:8px;">
+  <div style="font-size:10px; font-weight:700; color:#334155; margin-bottom:3px;">Pesos {{ w.stage }}</div>
+  {% if w.record %}
+  <table>
+    <thead><tr>{% for c in w.criteria %}<th style="text-align:center;">{{ c.code }}</th>{% endfor %}</tr></thead>
+    <tbody><tr>{% for v in w.record['values'] %}<td style="text-align:center; font-family:monospace;">{{ "%.2f"|format(v) }}</td>{% endfor %}</tr></tbody>
+  </table>
+  <div style="font-size:9px; color:#475569; margin-top:3px;">
+    Método: {{ 'distribuição direta de 100 pontos' if w.record.get('elicitation_method') == 'direct_100_points' else (w.record.get('elicitation_method') or 'não registado') }}
+    · Confirmado por {{ w.record.get('confirmed_by') or 'não registado' }}
+    em {{ (w.record.get('confirmed_at') or '')[:16] | replace('T', ' ') or 'data não registada' }}
+    · Preset de referência:
+    {% if w.preset %}#{{ w.preset.id }} (ativo desde {{ w.preset.active_date.strftime('%d/%m/%Y %H:%M') if w.preset.active_date else '-' }}){% else %}não registado{% endif %}
+  </div>
+  {% if w.record.get('justification') %}
+  <div style="font-size:9px; color:#475569; margin-top:2px;">Justificação: {{ w.record.get('justification') }}</div>
+  {% endif %}
+  {% else %}
+  <div style="font-size:9px; color:#dc2626;">Sem pesos confirmados nesta decisão.</div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if provenance.evidence %}
+<table class="no-break">
+  <thead>
+    <tr>
+      <th style="width:12%;">Base</th>
+      <th style="width:28%;">Utilização</th>
+      <th style="width:18%;">Código</th>
+      <th style="width:14%;">ID da versão</th>
+      <th>Versão ativa desde</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in provenance.evidence %}
+    <tr>
+      <td>{{ e.base }}</td>
+      <td>{{ e.role }}</td>
+      <td style="font-family:monospace;">{{ e.code or '-' }}</td>
+      <td style="font-family:monospace;">#{{ e.id }}</td>
+      <td>
+        {{ e.active_date.strftime('%d/%m/%Y %H:%M') if e.active_date else '-' }}
+        {% if e.is_active == False %}<span style="color:#d97706;">(substituída por versão posterior)</span>{% elif e.is_active is none %}<span style="color:#dc2626;">(versão não encontrada)</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endif %}
 
 <!-- HISTÓRICO DE TRANSIÇÕES -->

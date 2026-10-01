@@ -486,14 +486,13 @@ Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variaç�
 | Mecanismo | Descrição |
 |-----------|-----------|
 | **Varrimento por critério** | Para cada critério j, fixa o peso em valores de 0→1 (passo 0.01), redistribuindo proporcionalmente os restantes. Encontra o intervalo `[min, max]` onde a metodologia top-1 se mantém #1. |
-| **Monte Carlo (Dirichlet)** | 500 vectores de pesos amostrados da distribuição Dirichlet uniforme (cobertura uniforme do simplex). Mede a % de simulações onde o top-1 se mantém. |
+| **Monte Carlo (Dirichlet)** | 500 vetores de pesos amostrados de Dirichlet(1,…,1), que explora uniformemente todo o simplex de pesos (não gera perturbações em torno do vetor confirmado). ρ é a % de simulações em que o top-1 se mantém: estabilidade global do top-1 sob uma exploração ampla do espaço de pesos, não uma probabilidade nem uma incerteza estatística em torno dos pesos elicitados. |
 
-**Interpretação da robustez:**
+**Interpretação de ρ:** o valor é reportado de forma contínua (`robustness_pct`). Existe um único limiar, `stable = ρ ≥ 0.60` (`stability_threshold`), identificado como *prototype decision-support threshold*: uma convenção da prova de conceito, não evidência de validade nem de confiança estatística. Um ρ abaixo do limiar indica que as preferências usadas em Level 2 devem ser revistas; não desencadeia re-entry automático.
 
-| Score Monte Carlo | Significado |
-|-------------------|-------------|
-| ≥ 60% | Ranking robusto, recomendação estável face a preferências dos decisores |
-| < 60% | Ranking sensível, valide critérios e pesos com os arguentes |
+**Persistência:** a análise é calculada uma única vez, quando o GP confirma a metodologia na Etapa 3, e guardada em `ProjectDecision.sensitivity_result`, com a semente (`seed`), a amostragem, o passo do varrimento, os pesos base, os critérios e as candidatas avaliadas. O workflow e as exportações JSON/CSV/PDF limitam-se a ler esse registo; nunca a recalculam a partir do estado atual da aplicação.
+
+**Alternativa que desloca o top-1:** `displaced_pct` é a % de simulações em que o top-1 perde o 1.º lugar; `displacing_alternative` é a candidata que mais vezes ocupa o 1.º lugar nessas simulações, com `displacing_alternative_pct` em % do total de simulações. Se o top-1 nunca é deslocado, não há alternativa (`None`).
 
 **Saída `per_criterion`**, lista com um objeto por critério:
 
@@ -508,7 +507,7 @@ Avalia a **robustez do ranking** calculado em `run_fit_m_level2` face a variaç�
 }
 ```
 
-O **gráfico de barras flutuantes** em `/workflow/<id>` visualiza este `range` por critério, com código de cor: verde (Δ ≥ 30pp), amarelo (Δ 10–29pp), vermelho (Δ < 10pp). Uma marca vertical indica o peso atual.
+O **gráfico de barras flutuantes** em `/workflow/<id>` visualiza este intervalo por critério numa só cor, sem categorias normativas; uma marca vertical indica o peso confirmado. O PDF apresenta os mesmos valores em tabela.
 
 ---
 

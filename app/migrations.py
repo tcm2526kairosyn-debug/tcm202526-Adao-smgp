@@ -95,33 +95,6 @@ def run_migrations(db):
             "ALTER TABLE projetos ALTER COLUMN equipa_projeto TYPE TEXT"
         ))
 
-        # MEB, spec-aligned posture coordinates {1,2,3,4}
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS ag_posture INTEGER DEFAULT 2"
-        ))
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS as_posture INTEGER DEFAULT 2"
-        ))
-
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_assurance FLOAT DEFAULT 0.5"
-        ))
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_agility FLOAT DEFAULT 0.5"
-        ))
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_scalability FLOAT DEFAULT 0.5"
-        ))
-        conn.execute(text(
-            "ALTER TABLE methodology_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_hybridisation FLOAT DEFAULT 0.5"
-        ))
-
         # TEB, spec-aligned context coordinates {1,2,3,4}
         conn.execute(text(
             "ALTER TABLE tool_evidence_base "
@@ -130,15 +103,6 @@ def run_migrations(db):
         conn.execute(text(
             "ALTER TABLE tool_evidence_base "
             "ADD COLUMN IF NOT EXISTS assurance_support INTEGER DEFAULT 2"
-        ))
-
-        conn.execute(text(
-            "ALTER TABLE tool_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_traceability FLOAT DEFAULT 0.5"
-        ))
-        conn.execute(text(
-            "ALTER TABLE tool_evidence_base "
-            "ADD COLUMN IF NOT EXISTS score_flow_support FLOAT DEFAULT 0.5"
         ))
 
         for col in ('min_agpi', 'max_aspi', 'score_flexibility',
@@ -235,7 +199,7 @@ def run_migrations(db):
             "ALTER TABLE project_decision "
             "ADD COLUMN IF NOT EXISTS capability_map JSON"
         ))
-        for col in ('meb_weights', 'teb_weights', 'portfolio_capability_map'):
+        for col in ('meb_weights', 'teb_weights', 'portfolio_capability_map', 'sensitivity_result'):
             conn.execute(text(
                 f"ALTER TABLE project_decision ADD COLUMN IF NOT EXISTS {col} JSON"
             ))

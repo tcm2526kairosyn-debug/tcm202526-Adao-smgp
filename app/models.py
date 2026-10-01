@@ -202,6 +202,7 @@ class ProjectDecision(db.Model):
     methodology_ranking = db.Column(db.JSON) # [{id, code, name, score, misfit}, ...]
     mcdm_engine = db.Column(db.String(20), default='MAVT')
     meb_weights = db.Column(db.JSON)  # {values: [7], preset_id, confirmed_by, confirmed_at}
+    sensitivity_result = db.Column(db.JSON)  # análise de sensibilidade persistida na confirmação da Etapa 3
 
     # Etapa 4
     teb_filtered = db.Column(db.JSON)   # IDs que passaram Level A
