@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Etapa 4: Ferramentas · {% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto py-10 px-4">
 
@@ -63,7 +64,7 @@ flowchart TD
             <!-- Capability map, output Level A (cobertura CD1-CD8 por I_A) -->
             {% if capability_map %}
             <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Capability Map (Level A, I_A)</p>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Capability Map do conjunto admissível I_A</p>
                 <p class="text-[10px] text-slate-400 mb-3">Cobertura potencial CD1-CD8 pelo conjunto admissível I_A, não pelo portfolio final. Auditoria, não entra no MAVT.</p>
                 <div class="space-y-1.5">
                     {% for cd in capability_map %}

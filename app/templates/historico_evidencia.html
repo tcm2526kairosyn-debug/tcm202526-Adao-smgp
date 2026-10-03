@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Histórico da evidência · {% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto py-8 px-4 font-sans antialiased text-slate-900">
 
@@ -188,7 +189,7 @@
      class="hidden"></div>
 {% endfor %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function () {
     const container = document.getElementById('chart-data');

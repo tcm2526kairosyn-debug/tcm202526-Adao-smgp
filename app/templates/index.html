@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Início · {% endblock %}
 {% block content %}
 <div class="max-w-screen-xl mx-auto py-8 px-0">
 
@@ -19,7 +20,7 @@
                         Olá, <span class="bg-gradient-to-r from-slate-700 to-zinc-900 bg-clip-text text-transparent">{{ current_user.username | truncate(20, true, '…') }}</span>
                     </h1>
                     <p class="text-slate-500 text-sm max-w-lg leading-relaxed">
-                        Sistema de Apoio à Decisão para Seleção de Metodologias de Gestão de Projetos, Framework KairoSyn
+                        Sistema de Apoio à Decisão para Seleção de Metodologias de Gestão de Projetos · Framework KairoSyn
                     </p>
                 </div>
                 <a href="{{ url_for('main.listaprojetos') }}"
@@ -165,7 +166,7 @@
     </div>
 
     <!-- ── KairoSyn Pipeline ─────────────────────────────────────────────────── -->
-    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-0.5">Fluxo KairoSyn, 4 Etapas</p>
+    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-0.5">Fluxo KairoSyn em 4 etapas</p>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
 
         {% set pipeline = [
