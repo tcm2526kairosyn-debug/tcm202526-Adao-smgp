@@ -136,12 +136,16 @@ flowchart TD
                     </div>
                 </div>
 
-                <!-- Decision-Control Register (se existir) -->
-                {% if decision.decision_control_register %}
+                <!-- Decision-Control Register (pré-visualização para a abordagem sugerida) -->
+                {% if dcr_preview %}
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow mt-4">
-                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 uppercase tracking-wider">Decision-Control Register</h2>
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 uppercase tracking-wider">Decision-Control Register</h2>
+                    <p class="text-[10px] text-gray-400 mb-3">Gerado para a abordagem {{ decision.suggested_approach }}. É recalculado e gravado com a abordagem que confirmar.</p>
+                    {% if not (dcr_preview.binding_constraints or dcr_preview.acceptance_thresholds or dcr_preview.advisory_guidelines) %}
+                    <p class="text-xs text-gray-400 italic">Sem restrições geradas para este perfil contextual.</p>
+                    {% endif %}
                     {% set level_labels = {'binding_constraints': 'Binding constraints', 'acceptance_thresholds': 'Acceptance thresholds', 'advisory_guidelines': 'Advisory guidelines'} %}
-                    {% for level, constraints in decision.decision_control_register.items() %}
+                    {% for level, constraints in dcr_preview.items() %}
                     {% if constraints %}
                     <div class="mb-3">
                         <p class="text-xs font-bold uppercase tracking-wider mb-1
@@ -149,7 +153,7 @@ flowchart TD
                             {{ level_labels.get(level, level) }}
                         </p>
                         {% for c in constraints %}
-                        <p class="text-xs text-gray-600 dark:text-gray-400">· {{ c.constraint }} = {{ c.value }} <span class="text-gray-400">[scope: {{ c.scope }}]</span>, {{ c.reason }}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">· {{ c.constraint }}{% if c.value is defined %} = {{ c.value }}{% endif %} <span class="text-gray-400">[scope: {{ c.scope }}]</span>: {{ c.reason }}</p>
                         {% endfor %}
                     </div>
                     {% endif %}

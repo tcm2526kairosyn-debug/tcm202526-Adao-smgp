@@ -10,6 +10,8 @@ _MEB_CRITERIA = ['score_c1_responsiveness', 'score_c2_alignment', 'score_c3_trac
 _TEB_CRITERIA = ['contribution_cd1', 'contribution_cd2', 'contribution_cd3', 'contribution_cd4',
                  'contribution_cd5', 'contribution_cd6', 'contribution_cd7', 'contribution_cd8']
 
+_SENSITIVITY_THRESHOLD = 0.60  # prototype decision-support threshold, convenção da prova de conceito
+
 _MISFIT_BY_TIER = {'exact': 0.0, 'adjacent': 0.7, 'distant': 1.5}
 
 
@@ -517,11 +519,11 @@ def run_fit_t_level_b(viable_tools: list, engine_name: str = 'MAVT', top_n: int 
 
 # ── Sensitivity Analysis ──────────────────────────────────────────────────────
 
-def run_sensitivity_analysis(ranking: list, n_mc: int = 500, *, weights: list | None) -> dict | None:
+def run_sensitivity_analysis(ranking: list, n_mc: int = 500, *, weights: list | None, seed: int = 42) -> dict | None:
     """
     run_sensitivity_analysis(ranking_B, n_mc=500, weights=[0.12,0.12,0.18,0.18,0.15,0.13,0.12])
-    -> {'top_name':'PRINCE2 Agile', 'robustness_pct':100.0, 'stable':True,
-        'runner_up':'PM2 (Comissão Europeia)', 'runner_up_pct':100.0, 'per_criterion':[...7 entries...]}
+    -> {'top_name':'PRINCE2 Agile', 'robustness_pct':100.0, 'stable':True, 'displaced_pct':0.0,
+        'displacing_alternative':None, 'displacing_alternative_pct':0.0, 'per_criterion':[...7 entries...]}
     """
     if not ranking or len(ranking) < 2 or weights is None:
         return None
@@ -585,34 +587,38 @@ def run_sensitivity_analysis(ranking: list, n_mc: int = 500, *, weights: list | 
             'range': round(max(0.0, s_max - s_min), 3),
         })
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(seed)
     samples = rng.dirichlet(np.ones(N), size=n_mc)
     top_count = 0
-    runner_up_counts: dict[str, int] = {}
+    displacing_counts: dict[str, int] = {}
 
     for w in samples:
-        ranked = MCDMEngine(method='MAVT').rank(X, w)
-        winner_idx = ranked[0][0]
+        winner_idx = MCDMEngine(method='MAVT').rank(X, w)[0][0]
         if winner_idx == current_top:
             top_count += 1
-            if len(ranked) > 1:
-                name = ranking[ranked[1][0]]['name']
-                runner_up_counts[name] = runner_up_counts.get(name, 0) + 1
         else:
             name = ranking[winner_idx]['name']
-            runner_up_counts[name] = runner_up_counts.get(name, 0) + 1
+            displacing_counts[name] = displacing_counts.get(name, 0) + 1
 
     robustness = round(top_count / n_mc, 3)
-    runner_up = max(runner_up_counts, key=runner_up_counts.get) if runner_up_counts else None
-    runner_up_pct = round(runner_up_counts.get(runner_up, 0) / n_mc * 100, 1) if runner_up else 0.0
+    displacing = max(displacing_counts, key=displacing_counts.get) if displacing_counts else None
+    displacing_pct = round(displacing_counts[displacing] / n_mc * 100, 1) if displacing else 0.0
 
     return {
         'top_name': top_name,
         'robustness_score': robustness,
         'robustness_pct': round(robustness * 100, 1),
-        'stable': robustness >= 0.60,
+        'stability_threshold': _SENSITIVITY_THRESHOLD,
+        'stable': robustness >= _SENSITIVITY_THRESHOLD,
         'per_criterion': per_criterion,
-        'runner_up': runner_up,
-        'runner_up_pct': runner_up_pct,
+        'displaced_pct': round((n_mc - top_count) / n_mc * 100, 1),
+        'displacing_alternative': displacing,
+        'displacing_alternative_pct': displacing_pct,
         'n_simulations': n_mc,
+        'seed': seed,
+        'sampling': 'Dirichlet(1,...,1)',
+        'sweep_step': step,
+        'base_weights': [round(float(w), 4) for w in w0],
+        'criteria': CRITERIA,
+        'evaluated': [{'id': m['id'], 'code': m['code'], 'score': m['score']} for m in ranking],
     }

@@ -81,6 +81,31 @@ _WEIGHTS_FIELD = {'MEB': 'meb_weights', 'TEB': 'teb_weights'}
 _WEIGHTS_STAGE_LABEL = {'MEB': 'Etapa 3 (C1-C7)', 'TEB': 'Etapa 4 (CD1-CD8)'}
 
 
+def _provenance(decision):
+    """_provenance(decision) -> {'weights': [{stage, criteria, record, preset}, ...], 'evidence': [{base, role, code, id, active_date, is_active}, ...]}"""
+    weights = []
+    for context, stage in (('MEB', 'Stage 3 (C1-C7)'), ('TEB', 'Stage 4 (CD1-CD8)')):
+        record = getattr(decision, _WEIGHTS_FIELD[context])
+        preset = MCDMWeights.query.get(record['preset_id']) if record and record.get('preset_id') else None
+        weights.append({"stage": stage, "criteria": criteria_labels(context), "record": record, "preset": preset})
+
+    refs = [('MEB', 'Ranking Stage 3', r['id']) for r in (decision.methodology_ranking or [])]
+    refs += [('MEB', 'Componente do envelope', c['id']) for c in (decision.methodological_envelope or {}).get('components', [])]
+    refs += [('TEB', 'Portfolio Stage 4', t['id']) for t in (decision.tool_portfolio or [])]
+    rows = {('MEB', m.id): m for m in MethodologyEvidenceBase.query.filter(
+                MethodologyEvidenceBase.id.in_([i for b, _, i in refs if b == 'MEB'])).all()}
+    rows.update({('TEB', t.id): t for t in ToolEvidenceBase.query.filter(
+                ToolEvidenceBase.id.in_([i for b, _, i in refs if b == 'TEB'])).all()})
+    evidence = []
+    for base, role, rid in refs:
+        row = rows.get((base, rid))
+        evidence.append({"base": base, "role": role, "id": rid,
+                         "code": row.code if row else None,
+                         "active_date": row.active_date if row else None,
+                         "is_active": row.is_active if row else None})
+    return {"weights": weights, "evidence": evidence}
+
+
 def _stage4_reentry(decision, cause, message):
     """_stage4_reentry(decision, 'no_viable_portfolio', '...') -> redirect para a Etapa 3"""
     decision.reentry_cause = cause
@@ -725,7 +750,9 @@ def etapa2(id):
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
 
-    return render_template("etapa2.html", decision=decision)
+    dcr_preview = build_decision_control_register(decision.suggested_approach, decision.context_data or {},
+                                                  decision.agpi_score, decision.aspi_score)
+    return render_template("etapa2.html", decision=decision, dcr_preview=dcr_preview)
 
 
 # ── Etapa 3, Fit_M ───────────────────────────────────────────────────────────
@@ -798,6 +825,13 @@ def etapa3(id):
                 flash(f"{dropped} componente(s) do envelope ignorado(s) por falta de justificação.", "warning")
             if inadmissible:
                 flash(f"{inadmissible} componente(s) ignorado(s): deixaram de ser admissíveis face às restrições do decision-control register.", "warning")
+
+            decision.sensitivity_result = None
+            sens = run_sensitivity_analysis(decision.methodology_ranking or [],
+                                            weights=_decision_weights(decision, 'MEB'))
+            if sens:
+                sens['computed_at'] = datetime.utcnow().isoformat()
+                decision.sensitivity_result = sens
 
             decision.reentry_cause = None
             _log_transition(decision, previous, 'stage_4_fit_t', 'CONFIRM_METHODOLOGY')
@@ -1061,15 +1095,7 @@ def workflow(id):
     decision = ProjectDecision.query.get_or_404(id)
     projeto = Projeto.query.get(decision.projeto_id) if decision.projeto_id else None
 
-    sensitivity = None
-    if decision.methodology_ranking and decision.agpi_score and decision.aspi_score:
-        try:
-            sensitivity = run_sensitivity_analysis(
-                decision.methodology_ranking,
-                weights=_decision_weights(decision, 'MEB'),
-            )
-        except Exception:
-            pass
+    sensitivity = decision.sensitivity_result
 
     return render_template("workflow.html", decision=decision, projeto=projeto,
                            sensitivity=sensitivity)
@@ -1128,15 +1154,7 @@ def export_decision(id):
     decision = ProjectDecision.query.get_or_404(id)
     fmt = request.args.get('format', 'json')
 
-    sensitivity = None
-    if decision.methodology_ranking and decision.agpi_score and decision.aspi_score:
-        try:
-            sensitivity = run_sensitivity_analysis(
-                decision.methodology_ranking,
-                weights=_decision_weights(decision, 'MEB'),
-            )
-        except Exception:
-            pass
+    sensitivity = decision.sensitivity_result
 
     payload = {
         "id": decision.id,
@@ -1210,17 +1228,9 @@ def export_decision(id):
 def export_decision_pdf(id):
     from weasyprint import HTML
     decision = ProjectDecision.query.get_or_404(id)
-    sensitivity = None
-    if decision.methodology_ranking and decision.agpi_score and decision.aspi_score:
-        try:
-            sensitivity = run_sensitivity_analysis(
-                decision.methodology_ranking,
-                weights=_decision_weights(decision, 'MEB'),
-            )
-        except Exception:
-            pass
+    sensitivity = decision.sensitivity_result
     html_string = render_template("pdf_report.html", decision=decision, now=datetime.utcnow(),
-                                  sensitivity=sensitivity)
+                                  sensitivity=sensitivity, provenance=_provenance(decision))
     pdf_bytes = HTML(string=html_string, base_url=request.host_url).write_pdf()
     response = make_response(pdf_bytes)
     response.headers['Content-Type'] = 'application/pdf'

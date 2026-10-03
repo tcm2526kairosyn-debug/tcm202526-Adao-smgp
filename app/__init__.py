@@ -35,6 +35,8 @@ def create_app():
         run_migrations(db)
         from .seeds import run_seeds
         run_seeds()
+        # gunicorn --preload: não partilhar ligações abertas no master com os workers
+        db.engine.dispose()
 
     @app.cli.command("seed-db")
     def seed_database():
