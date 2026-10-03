@@ -750,7 +750,9 @@ def etapa2(id):
         db.session.commit()
         return redirect(url_for('main.etapa3', id=id))
 
-    return render_template("etapa2.html", decision=decision)
+    dcr_preview = build_decision_control_register(decision.suggested_approach, decision.context_data or {},
+                                                  decision.agpi_score, decision.aspi_score)
+    return render_template("etapa2.html", decision=decision, dcr_preview=dcr_preview)
 
 
 # ── Etapa 3, Fit_M ───────────────────────────────────────────────────────────
