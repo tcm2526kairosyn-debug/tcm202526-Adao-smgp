@@ -215,7 +215,7 @@
 </div>
 
 <!-- ÍNDICES E ABORDAGEM -->
-<h2>Etapa 2, Índices e Abordagem de Gestão</h2>
+<h2>Etapa 2: Índices e Abordagem de Gestão</h2>
 <div class="grid-2 no-break" style="margin-bottom:14px;">
   <div class="index-card card-slate">
     <div class="label">AdPO, Pressão de Adaptação</div>
@@ -241,7 +241,7 @@
 
 <!-- PERFIL CONTEXTUAL 8D -->
 {% if decision.context_data %}
-<h2>Etapa 1, Perfil Contextual (8 Dimensões)</h2>
+<h2>Etapa 1: Perfil Contextual (8 Dimensões)</h2>
 <div class="no-break" style="margin-bottom:6px;">
   <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Adaptação (AdPO)</div>
   <div class="dim-grid">
@@ -282,7 +282,7 @@
 {% if decision.decision_control_register %}
 {% set gov = decision.decision_control_register %}
 {% if gov.binding_constraints or gov.acceptance_thresholds or gov.advisory_guidelines %}
-<h2>Etapa 2, Decision-Control Register</h2>
+<h2>Etapa 2: Decision-Control Register</h2>
 <div class="no-break">
   {% if gov.binding_constraints %}
   <div class="gov-section gov-hard">
@@ -317,7 +317,7 @@
 
 <!-- RANKING DE METODOLOGIAS -->
 {% if decision.methodology_ranking %}
-<h2>Etapa 3, Ranking MCDM de Metodologias ({{ decision.mcdm_engine or 'MAVT' }})</h2>
+<h2>Etapa 3: Ranking MCDM de Metodologias ({{ decision.mcdm_engine or 'MAVT' }})</h2>
 <table class="no-break">
   <thead>
     <tr>
@@ -371,7 +371,7 @@
 <!-- ENVELOPE METODOLÓGICO COMPOSTO -->
 {% set env = decision.methodological_envelope %}
 {% if env and env.components %}
-<h2>Etapa 3, Envelope Metodológico Composto</h2>
+<h2>Etapa 3: Envelope Metodológico Composto</h2>
 <p style="font-size:10px; color:#64748b; margin-bottom:6px;">
   Primário: <strong>{{ env.primary.name }}</strong>. Os componentes abaixo integram o envelope com
   justificação explícita, não competem no ranking MAVT (screening por candidate_role, Level 1).
@@ -398,7 +398,7 @@
 
 <!-- CRITÉRIOS MCDM POR METODOLOGIA -->
 {% if decision.methodology_ranking and decision.methodology_ranking | selectattr('criteria') | list %}
-<h2>Etapa 3, Perfil de Critérios MCDM por Metodologia</h2>
+<h2>Etapa 3: Perfil de Critérios MCDM por Metodologia</h2>
 <table class="criteria-table no-break">
   <thead>
     <tr>
@@ -440,7 +440,7 @@
 
 <!-- PORTFÓLIO DE FERRAMENTAS -->
 {% if decision.tool_portfolio %}
-<h2>Etapa 4, Portfólio de Ferramentas (Fit_T)</h2>
+<h2>Etapa 4: Portfólio de Ferramentas (Fit_T)</h2>
 <table class="no-break">
   <thead>
     <tr>
@@ -476,10 +476,10 @@
 
 <!-- CAPABILITY MAPS (I_A e portfolio confirmado) -->
 {% set cap_maps = [
-  ('Etapa 4, Capability Map (Level A, conjunto admissível I_A)',
+  ('Etapa 4: Capability Map (Level A, conjunto admissível I_A)',
    'Cobertura potencial das dimensões CD1-CD8 pelo conjunto admissível I_A, antes da seleção do portfolio. Uma dimensão pode surgir como forte mesmo que a ferramenta que a cobre não venha a ser selecionada. Não entra no scoring MAVT de Level B.',
    decision.capability_map),
-  ('Etapa 4, Capability Map do portfolio confirmado',
+  ('Etapa 4: Capability Map do portfolio confirmado',
    'Cobertura das dimensões CD1-CD8 apenas pelas ferramentas efetivamente confirmadas pelo GP.',
    decision.portfolio_capability_map),
 ] %}
@@ -639,7 +639,7 @@
 
 <!-- HISTÓRICO DE TRANSIÇÕES -->
 {% if decision.transition_history %}
-<h2>Auditoria, Histórico de Transições de Estado</h2>
+<h2>Auditoria: Histórico de Transições de Estado</h2>
 <div class="timeline no-break">
   {% for t in decision.transition_history %}
   <div class="tl-item">

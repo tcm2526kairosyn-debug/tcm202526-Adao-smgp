@@ -29,6 +29,25 @@ def create_app():
     from .routes import main
     app.register_blueprint(main)
 
+    from flask import render_template
+    _ERRORS = {
+        403: ("Acesso restrito", "Não tem permissão para aceder a esta página."),
+        404: ("Página não encontrada", "O endereço não existe ou o registo foi removido."),
+        500: ("Erro interno", "Ocorreu um erro inesperado. Tente novamente; se persistir, contacte o administrador."),
+    }
+
+    def _error_page(code):
+        heading, message = _ERRORS[code]
+        if code == 500:
+            db.session.rollback()
+        try:
+            return render_template("erro.html", code=code, heading=heading, message=message), code
+        except Exception:
+            return f"{code} {heading}", code
+
+    for _code in _ERRORS:
+        app.register_error_handler(_code, lambda e, c=_code: _error_page(c))
+
     with app.app_context():
         db.create_all()
         from .migrations import run_migrations

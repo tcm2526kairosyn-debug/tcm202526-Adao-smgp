@@ -2,7 +2,7 @@
 <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 {% if wp.confirmed %}border-green-500{% else %}border-amber-500{% endif %}">
     <details {% if not wp.confirmed %}open{% endif %}>
         <summary class="cursor-pointer select-none flex flex-wrap items-center gap-2">
-            <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Pesos MAVT, {{ wp.stage_label }}</span>
+            <span class="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Pesos MAVT: {{ wp.stage_label }}</span>
             {% if wp.confirmed %}
             <span class="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold uppercase">Confirmados</span>
             <span class="text-[10px] text-gray-400">por {{ wp.confirmed_by }} em {{ wp.confirmed_at }}</span>
