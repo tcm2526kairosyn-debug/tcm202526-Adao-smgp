@@ -176,44 +176,35 @@ flowchart TD
         </div>
     </div>
 
-    <!-- ── Perfil Contextual 8D ──────────────────────────────────────────── -->
+    <!-- ── Perfil Contextual D1-D8 ────────────────────────────────────────── -->
     {% if decision.context_data %}
     <div class="bg-white rounded-2xl shadow border border-slate-100 p-6">
-        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Perfil contextual em 8 dimensões</h2>
-        <canvas id="context-bar" class="mb-6" style="max-height:180px;"></canvas>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-
-            {% set agpi_dims = [
-                ('complexity',         'Complexidade',   'Âmbito',      'slate'),
-                ('novelty',            'Novidade',        'Incerteza',   'slate'),
-                ('dynamism',           'Dinamismo',       'Requisitos',  'slate'),
-                ('team_autonomy',      'Autonomia',       'Equipa',      'slate'),
-            ] %}
-            {% set aspi_dims = [
-                ('criticality',           'Criticidade',   '',             'red'),
-                ('compliance',            'Regulatório',   'Rigidez',      'red'),
-                ('traceability',          'Rastreab.',     'Necessidade',  'red'),
-                ('stakeholder_formality', 'Stakeholders',  'Formalidade',  'red'),
-            ] %}
-
-            {% for key, label, sublabel, cor in agpi_dims + aspi_dims %}
-            {% set val = decision.context_data.get(key) %}
-            {% if val is not none %}
-            <div class="bg-{{ cor }}-50 rounded-xl p-3 sm:p-4">
-                <p class="text-[10px] font-bold text-{{ cor }}-500 uppercase tracking-normal leading-tight mb-0.5">{{ label }}</p>
-                {% if sublabel %}<p class="text-[9px] text-{{ cor }}-300 uppercase leading-none mb-2">{{ sublabel }}</p>{% else %}<div class="mb-2"></div>{% endif %}
-                <div class="flex items-center gap-1.5">
-                    <div class="flex gap-0.5">
-                        {% for i in range(1, 5) %}
-                        <div class="w-4 h-4 sm:w-5 sm:h-5 rounded-md {% if i <= val %}bg-{{ cor }}-500{% else %}bg-{{ cor }}-100{% endif %}"></div>
-                        {% endfor %}
-                    </div>
-                    <span class="text-base sm:text-lg font-black text-{{ cor }}-700">{{ val }}</span>
-                </div>
+        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Perfil contextual D1-D8 (Stage 1)</h2>
+        <p class="text-[10px] text-slate-400 mb-4">Escala ordinal 1-4 · cinzento = dimensões lidas pelo AdPO · vermelho = dimensões lidas pelo AsPO</p>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <div class="relative mx-auto w-full" style="max-width:380px;">
+                <canvas id="context-radar"></canvas>
             </div>
-            {% endif %}
-            {% endfor %}
-
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for dim in STAGE1_DIMENSIONS %}
+                {% set val = decision.context_data.get(dim.key) %}
+                {% set cor = 'slate' if dim.organiser == 'AdPO' else 'red' %}
+                <div class="bg-{{ cor }}-50 rounded-xl p-3" title="{{ dim.reading }}">
+                    <p class="text-[10px] font-bold text-{{ cor }}-600 leading-tight"><span class="font-mono">{{ dim.code }}</span> {{ dim.name }}</p>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <div class="flex gap-0.5">
+                            {% for i in range(1, 5) %}
+                            <div class="w-4 h-4 rounded-md {% if val is not none and i <= val %}bg-{{ cor }}-500{% else %}bg-{{ cor }}-100{% endif %}"></div>
+                            {% endfor %}
+                        </div>
+                        <span class="text-base font-black text-{{ cor }}-700">{{ val if val is not none else '-' }}</span>
+                    </div>
+                    {% if decision.evidence_notes and decision.evidence_notes.get(dim.key) %}
+                    <p class="text-[10px] text-slate-500 mt-1.5 italic">{{ decision.evidence_notes.get(dim.key) }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
     {% endif %}
@@ -503,30 +494,29 @@ window._wfData = {
         });
     }
 
-    // 2. Context Bar ──────────────────────────────────────────────────────────
-    const ctxBarEl = document.getElementById('context-bar');
-    if (ctxBarEl && d.contextData && Object.keys(d.contextData).length) {
-        const DIM = { complexity: 'Complexidade', novelty: 'Novidade', dynamism: 'Dinamismo', team_autonomy: 'Autonomia', criticality: 'Criticidade', compliance: 'Regulatório', traceability: 'Rastreab.', stakeholder_formality: 'Stakeholders' };
-        const AGPI = ['complexity', 'novelty', 'dynamism', 'team_autonomy'];
-        const keys = [...AGPI, 'criticality', 'compliance', 'traceability', 'stakeholder_formality'];
-        new Chart(ctxBarEl, {
-            type: 'bar',
+    // 2. Stage 1 radar D1-D8 ──────────────────────────────────────────────────
+    const ctxRadarEl = document.getElementById('context-radar');
+    if (ctxRadarEl && d.contextData && Object.keys(d.contextData).length) {
+        const dims = {{ STAGE1_DIMENSIONS | tojson }};
+        new Chart(ctxRadarEl, {
+            type: 'radar',
             data: {
-                labels: keys.map(k => DIM[k]),
+                labels: dims.map(x => x.code),
                 datasets: [{
-                    data: keys.map(k => d.contextData[k] || 0),
-                    backgroundColor: keys.map(k => AGPI.includes(k) ? 'rgba(71,85,105,0.75)' : 'rgba(220,38,38,0.7)'),
-                    borderRadius: 4,
+                    data: dims.map(x => d.contextData[x.key] ?? null),
+                    borderColor: 'rgba(51,65,85,0.85)',
+                    backgroundColor: 'rgba(51,65,85,0.12)',
+                    pointBackgroundColor: dims.map(x => x.organiser === 'AdPO' ? 'rgba(71,85,105,1)' : 'rgba(220,38,38,1)'),
+                    pointRadius: 4,
                 }]
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed.x}/4` } } },
-                scales: {
-                    x: { min: 0, max: 4, ticks: { stepSize: 1, font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
-                    y: { ticks: { font: { size: 10 } }, grid: { display: false } }
-                }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { title: (c) => `${dims[c[0].dataIndex].code} ${dims[c[0].dataIndex].name}`, label: (c) => `${c.parsed.r}/4 (${dims[c.dataIndex].organiser})` } }
+                },
+                scales: { r: { min: 0, max: 4, ticks: { stepSize: 1, font: { size: 9 }, backdropColor: 'transparent' }, pointLabels: { font: { size: 11, weight: 'bold' } } } }
             }
         });
     }

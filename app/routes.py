@@ -19,10 +19,16 @@ from .services.kairosynlogic import (
     run_fit_t_level_a, run_fit_t_level_b,
     run_sensitivity_analysis, get_envelope_component_candidates,
     build_capability_map, get_weights_preset, weights_to_points,
+    STAGE1_DIMENSIONS, approach_descriptor,
     points_to_weights, criteria_labels,
 )
 
 main = Blueprint('main', __name__)
+
+
+@main.app_context_processor
+def _inject_stage1_catalogue():
+    return {"STAGE1_DIMENSIONS": STAGE1_DIMENSIONS, "approach_descriptor": approach_descriptor}
 
 
 def admin_required(f):
@@ -667,19 +673,13 @@ def historico_projeto(projeto_uuid):
 def diagnostico():
     if request.method == "POST":
         context_data = {
-            'complexity':            int(request.form.get('complexity', 2)),
-            'novelty':               int(request.form.get('novelty', 2)),
-            'dynamism':              int(request.form.get('dynamism', 2)),
-            'team_autonomy':         int(request.form.get('team_autonomy', 2)),
-            'criticality':           int(request.form.get('criticality', 2)),
-            'compliance':            int(request.form.get('compliance', 2)),
-            'traceability':          int(request.form.get('traceability', 2)),
-            'stakeholder_formality': int(request.form.get('stakeholder_formality', 2)),
+            d["key"]: min(4, max(1, int(request.form.get(d["key"], 2))))
+            for d in STAGE1_DIMENSIONS
         }
 
         evidence_notes = {
-            dim: request.form.get(f'note_{dim}', '').strip()
-            for dim in context_data
+            d["key"]: request.form.get(f'note_{d["key"]}', '').strip()
+            for d in STAGE1_DIMENSIONS
         }
 
         projeto_id_raw = request.form.get('projeto_id')
@@ -691,7 +691,7 @@ def diagnostico():
             projeto_id=projeto_id,
             context_data=context_data,
             evidence_notes={k: v for k, v in evidence_notes.items() if v},
-            questionnaire_version='v2',
+            questionnaire_version='v3-D1D8',
             current_stage='stage_2_approach',
             transition_history=[{
                 "from": "stage_1_diagnosis",

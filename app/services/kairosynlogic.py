@@ -69,26 +69,47 @@ def _require_weights(weights, n: int) -> np.ndarray:
 
 # ── Etapa 2 ─────────────────────────────────────────────────────────────────
 
+STAGE1_DIMENSIONS = [
+    {"key": "causal_complexity", "code": "D1", "name": "Causal Complexity", "organiser": "AdPO",
+     "reading": "Complexidade causal, interdependências e previsibilidade das relações entre ações e resultados",
+     "low": "Relações causa-efeito previsíveis", "high": "Causalidade emergente, legível só após integração"},
+    {"key": "novelty_exposure", "code": "D2", "name": "Technological & Novelty Exposure", "organiser": "AdPO",
+     "reading": "Grau de novidade tecnológica, desconhecimento e exposição a soluções pouco estabilizadas",
+     "low": "Tecnologia conhecida e estabilizada", "high": "Soluções novas, sem precedentes"},
+    {"key": "stakeholder_alignment", "code": "D3", "name": "Stakeholder Alignment & Cognitive Agreement", "organiser": "AdPO",
+     "reading": "Alinhamento entre stakeholders, objetivos, interpretações e critérios de decisão",
+     "low": "Objetivos e critérios partilhados", "high": "Desacordo sobre objetivos e interpretações"},
+    {"key": "pace_criticality", "code": "D4", "name": "Pace & Criticality", "organiser": "AsPO",
+     "reading": "Pressão temporal, criticidade das entregas e impacto de atrasos ou falhas",
+     "low": "Atrasos ou falhas com impacto reduzido", "high": "Prazos apertados, falhas com impacto severo"},
+    {"key": "environmental_volatility", "code": "D5", "name": "Environmental Volatility", "organiser": "AdPO",
+     "reading": "Frequência e magnitude de alterações externas relevantes",
+     "low": "Contexto externo estável", "high": "Alterações externas frequentes e relevantes"},
+    {"key": "structural_fragility", "code": "D6", "name": "Structural Fragility & Saturation", "organiser": "AsPO",
+     "reading": "Fragilidade estrutural, dependências, gargalos e saturação de capacidade",
+     "low": "Baixo acoplamento, capacidade folgada", "high": "Gargalos, dependências críticas, capacidade saturada"},
+    {"key": "institutional_pressure", "code": "D7", "name": "Institutional Pressure & Compliance Load", "organiser": "AsPO",
+     "reading": "Obrigações legais, normativas, contratuais e de assurance",
+     "low": "Sem obrigações formais relevantes", "high": "Obrigações legais e normativas não discricionárias"},
+    {"key": "interpretative_ambiguity", "code": "D8", "name": "Interpretative Ambiguity", "organiser": "AdPO",
+     "reading": "Grau de ambiguidade e instabilidade das interpretações aplicáveis ao problema",
+     "low": "Interpretações estáveis e partilhadas", "high": "Significados contestados e instáveis"},
+]
+_DIM = {d["code"]: d["key"] for d in STAGE1_DIMENSIONS}
+ADPO_DIMS = [d["key"] for d in STAGE1_DIMENSIONS if d["organiser"] == "AdPO"]
+ASPO_DIMS = [d["key"] for d in STAGE1_DIMENSIONS if d["organiser"] == "AsPO"]
+
+
 def compute_indices(context_data: dict) -> tuple[float, float]:
     """
-    compute_indices({'complexity':4,'novelty':4,'dynamism':4,'team_autonomy':3,
-    'criticality':1,'compliance':1,'traceability':1,'stakeholder_formality':2}) -> (4.0, 1.0)
+    compute_indices({'causal_complexity':3,'novelty_exposure':4,'stakeholder_alignment':2,'pace_criticality':3,
+    'environmental_volatility':3,'structural_fragility':4,'institutional_pressure':4,'interpretative_ambiguity':3}) -> (4.0, 4.0)
     """
-    adpo_dims = ['complexity', 'novelty', 'dynamism', 'team_autonomy']
-    aspo_dims = ['criticality', 'compliance', 'traceability', 'stakeholder_formality']
-
     def _ordinal(dims: list[str]) -> float:
         h = sum(1 for d in dims if context_data.get(d, 1) >= 3)
-        if h == 0:
-            return 1.0
-        elif h == 1:
-            return 2.0
-        elif h == 2:
-            return 3.0
-        else:
-            return 4.0
+        return float(min(h, 3) + 1)
 
-    return _ordinal(adpo_dims), _ordinal(aspo_dims)
+    return _ordinal(ADPO_DIMS), _ordinal(ASPO_DIMS)
 
 
 def resolve_approach(adpo: float, aspo: float) -> str:
@@ -101,49 +122,63 @@ def resolve_approach(adpo: float, aspo: float) -> str:
         return "Híbrida"
 
 
+def approach_descriptor(adpo: float, aspo: float) -> str | None:
+    """approach_descriptor(4.0, 3.0) -> 'Híbrida de alta pressão, adaptive-leaning'"""
+    if resolve_approach(adpo, aspo) != "Híbrida":
+        return None
+    if adpo <= 2.0 and aspo <= 2.0:
+        return "Híbrida de baixa pressão"
+    if aspo > adpo:
+        return "Híbrida de alta pressão, assurance-heavy"
+    if adpo > aspo:
+        return "Híbrida de alta pressão, adaptive-leaning"
+    return "Híbrida de alta pressão, balanced"
+
+
 def build_decision_control_register(approach: str, context_data: dict, adpo: float, aspo: float) -> dict:
     """
-    build_decision_control_register('Preditiva', {'compliance':4,'criticality':4,'team_autonomy':2,...}, 1.0, 4.0)
+    build_decision_control_register('Preditiva', {'institutional_pressure':4,'pace_criticality':4,...}, 1.0, 4.0)
     -> {'binding_constraints': [{'constraint':'regulatory_compatible','value':True,'scope':'M',...},
                                  {'constraint':'gdpr_compliant','value':True,'scope':'T',...}],
         'acceptance_thresholds': [{'constraint':'requires_fixed_scope','value':True,'scope':'M',...}],
         'advisory_guidelines': []}
     """
     register = {"binding_constraints": [], "acceptance_thresholds": [], "advisory_guidelines": []}
+    v = {code: context_data.get(key, 1) for code, key in _DIM.items()}
 
-    compliance = context_data.get('compliance', 1)
-    criticality = context_data.get('criticality', 1)
-    team_autonomy = context_data.get('team_autonomy', 1)
-
-    if compliance >= 3:
+    if v["D7"] >= 3:
         register["binding_constraints"].append({
-            "constraint": "regulatory_compatible",
-            "value": True,
-            "scope": "M",
-            "reason": f"Compliance score {compliance}/4 exige conformidade regulatória."
+            "constraint": "regulatory_compatible", "value": True, "scope": "M", "source": ["D7"],
+            "reason": f"D7 Institutional Pressure {v['D7']}/4: obrigações normativas exigem candidatos regulatory_compatible."
         })
-    if compliance >= 4:
+    if v["D7"] >= 4:
         register["binding_constraints"].append({
-            "constraint": "gdpr_compliant",
-            "value": True,
-            "scope": "T",
-            "reason": "Compliance máximo requer GDPR nas ferramentas."
+            "constraint": "gdpr_compliant", "value": True, "scope": "T", "source": ["D7"],
+            "reason": f"D7 Institutional Pressure {v['D7']}/4: carga máxima de compliance exige ferramentas conformes com o RGPD."
         })
 
-    if criticality >= 3:
+    if v["D4"] >= 3:
         register["acceptance_thresholds"].append({
-            "constraint": "requires_fixed_scope",
-            "value": (approach == "Preditiva"),
-            "scope": "M",
-            "reason": f"Criticidade {criticality}/4 favorece âmbito definido em abordagem Preditiva."
+            "constraint": "requires_fixed_scope", "value": (approach == "Preditiva"), "scope": "M", "source": ["D4"],
+            "reason": f"D4 Pace & Criticality {v['D4']}/4: criticidade das entregas exige âmbito definido em abordagem Preditiva."
         })
 
-    if team_autonomy >= 3:
-        register["advisory_guidelines"].append({
-            "constraint": "prefers_low_process_overhead",
-            "scope": "M",
-            "reason": f"Autonomia de equipa {team_autonomy}/4 favorece metodologias ágeis leves."
-        })
+    advisory = [
+        (max(v["D2"], v["D8"]) >= 3, "favour_discovery_rituals", ["D2", "D8"],
+         "novidade ou ambiguidade interpretativa elevadas favorecem rituais de descoberta reforçados"),
+        (v["D5"] >= 3, "favour_frequent_feedback", ["D5"],
+         "volatilidade do ambiente favorece ciclos de feedback mais frequentes"),
+        (v["D3"] >= 3, "reinforce_facilitation", ["D3"],
+         "baixo alinhamento entre stakeholders favorece facilitação reforçada"),
+        (v["D6"] >= 3, "favour_controlled_integration", ["D6"],
+         "fragilidade estrutural favorece mecanismos de integração controlada"),
+    ]
+    for active, constraint, source, text in advisory:
+        if active:
+            register["advisory_guidelines"].append({
+                "constraint": constraint, "scope": "M", "source": source,
+                "reason": f"{', '.join(f'{c} {v[c]}/4' for c in source)}: {text}."
+            })
 
     return register
 

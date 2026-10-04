@@ -239,43 +239,30 @@
   </div>
 </div>
 
-<!-- PERFIL CONTEXTUAL 8D -->
+<!-- PERFIL CONTEXTUAL D1-D8 -->
 {% if decision.context_data %}
-<h2>Etapa 1: Perfil Contextual (8 Dimensões)</h2>
-<div class="no-break" style="margin-bottom:6px;">
-  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Adaptação (AdPO)</div>
+<h2>Etapa 1: Perfil Contextual D1-D8</h2>
+{% for org, title, cls, filled, empty, color in [
+    ('AdPO', 'Dimensões lidas pelo organizador de adaptação (AdPO)', 'dim-slate', 'dot-filled-slate', 'dot-empty-slate', '#334155'),
+    ('AsPO', 'Dimensões lidas pelo organizador de assurance (AsPO)', 'dim-red', 'dot-filled-red', 'dot-empty-red', '#b91c1c')] %}
+<div class="no-break" style="margin-top:{{ '0' if loop.first else '8px' }}; margin-bottom:6px;">
+  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">{{ title }}</div>
   <div class="dim-grid">
-    {% for key, label in [('complexity','Complexidade do Âmbito'),('novelty','Incerteza / Novidade'),('dynamism','Dinamismo dos Requisitos'),('team_autonomy','Autonomia da Equipa')] %}
-    {% set val = decision.context_data.get(key, 0) %}
-    <div class="dim-card dim-slate">
-      <div class="dim-label">{{ label }}</div>
+    {% for dim in STAGE1_DIMENSIONS if dim.organiser == org %}
+    {% set val = decision.context_data.get(dim.key, 0) %}
+    <div class="dim-card {{ cls }}">
+      <div class="dim-label">{{ dim.code }} {{ dim.name }}</div>
       <div class="dim-dots">
-        {% for i in range(1,5) %}<div class="dot {% if i <= val %}dot-filled-slate{% else %}dot-empty-slate{% endif %}"></div>{% endfor %}
+        {% for i in range(1,5) %}<div class="dot {% if i <= val %}{{ filled }}{% else %}{{ empty }}{% endif %}"></div>{% endfor %}
       </div>
-      <div class="dim-val" style="color:#334155;">{{ val }}</div>
-      {% set note = (decision.evidence_notes or {}).get(key,'') %}
+      <div class="dim-val" style="color:{{ color }};">{{ val }}</div>
+      {% set note = (decision.evidence_notes or {}).get(dim.key,'') %}
       {% if note %}<div class="dim-note">{{ note }}</div>{% endif %}
     </div>
     {% endfor %}
   </div>
 </div>
-<div class="no-break" style="margin-top:8px;">
-  <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Pressão de Assurance (AsPO)</div>
-  <div class="dim-grid">
-    {% for key, label in [('criticality','Criticidade'),('compliance','Rigidez Regulatória'),('traceability','Rastreabilidade'),('stakeholder_formality','Formalidade Stakeholders')] %}
-    {% set val = decision.context_data.get(key, 0) %}
-    <div class="dim-card dim-red">
-      <div class="dim-label">{{ label }}</div>
-      <div class="dim-dots">
-        {% for i in range(1,5) %}<div class="dot {% if i <= val %}dot-filled-red{% else %}dot-empty-red{% endif %}"></div>{% endfor %}
-      </div>
-      <div class="dim-val" style="color:#b91c1c;">{{ val }}</div>
-      {% set note = (decision.evidence_notes or {}).get(key,'') %}
-      {% if note %}<div class="dim-note">{{ note }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
-</div>
+{% endfor %}
 {% endif %}
 
 <!-- DECISION-CONTROL REGISTER -->
