@@ -186,7 +186,7 @@ class ProjectDecision(db.Model):
     agpi_score = db.Column(db.Float)
     aspi_score = db.Column(db.Float)
     evidence_notes = db.Column(db.JSON)
-    questionnaire_version = db.Column(db.String(10), default='v2')
+    questionnaire_version = db.Column(db.String(10), default='v3-D1D8')
 
     # Etapa 2
     suggested_approach = db.Column(db.String(50))  # Preditiva | Adaptativa | Híbrida

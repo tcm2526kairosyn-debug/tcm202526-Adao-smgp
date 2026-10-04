@@ -30,8 +30,8 @@ O **KairoSyn SAD** responde a este problema operacionalizando a Framework KairoS
 
 | ID | Funcionalidade | Descrição |
 |---|---|---|
-| RF01 | **Diagnóstico Contextual (Etapa 1)** | Questionário de 8 dimensões (escala 1–4) que captura o perfil do projeto: complexidade, novidade, dinamismo, autonomia da equipa, criticidade, compliance, rastreabilidade e formalidade de stakeholders. |
-| RF02 | **Cálculo AdPO e AsPO** | Computação automática do *Agility Pressure Index* e do *Assurance Pressure Index* como índices ordinais `{1,2,3,4}`, robustos a perturbações e comparáveis entre projetos. |
+| RF01 | **Diagnóstico Contextual (Etapa 1)** | Diagnóstico D1-D8 (escala ordinal 1-4): Causal Complexity, Technological & Novelty Exposure, Stakeholder Alignment & Cognitive Agreement, Pace & Criticality, Environmental Volatility, Structural Fragility & Saturation, Institutional Pressure & Compliance Load e Interpretative Ambiguity, com justificação opcional por dimensão. |
+| RF02 | **Cálculo AdPO e AsPO** | Computação automática dos organizadores *Adaptation Pressure Organiser* (AdPO) e *Assurance Pressure Organiser* (AsPO) como índices ordinais `{1,2,3,4}`, robustos a perturbações e comparáveis entre projetos. |
 | RF03 | **Resolução da Abordagem (Etapa 2)** | Motor de regras que classifica a abordagem de gestão em Adaptativa, Preditiva ou Híbrida com base nos limiares KairoSyn, com possibilidade de ajuste manual pelo gestor. |
 | RF04 | **Governance Register** | Geração automática de um registo de restrições (Hard, Threshold, Soft) com âmbito orientado a metodologias (M) ou ferramentas (T), derivado dos dados de diagnóstico. |
 | RF05 | **Fit_M, Seleção de Metodologia (Etapa 3)** | Triagem por nível (L1: filtro de restrições Hard; L2: ranking MCDM com 5 critérios ponderados) sobre a *Methodology Evidence Base* (MEB). Produz um ranking auditável com *Value Score* e *Misfit Δk*. |
@@ -346,19 +346,20 @@ Este é o caso mais ilustrativo da correção estrutural: o topo do ranking já 
 
 Este ficheiro é o **coração computacional do sistema**. Implementa todas as etapas do motor KairoSyn numa camada de serviço independente da camada web (routes.py), garantindo testabilidade e substituição futura de componentes.
 
-#### `compute_indices(context_data)`: Etapa 1
+#### `compute_indices(context_data)`: Etapa 2
 
-Converte as 8 respostas do questionário nos índices AdPO e AsPO usando um **mapeamento ordinal robusto**. Em vez de uma média aritmética (sensível a outliers), conta quantas dimensões ultrapassam o limiar ≥ 3 e mapeia esse count para a escala `{1, 2, 3, 4}`.
+Sintetiza o perfil D1-D8 nos organizadores AdPO e AsPO. Em vez de uma média aritmética, conta quantas dimensões de cada grupo atingem o limiar ≥ 3 e mapeia essa contagem para a escala `{1, 2, 3, 4}`. O catálogo das dimensões (`STAGE1_DIMENSIONS`) é a fonte única usada pelo questionário, pelo workflow e pelo PDF.
 
 ```
-AdPO: {complexity, novelty, dynamism, team_autonomy}
-AsPO: {criticality, compliance, traceability, stakeholder_formality}
-count → ordinal: 0→1, 1→2, 2→3, ≥3→4
+AdPO: D1 Causal Complexity, D2 Technological & Novelty Exposure, D3 Stakeholder Alignment,
+      D5 Environmental Volatility, D8 Interpretative Ambiguity
+AsPO: D4 Pace & Criticality, D6 Structural Fragility & Saturation, D7 Institutional Pressure & Compliance Load
+contagem de dimensões ≥ 3 → ordinal: 0→1, 1→2, 2→3, ≥3→4
 ```
 
-Esta escolha é deliberada: AdPO e AsPO são **organisadores ordinais**, não médias cardinais, o que importa é o padrão de pressão, não a magnitude absoluta.
+Todas as dimensões são lidas no mesmo sentido: 4 corresponde à maior pressão (em D3, menor alinhamento entre stakeholders). Exemplo (OmniCore-X, Tabela 3.4 da tese): D1-D8 = 3, 4, 2, 3, 3, 4, 4, 3 → AdPO 4, AsPO 4 → Híbrida de alta pressão (*balanced*).
 
-#### `resolve_approach(adpo, aspo)`: Etapa 2
+#### `resolve_approach(adpo, aspo)` e `approach_descriptor(adpo, aspo)`: Etapa 2
 
 Aplica as regras de transição da Framework KairoSyn:
 
@@ -370,51 +371,23 @@ else                         →  "Híbrida"      # pressões equilibradas
 
 Os dois limiares são simétricos: só uma pressão ágil (AdPO) ou de assurance (AsPO) claramente dominante (≥3, no nível "alto" ou "muito alto") resolve para Adaptativa/Preditiva; qualquer combinação intermédia (incluindo AdPO=2 com AsPO baixo) resolve para Híbrida.
 
+`approach_descriptor()` qualifica a Híbrida sem criar novas categorias (Figura 3.6 da tese): *baixa pressão* quando AdPO ≤ 2 e AsPO ≤ 2; *alta pressão* quando ambos ≥ 3, descrita como *assurance-heavy* (AsPO > AdPO), *adaptive-leaning* (AdPO > AsPO) ou *balanced*.
+
 #### `build_decision_control_register(...)`: Etapa 2
 
-Classifica as restrições do projeto em três níveis de exigência, derivadas automaticamente dos scores de diagnóstico:
+Operacionaliza a secção 3.3.2 da tese com o mesmo limiar ≥ 3 dos organizadores. Cada elemento regista as dimensões de origem (`source`):
 
-- **Hard**: eliminatório: `compliance ≥ 3` exige `regulatory_compatible = True`; `compliance = 4` adiciona `gdpr_compliant = True` nas ferramentas
-- **Threshold**: preferencial: `criticality ≥ 3` favorece `requires_fixed_scope` em abordagem Preditiva
-- **Soft**: indicativo: `team_autonomy ≥ 3` prefere metodologias com overhead reduzido
+| Tipo | Regra | Elemento |
+|---|---|---|
+| Binding constraint | D7 ≥ 3 | `regulatory_compatible = True` (metodologias) |
+| Binding constraint | D7 = 4 | `gdpr_compliant = True` (ferramentas) |
+| Acceptance threshold | D4 ≥ 3 | `requires_fixed_scope`, exigido em abordagem Preditiva |
+| Advisory guideline | D2 ≥ 3 ou D8 ≥ 3 | `favour_discovery_rituals` |
+| Advisory guideline | D5 ≥ 3 | `favour_frequent_feedback` |
+| Advisory guideline | D3 ≥ 3 | `reinforce_facilitation` |
+| Advisory guideline | D6 ≥ 3 | `favour_controlled_integration` |
 
-Exemplo de estrutura JSON produzida para um projeto com `compliance=4`, `criticality=3`, `team_autonomy=3`:
-
-```json
-{
-  "hard": [
-    {
-      "constraint": "regulatory_compatible",
-      "value": true,
-      "scope": "M",
-      "reason": "Compliance score 4/4 exige conformidade regulatória."
-    },
-    {
-      "constraint": "gdpr_compliant",
-      "value": true,
-      "scope": "T",
-      "reason": "Compliance máximo requer GDPR nas ferramentas."
-    }
-  ],
-  "threshold": [
-    {
-      "constraint": "requires_fixed_scope",
-      "value": true,
-      "scope": "M",
-      "reason": "Criticidade 3/4 favorece âmbito definido em abordagem Preditiva."
-    }
-  ],
-  "soft": [
-    {
-      "constraint": "prefers_low_process_overhead",
-      "scope": "M",
-      "reason": "Autonomia de equipa 3/4 favorece metodologias ágeis leves."
-    }
-  ]
-}
-```
-
-O campo `scope` determina a que camada se aplica a restrição: `"M"` é avaliado em `run_fit_m_level1()`, `"T"` é avaliado em `run_fit_t_level_a()`.
+As binding constraints e as acceptance thresholds são verificadas no Level 1 e no Level A. As advisory guidelines ficam registadas na decisão para orientar o GP, mas não alteram a triagem nem o ranking.
 
 #### `_posture_alignment_tier(adpo, aspo, adpo_min, adpo_max, aspo_min, aspo_max)`: Classificação de Postura
 

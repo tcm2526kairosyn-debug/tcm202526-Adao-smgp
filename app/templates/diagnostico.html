@@ -102,143 +102,34 @@ flowchart TD
             </div>
             {% endif %}
 
-            <!-- Dimensões AdPO -->
-            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <h2 class="text-base font-semibold mb-1 text-blue-600 dark:text-blue-400">Pressão de Adaptação (AdPO)</h2>
-                <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de uma abordagem adaptativa/ágil.</p>
+            <!-- Diagnóstico D1-D8, agrupado pelo organizador que cada dimensão alimenta -->
+            {% for org, title, desc, color in [
+                ('AdPO', 'Pressão de Adaptação (AdPO)', 'Dimensões lidas pelo organizador de adaptação: quanto mais alto, maior a pressão para aprendizagem iterativa e adaptação.', 'blue'),
+                ('AsPO', 'Pressão de Assurance (AsPO)', 'Dimensões lidas pelo organizador de assurance: quanto mais alto, maior a pressão para evidência, rastreabilidade e controlo.', 'red')] %}
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-{{ color }}-500">
+                <h2 class="text-base font-semibold mb-1 text-{{ color }}-600 dark:text-{{ color }}-400">{{ title }}</h2>
+                <p class="text-xs text-gray-500 mb-4">{{ desc }} Escala ordinal 1-4.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-
+                    {% for d in STAGE1_DIMENSIONS if d.organiser == org %}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Complexidade do Âmbito
-                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_complexity">{{ ctx.get('complexity', 2) }}</span>
+                        <label for="{{ d.key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span class="font-mono font-bold">{{ d.code }}</span> {{ d.name }}
+                            <span class="ml-2 inline-block bg-{{ color }}-100 text-{{ color }}-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_{{ d.key }}">{{ ctx.get(d.key, 2) }}</span>
                         </label>
-                        <input type="range" name="complexity" id="complexity" min="1" max="4" step="1" value="{{ ctx.get('complexity', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                               oninput="document.getElementById('lbl_complexity').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Simples</span><span>4, Muito Complexo</span></div>
-                        <details class="mt-2" {% if notes.get('complexity') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_complexity" rows="2" placeholder="Observações sobre a complexidade..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('complexity', '') }}</textarea>
+                        <p class="text-xs text-gray-400 mb-1">{{ d.reading }}</p>
+                        <input type="range" name="{{ d.key }}" id="{{ d.key }}" min="1" max="4" step="1" value="{{ ctx.get(d.key, 2) }}"
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-{{ color }}-500"
+                               oninput="document.getElementById('lbl_{{ d.key }}').textContent=this.value">
+                        <div class="flex justify-between gap-3 text-xs text-gray-400 mt-1"><span>1: {{ d.low }}</span><span class="text-right">4: {{ d.high }}</span></div>
+                        <details class="mt-2" {% if notes.get(d.key) %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Justificação</summary>
+                            <textarea name="note_{{ d.key }}" rows="2" placeholder="Evidência e justificação da leitura de {{ d.code }}..."
+                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get(d.key, '') }}</textarea>
                         </details>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Incerteza / Novidade Tecnológica
-                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_novelty">{{ ctx.get('novelty', 2) }}</span>
-                        </label>
-                        <input type="range" name="novelty" id="novelty" min="1" max="4" step="1" value="{{ ctx.get('novelty', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                               oninput="document.getElementById('lbl_novelty').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Conhecido</span><span>4, Inovação Total</span></div>
-                        <details class="mt-2" {% if notes.get('novelty') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_novelty" rows="2" placeholder="Observações sobre novidade..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('novelty', '') }}</textarea>
-                        </details>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Dinamismo dos Requisitos
-                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_dynamism">{{ ctx.get('dynamism', 2) }}</span>
-                        </label>
-                        <input type="range" name="dynamism" id="dynamism" min="1" max="4" step="1" value="{{ ctx.get('dynamism', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                               oninput="document.getElementById('lbl_dynamism').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Estáveis</span><span>4, Altamente Voláteis</span></div>
-                        <details class="mt-2" {% if notes.get('dynamism') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_dynamism" rows="2" placeholder="Observações sobre dinamismo..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('dynamism', '') }}</textarea>
-                        </details>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Autonomia da Equipa
-                            <span class="ml-2 inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_team_autonomy">{{ ctx.get('team_autonomy', 2) }}</span>
-                        </label>
-                        <input type="range" name="team_autonomy" id="team_autonomy" min="1" max="4" step="1" value="{{ ctx.get('team_autonomy', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                               oninput="document.getElementById('lbl_team_autonomy').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Hierárquica</span><span>4, Auto-organizada</span></div>
-                        <details class="mt-2" {% if notes.get('team_autonomy') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_team_autonomy" rows="2" placeholder="Observações sobre autonomia..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('team_autonomy', '') }}</textarea>
-                        </details>
-                    </div>
-
+                    {% endfor %}
                 </div>
             </div>
-
-            <!-- Dimensões AsPO -->
-            <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border-l-4 border-red-500">
-                <h2 class="text-base font-semibold mb-1 text-red-600 dark:text-red-400">Pressão de Garantia / Assurance (AsPO)</h2>
-                <p class="text-xs text-gray-500 mb-4">Quanto mais alto, maior a necessidade de controlo, conformidade e rastreabilidade.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Criticidade (Impacto de Falha)
-                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_criticality">{{ ctx.get('criticality', 2) }}</span>
-                        </label>
-                        <input type="range" name="criticality" id="criticality" min="1" max="4" step="1" value="{{ ctx.get('criticality', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
-                               oninput="document.getElementById('lbl_criticality').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Baixo Impacto</span><span>4, Vital / Vida Humana</span></div>
-                        <details class="mt-2" {% if notes.get('criticality') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_criticality" rows="2" placeholder="Observações sobre criticidade..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('criticality', '') }}</textarea>
-                        </details>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Rigidez Regulatória / Compliance
-                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_compliance">{{ ctx.get('compliance', 2) }}</span>
-                        </label>
-                        <input type="range" name="compliance" id="compliance" min="1" max="4" step="1" value="{{ ctx.get('compliance', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
-                               oninput="document.getElementById('lbl_compliance').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Flexível</span><span>4, Altamente Regulado</span></div>
-                        <details class="mt-2" {% if notes.get('compliance') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_compliance" rows="2" placeholder="Observações sobre compliance..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('compliance', '') }}</textarea>
-                        </details>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Necessidade de Rastreabilidade
-                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_traceability">{{ ctx.get('traceability', 2) }}</span>
-                        </label>
-                        <input type="range" name="traceability" id="traceability" min="1" max="4" step="1" value="{{ ctx.get('traceability', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
-                               oninput="document.getElementById('lbl_traceability').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Informal</span><span>4, Auditoria Total</span></div>
-                        <details class="mt-2" {% if notes.get('traceability') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_traceability" rows="2" placeholder="Observações sobre rastreabilidade..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('traceability', '') }}</textarea>
-                        </details>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Formalidade dos Stakeholders
-                            <span class="ml-2 inline-block bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded" id="lbl_stakeholder_formality">{{ ctx.get('stakeholder_formality', 2) }}</span>
-                        </label>
-                        <input type="range" name="stakeholder_formality" id="stakeholder_formality" min="1" max="4" step="1" value="{{ ctx.get('stakeholder_formality', 2) }}"
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
-                               oninput="document.getElementById('lbl_stakeholder_formality').textContent=this.value">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1, Informal</span><span>4, Exige Relatórios Formais</span></div>
-                        <details class="mt-2" {% if notes.get('stakeholder_formality') %}open{% endif %}><summary class="text-xs text-gray-400 cursor-pointer">+ Notas</summary>
-                            <textarea name="note_stakeholder_formality" rows="2" placeholder="Observações sobre stakeholders..."
-                                      class="w-full mt-1 border border-gray-200 rounded text-xs px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">{{ notes.get('stakeholder_formality', '') }}</textarea>
-                        </details>
-                    </div>
-
-                </div>
-            </div>
+            {% endfor %}
 
             <div class="flex justify-end pb-6">
                 <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg">

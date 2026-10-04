@@ -80,6 +80,10 @@ flowchart TD
             <div class="bg-{{ color }}-50 dark:bg-{{ color }}-900 border border-{{ color }}-200 dark:border-{{ color }}-700 rounded-xl p-6 shadow">
                 <p class="text-xs font-semibold text-{{ color }}-600 uppercase tracking-wider mb-1">Abordagem Sugerida pelo Motor KairoSyn</p>
                 <p class="text-3xl font-bold text-{{ color }}-700 dark:text-{{ color }}-200">{{ decision.suggested_approach }}</p>
+                {% set descriptor = approach_descriptor(decision.agpi_score, decision.aspi_score) %}
+                {% if descriptor and decision.suggested_approach == 'Híbrida' %}
+                <p class="text-xs font-semibold text-{{ color }}-600 dark:text-{{ color }}-300 mt-1">{{ descriptor }} (AdPO {{ decision.agpi_score | int }} · AsPO {{ decision.aspi_score | int }})</p>
+                {% endif %}
                 <p class="text-sm text-{{ color }}-600 dark:text-{{ color }}-300 mt-2">
                     {% if decision.suggested_approach == "Adaptativa" %}
                         AdPO ≥ 3 ∧ AsPO ≤ 2: contexto dinâmico favorece iterações curtas e equipas auto-organizadas.
