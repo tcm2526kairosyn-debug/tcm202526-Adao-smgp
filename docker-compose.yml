@@ -11,13 +11,6 @@ services:
       - FLASK_APP=app:create_app  # IMPORTANTE: Indica o caminho da factory
       - FLASK_DEBUG=1
       - DATABASE_URL=postgresql://user:secret@db:5432/postgres
-      - WKHTMLTOPDF_PATH=/usr/bin/wkhtmltopdf
-      # Flask-Mail — usar App Password do Gmail (não a password normal da conta)
-      - MAIL_SERVER=smtp.gmail.com
-      - MAIL_PORT=587
-      - MAIL_USE_TLS=true
-      - MAIL_USERNAME=tcm2526kairosyn@gmail.com
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
       - FLASK_BASE_URL=http://127.0.0.1:5000
     depends_on:
       - db
